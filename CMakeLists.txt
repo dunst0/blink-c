@@ -6,6 +6,8 @@ project(blink
         VERSION ${project_version}
         DESCRIPTION ${project_description}
         HOMEPAGE_URL ${project_homepage}
-        LANGUAGES C)
+        LANGUAGES C
+        )
 
 add_subdirectory(app)
+add_subdirectory(library/parser)
