@@ -6,7 +6,8 @@ project(blink-app
         VERSION ${project_version}
         DESCRIPTION ${project_description}
         HOMEPAGE_URL ${project_homepage}
-        LANGUAGES C)
+        LANGUAGES C
+        )
 
 add_executable(blink)
 
@@ -15,4 +16,4 @@ target_sources(blink
         "src/main.c"
         )
 
-#target_link_libraries(blink PRIVATE ast lexer fsm utils parser)
+target_link_libraries(blink PRIVATE parser)
