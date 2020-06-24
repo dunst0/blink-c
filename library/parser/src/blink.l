@@ -1,6 +1,8 @@
 %{
-#include <stdio.h>
+#include "blink/str.h"
 #include "blink/parser.h"
+
+#include <stdio.h>
 
 #define MAX_IMPORT_DEPTH 1024
 YY_BUFFER_STATE import_stack[MAX_IMPORT_DEPTH];
@@ -18,6 +20,8 @@ int import_stack_ptr = 0;
             yylloc.last_column++;               \
         }                                       \
     }
+
+void importFile(char *import);
 
 %}
 
@@ -38,34 +42,7 @@ whitespace          [ \n\t\r]
 "import"                                                                                BEGIN(IMPORT);
 <IMPORT,PACKAGE>[ \t]*                                                                  /* eat the whitespace */
 <IMPORT>[^ \t\n]+                                                                       {
-                                                                                            /* got the include file name */
-                                                                                            if(import_stack_ptr >= MAX_IMPORT_DEPTH) {
-                                                                                                fprintf(stderr, "Includes nested too deeply");
-                                                                                                exit(1);
-                                                                                            }
-
-                                                                                            import_stack[import_stack_ptr++] = YY_CURRENT_BUFFER;
-
-                                                                                            int length = snprintf(NULL, 0, "%s\n", yytext);
-                                                                                            if(filename) {
-                                                                                                free(filename);
-                                                                                            }
-                                                                                            filename = calloc(length + 1, sizeof(char));
-                                                                                            if(!filename) {
-                                                                                                yyerror("out of memory");
-                                                                                                exit(1);
-                                                                                            }
-                                                                                            memcpy(filename, yytext, length);
-                                                                                            printf("filename: '%s'\n", filename);
-
-                                                                                            /* TODO: need to convert to path */
-                                                                                            yyin = fopen(filename, "r");
-                                                                                            if(!yyin) {
-                                                                                                yyerror("error loading file");
-                                                                                                exit(1);
-                                                                                            }
-
-                                                                                            yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
+                                                                                            importFile(yytext);
 
                                                                                             BEGIN(INITIAL);
                                                                                             return IMPORT_KEYWORD;
@@ -151,3 +128,46 @@ whitespace          [ \n\t\r]
 
 %%
 
+#define FILE_EXTENTION ".blink"
+
+
+void importFile(char *import) {
+    str sourceFileName = STR_NULL;
+
+    int importLength = snprintf(NULL, 0, "%s", import);
+    int i = 0;
+
+    sourceFileName.len = yyleng + sizeof(FILE_EXTENTION);
+    sourceFileName.s = calloc(sourceFileName.len, sizeof(char));
+    if(!sourceFileName.s) {
+        fprintf(stderr, "Error: could not allocate memory for import filename\n");
+        exit(1);
+    }
+    
+    for(i = 0; i < importLength; ++i) {
+        sourceFileName.s[i] = (import[i] == '.') ? '/' : import[i];
+    }
+    memcpy(sourceFileName.s + importLength, FILE_EXTENTION, sizeof(FILE_EXTENTION) - 1);
+
+    if(filename) {
+        free(filename);
+    }
+    filename = sourceFileName.s;
+    printf("current import filename: '%.*s'\n", STR_FMT(&sourceFileName));
+
+    /* got the include file name */
+    if(import_stack_ptr >= MAX_IMPORT_DEPTH) {
+        fprintf(stderr, "Error: imports nested too deeply\n");
+        exit(1);
+    }
+
+    import_stack[import_stack_ptr++] = YY_CURRENT_BUFFER;
+
+    yyin = fopen(sourceFileName.s, "r");
+    if(!yyin) {
+        fprintf(stderr, "Error: could not open file: '%.*s'\n", STR_FMT(&sourceFileName));
+        exit(1);
+    }
+
+    yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
+}
