@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     printf("%s: start parsing from '%.*s'\n", argv[0], STR_FMT(&sourceFileName));
 
     yydebug = 1;
-    filename = sourceFileName.s;
+    yylloc.filename = sourceFileName;
 
     if (yyparse() != 0) {
         printf("blink parse failed\n");

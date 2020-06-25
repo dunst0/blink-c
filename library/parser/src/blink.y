@@ -1,4 +1,10 @@
+/**
+ * Parser for the blink language
+ */
+
 %code requires {
+
+#include "blink/str.h"
 
 #include <stdio.h>
 
@@ -26,11 +32,6 @@ enum assignment_operator {
     PIPE_EQUAL_OPERATOR,
 };
 
-/**
- * Currente filename for the lexer.
- */
-extern char* filename;
-
 extern int yyerror(char *s);
 extern int yylex(void);
 
@@ -39,7 +40,7 @@ typedef struct YYLTYPE {
     int first_column;
     int last_line;
     int last_column;
-    char *filename;
+    str filename;
 } YYLTYPE;
 
 /* alert the parser that we have our own definition */
@@ -57,7 +58,8 @@ typedef struct YYLTYPE {
             /* empty RHS */                                                                 \
             (Current).first_line = (Current).last_line = YYRHSLOC(Rhs, 0).last_line;        \
             (Current).first_column = (Current).last_column = YYRHSLOC (Rhs, 0).last_column; \
-            (Current).filename = NULL; /* new */                                            \
+            (Current).filename.s = NULL ; /* new */                                         \
+            (Current).filename.len = 0 ;  /* new */                                         \
         }                                                                                   \
     } while(0)
 
@@ -65,8 +67,6 @@ typedef struct YYLTYPE {
 
 %code {
 #include <stdlib.h>
-
-char *filename = NULL;
 }
 
 %verbose
@@ -76,6 +76,8 @@ char *filename = NULL;
 %union{
     int operator;
 }
+
+%token NL
 
 %token INTEGER_LITERAL
 %token DECIMAL_LITERAL
@@ -160,10 +162,16 @@ classes                         : class_definition
                                 ;
 
 /* class definitions */
-class_definition                : CLASS_KEYWORD CLASS_NAME '{' class_body '}'
-                                | CLASS_KEYWORD CLASS_NAME formals_definition '{' class_body '}'
-                                | CLASS_KEYWORD CLASS_NAME EXTENDS_KEYWORD '{' class_body '}' 
-                                | CLASS_KEYWORD CLASS_NAME formals_definition EXTENDS_KEYWORD actuals_definition '{' class_body '}' 
+class_definition                : CLASS_KEYWORD CLASS_NAME class_formals '{' class_body '}'
+                                | CLASS_KEYWORD CLASS_NAME class_formals EXTENDS_KEYWORD class_actuals '{' class_body '}'
+                                ;
+
+class_formals                   : /* empty */
+                                | formals_definition
+                                ;
+
+class_actuals                   : /* empty */
+                                | actuals_definition
                                 ;
 
 class_body                      : /* empty */
@@ -172,7 +180,7 @@ class_body                      : /* empty */
                                 ;
 
 
-/* propreties definitions */
+/* properties definitions */
 property_definition             : VAR_KEYWORD IDENTIFIER property_signature
                                 ;
 
@@ -185,13 +193,13 @@ property_value                  : '=' expression
                                 ;
 
 /* methods definitions */
-method_definition               : ABSTRACT_KEYWORD method_visibilty_optional method_signature
-                                | FINAL_KEYWORD method_visibilty_optional method_signature method_value
-                                | FINAL_KEYWORD OVERRIDE_KEYWORD method_visibilty_optional method_signature method_value
-                                | OVERRIDE_KEYWORD method_visibilty_optional method_signature method_value
+method_definition               : ABSTRACT_KEYWORD method_visibility method_signature
+                                | FINAL_KEYWORD method_visibility method_signature method_value
+                                | FINAL_KEYWORD OVERRIDE_KEYWORD method_visibility method_signature method_value
+                                | OVERRIDE_KEYWORD method_visibility method_signature method_value
                                 ;
 
-method_visibilty_optional       : /* empty */
+method_visibility               : /* empty */
                                 | PROTECTED_KEYWORD
                                 | PRIVATE_KEYWORD
                                 ;
@@ -221,7 +229,7 @@ block_expression                : '{' expressions '}'
                                 ;
 
 expressions                     : /* empty */
-                                | expressions expression
+                                | expressions expression NL
                                 ;
 
 expression                      : INTEGER_LITERAL
@@ -231,6 +239,7 @@ expression                      : INTEGER_LITERAL
                                 | THIS_LITERAL
                                 | TRUE_LITERAL
                                 | FALSE_LITERAL
+                                | IDENTIFIER
                                 | assignment_expression
                                 | binary_expression
                                 | cast_expression
@@ -239,9 +248,8 @@ expression                      : INTEGER_LITERAL
                                 | dispatch_expression
                                 | if_else_expression
                                 | let_expression
-                                | referenz_expression
                                 | unary_expression
-                                | value_expression
+                                | '(' expression ')'
                                 | while_expression
                                 ;
 
@@ -285,16 +293,10 @@ let_expression                  : LET_KEYWORD initializations IN_KEYWORD block_e
 method_call_expression          : METHOD_NAME actuals_definition
                                 ;
 
-referenz_expression             : IDENTIFIER
-                                ;
-
 unary_expression                : '-' expression %prec UMINUS
                                 | NOT_OPERATOR expression
                                 | DOUBLE_PLUS_OPERATOR expression
                                 | DOUBLE_MINUS_OPERATOR expression
-                                ;
-
-value_expression                : '(' expression ')'
                                 ;
 
 while_expression                : WHILE_KEYWORD '(' expression ')' block_expression
@@ -329,7 +331,7 @@ type                            : ':' CLASS_NAME
 
 int yyerror(char *s)
 {
-    printf("%s (%d:%d): %s in this line:\n%s\n", yylloc.filename, yylloc.first_line, yylloc.first_column + 1, s, "");
+    printf("%.*s (%d:%d): %s in this line:\n%s\n", STR_FMT(&yylloc.filename), yylloc.first_line + 1, yylloc.first_column + 1, s, "");
     printf("%*s\n", yylloc.first_column + 1, "^");
 
     return 1;

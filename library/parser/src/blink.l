@@ -1,15 +1,29 @@
+/**
+ * Lexer for the blink language
+ */
+
+%option noyywrap
+
 %{
+
 #include "blink/str.h"
 #include "blink/parser.h"
 
 #include <stdio.h>
 
 #define MAX_IMPORT_DEPTH 1024
-YY_BUFFER_STATE import_stack[MAX_IMPORT_DEPTH];
+static struct blink_yy_state {
+    YY_BUFFER_STATE state;
+    str filename;
+    int first_line;
+    int last_line;
+    int first_column;
+    int last_column;
+} import_stack[MAX_IMPORT_DEPTH];
 int import_stack_ptr = 0;
 
 #define YY_USER_ACTION                          \
-    yylloc.filename     = filename;             \
+    yylloc.filename     = yylloc.filename;      \
     yylloc.first_line   = yylloc.last_line;     \
     yylloc.first_column = yylloc.last_column;   \
     for(int i = 0; yytext[i] != '\0'; ++i) {    \
@@ -21,43 +35,45 @@ int import_stack_ptr = 0;
         }                                       \
     }
 
-void importFile(char *import);
+static int blink_push_yy_state(char *import, int importLength);
+static int blink_pop_yy_state();
 
 %}
 
 %x IMPORT
 %x PACKAGE
 
-%option noyywrap
-
 letter              [a-zA-Z]
 digit               [0-9]
-postive_number      [1-9]{digit}*
-exponent_part       [eE][-+]?{postive_number}
+positive_number     [1-9]{digit}*
+exponent_part       [eE][-+]?{positive_number}
 operator            ([-+*\/=><!&%~$^]=?)|\+\+|--
-whitespace          [ \n\t\r]
+whitespace          [ \f\t\r]
 
 %%
 
-"import"                                                                                BEGIN(IMPORT);
+<INITIAL>{whitespace}                                                                   /* eat the whitespace */
+
+<INITIAL>"import"                                                                       BEGIN(IMPORT);
 <IMPORT,PACKAGE>[ \t]*                                                                  /* eat the whitespace */
 <IMPORT>[^ \t\n]+                                                                       {
-                                                                                            importFile(yytext);
+                                                                                            if (!blink_push_yy_state(yytext, yyleng)) {
+                                                                                                exit(1);
+                                                                                            }
 
                                                                                             BEGIN(INITIAL);
                                                                                             return IMPORT_KEYWORD;
                                                                                         }
-"package"                                                                               BEGIN(PACKAGE);
+
+<INITIAL>"package"                                                                      BEGIN(PACKAGE);
 <PACKAGE>[^ \t\n]+                                                                      {
                                                                                             printf("now in package name: %s\n", yytext);
                                                                                             BEGIN(INITIAL);
                                                                                             return PACKAGE_KEYWORD;
                                                                                         }
 <<EOF>>                                                                                 {
-                                                                                            if(--import_stack_ptr < 0) {
+                                                                                            if (!blink_pop_yy_state()) {
                                                                                                 yyterminate();
-                                                                                            } else {
-                                                                                                yy_switch_to_buffer(import_stack[import_stack_ptr]);
                                                                                             }
                                                                                         }
 
@@ -112,8 +128,8 @@ whitespace          [ \n\t\r]
 
 [-.=+*/%&^~|:,{\[(}\])]                                                                 return yytext[0];
 
-0|{postive_number}                                                                      { printf("<INTEGER_LITERAL: %s>\n", yytext); return INTEGER_LITERAL; }
-((0|{postive_number})?\.{digit}+{exponent_part}?)|({postive_number}{exponent_part})     { printf("<DECIMAL_LITERAL: %s>\n", yytext); return DECIMAL_LITERAL; }
+0|{positive_number}                                                                     { printf("<INTEGER_LITERAL: %s>\n", yytext); return INTEGER_LITERAL; }
+((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { printf("<DECIMAL_LITERAL: %s>\n", yytext); return DECIMAL_LITERAL; }
 \"(\\.|[^"\\])*\"                                                                       { printf("<STRING_LITERAL: %s>\n", yytext); return STRING_LITERAL; }
 
 {letter}({letter}|{digit}|_)*                                                           { printf("<CLASS_NAME: %s>\n", yytext); return CLASS_NAME; }
@@ -121,53 +137,87 @@ whitespace          [ \n\t\r]
 ({letter}|_)({letter}|{digit}|_)*                                                       { printf("<IDENTIFIER: %s>\n", yytext); return IDENTIFIER; }
 (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)                                { printf("<METHOD_NAME: %s>\n", yytext); return METHOD_NAME; }
 
+\n+                                                                                     /* return NL; */
 {whitespace}                                                                            /* eat the whitespace */
-"//".*                                                                                  /* this is a comment skip */
+"//".*\n+                                                                               /* this is a comment skip */
 
 .                                                                                       { yyerror("unexpected input"); exit(1); } /* error */
 
 %%
 
-#define FILE_EXTENTION ".blink"
+#define FILE_EXTENSION ".blink"
 
+static int blink_getFileNameForImport(char *import, int importLength, str *result) {
+    result->len = importLength + sizeof(FILE_EXTENSION);
+    result->s   = calloc(result->len, sizeof(*result->s));
+    if(!result->s) {
+        fprintf(stderr, "Error: could not allocate memory for import filename\n");
+        return 0;
+    }
 
-void importFile(char *import) {
+    for(int i = 0; i < importLength; ++i) {
+        result->s[i] = (import[i] == '.') ? '/' : import[i];
+    }
+    memcpy(result->s + importLength, FILE_EXTENSION, sizeof(FILE_EXTENSION) - 1);
+
+    return 1;
+}
+
+static int blink_push_yy_state(char *import, int importLength) {
     str sourceFileName = STR_NULL;
 
-    int importLength = snprintf(NULL, 0, "%s", import);
-    int i = 0;
-
-    sourceFileName.len = yyleng + sizeof(FILE_EXTENTION);
-    sourceFileName.s = calloc(sourceFileName.len, sizeof(char));
-    if(!sourceFileName.s) {
-        fprintf(stderr, "Error: could not allocate memory for import filename\n");
-        exit(1);
-    }
-    
-    for(i = 0; i < importLength; ++i) {
-        sourceFileName.s[i] = (import[i] == '.') ? '/' : import[i];
-    }
-    memcpy(sourceFileName.s + importLength, FILE_EXTENTION, sizeof(FILE_EXTENTION) - 1);
-
-    if(filename) {
-        free(filename);
-    }
-    filename = sourceFileName.s;
-    printf("current import filename: '%.*s'\n", STR_FMT(&sourceFileName));
-
-    /* got the include file name */
-    if(import_stack_ptr >= MAX_IMPORT_DEPTH) {
+    if (import_stack_ptr >= MAX_IMPORT_DEPTH) {
         fprintf(stderr, "Error: imports nested too deeply\n");
-        exit(1);
+        return 0;
     }
 
-    import_stack[import_stack_ptr++] = YY_CURRENT_BUFFER;
+    if (!blink_getFileNameForImport(import, importLength, &sourceFileName)) {
+        return 0;
+    }
+    fprintf(stdout, "current import filename: '%.*s'\n", STR_FMT(&sourceFileName));
+
+    import_stack[import_stack_ptr].state        = YY_CURRENT_BUFFER;
+    import_stack[import_stack_ptr].filename     = yylloc.filename;
+    import_stack[import_stack_ptr].first_line   = yylloc.first_line;
+    import_stack[import_stack_ptr].last_line    = yylloc.last_line;
+    import_stack[import_stack_ptr].first_column = yylloc.first_column;
+    import_stack[import_stack_ptr].last_column  = yylloc.last_column;
+    import_stack_ptr++;
+
+    yylloc.first_line   = yylloc.last_line   = 0;
+    yylloc.first_column = yylloc.last_column = 0;
+    yylloc.filename     = sourceFileName;
 
     yyin = fopen(sourceFileName.s, "r");
     if(!yyin) {
         fprintf(stderr, "Error: could not open file: '%.*s'\n", STR_FMT(&sourceFileName));
-        exit(1);
+        return 0;
     }
 
     yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
+
+    return 1;
+}
+
+static int blink_pop_yy_state() {
+    if (import_stack[import_stack_ptr].filename.s) {
+        free(import_stack[import_stack_ptr].filename.s);
+        import_stack[import_stack_ptr].filename.s   = NULL;
+        import_stack[import_stack_ptr].filename.len = 0;
+    }
+
+    if (--import_stack_ptr < 0) {
+        return 0;
+    }
+
+    yy_delete_buffer(YY_CURRENT_BUFFER);
+    yy_switch_to_buffer(import_stack[import_stack_ptr].state);
+
+    yylloc.filename     = import_stack[import_stack_ptr].filename;
+    yylloc.first_line   = import_stack[import_stack_ptr].first_line;
+    yylloc.last_line    = import_stack[import_stack_ptr].last_line;
+    yylloc.first_column = import_stack[import_stack_ptr].first_column;
+    yylloc.last_column  = import_stack[import_stack_ptr].last_column;
+
+    return 1;
 }
