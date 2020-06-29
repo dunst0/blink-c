@@ -77,8 +77,6 @@ typedef struct YYLTYPE {
     int operator;
 }
 
-%token NL
-
 %token INTEGER_LITERAL
 %token DECIMAL_LITERAL
 %token STRING_LITERAL
@@ -88,8 +86,6 @@ typedef struct YYLTYPE {
 %token THIS_LITERAL
 %token TRUE_LITERAL
 
-%token FULL_QULIFIED_NAME
-%token CLASS_NAME
 %token METHOD_NAME
 %token IDENTIFIER
 
@@ -107,7 +103,7 @@ typedef struct YYLTYPE {
 %token LAZY_KEYWORD
 %token LET_KEYWORD
 %token NEW_KEYWORD
-%token OVERRIDE_KEYWORD
+%token OVERWRITE_KEYWORD
 %token PACKAGE_KEYWORD
 %token PRIVATE_KEYWORD
 %token PROTECTED_KEYWORD
@@ -162,8 +158,8 @@ classes                         : class_definition
                                 ;
 
 /* class definitions */
-class_definition                : CLASS_KEYWORD CLASS_NAME class_formals '{' class_body '}'
-                                | CLASS_KEYWORD CLASS_NAME class_formals EXTENDS_KEYWORD class_actuals '{' class_body '}'
+class_definition                : CLASS_KEYWORD IDENTIFIER class_formals '{' class_body '}'
+                                | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD class_actuals '{' class_body '}'
                                 ;
 
 class_formals                   : /* empty */
@@ -194,10 +190,17 @@ property_value                  : '=' expression
 
 /* methods definitions */
 method_definition               : ABSTRACT_KEYWORD method_visibility method_signature
-                                | FINAL_KEYWORD method_visibility method_signature method_value
-                                | FINAL_KEYWORD OVERRIDE_KEYWORD method_visibility method_signature method_value
-                                | OVERRIDE_KEYWORD method_visibility method_signature method_value
+                                | method_final method_overwrite method_visibility method_signature method_value
                                 ;
+
+method_final                    : /* empty */
+                                | FINAL_KEYWORD
+                                ;
+
+method_overwrite                : /* empty */
+                                | OVERWRITE_KEYWORD
+                                ;
+
 
 method_visibility               : /* empty */
                                 | PROTECTED_KEYWORD
@@ -225,11 +228,12 @@ formal                          : LAZY_KEYWORD IDENTIFIER type
 
 /* expressions */
 
-block_expression                : '{' expressions '}'
+block_expression                : expression ';'
+                                |'{' expressions '}'
                                 ;
 
 expressions                     : /* empty */
-                                | expressions expression NL
+                                | expressions expression ';'
                                 ;
 
 expression                      : INTEGER_LITERAL
@@ -265,18 +269,19 @@ binary_expression               : expression '+' expression
                                 | expression '&' expression
                                 | expression '~' expression
                                 | expression '^' expression
+                                | expression '|' expression
                                 | expression DOUBLE_AND_OPERATOR expression
                                 | expression DOUBLE_PIPE_OPERATOR expression
                                 ;
 
-cast_expression                 : expression AS_KEYWORD CLASS_NAME
+cast_expression                 : expression AS_KEYWORD IDENTIFIER
                                 ;
 
 comparison_expression           : expression RELATIONAL expression
                                 | expression EQUALITY expression
                                 ;
 
-constructor_call_expression     : NEW_KEYWORD CLASS_NAME actuals_definition
+constructor_call_expression     : NEW_KEYWORD IDENTIFIER actuals_definition
                                 ;
 
 dispatch_expression             : expression '.' method_call_expression
@@ -324,7 +329,7 @@ initialization_definition       : type '=' expression
                                 | '=' expression
                                 ;
 
-type                            : ':' CLASS_NAME
+type                            : ':' IDENTIFIER
                                 ;
 
 %%
