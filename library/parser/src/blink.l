@@ -126,7 +126,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 "/="                                                                                    { yylval.operator = DIV_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
 "%="                                                                                    { yylval.operator = MODULO_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
 "&="                                                                                    { yylval.operator = AND_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
-"^="                                                                                    { yylval.operator = CARRET_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
+"^="                                                                                    { yylval.operator = CARET_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
 "~="                                                                                    { yylval.operator = TILDE_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
 "|="                                                                                    { yylval.operator = PIPE_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
 
