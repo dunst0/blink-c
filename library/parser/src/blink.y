@@ -133,6 +133,7 @@ typedef struct YYLTYPE {
 %left       '+' '-'
 %left       '*' '/' '%'
 %right      DOUBLE_PLUS_OPERATOR DOUBLE_MINUS_OPERATOR UMINUS NOT_OPERATOR '~' AS_KEYWORD
+%nonassoc   IN_KEYWORD
 %left       '(' ')' '.'
 
 
@@ -158,8 +159,8 @@ classes                         : class_definition
                                 ;
 
 /* class definitions */
-class_definition                : CLASS_KEYWORD IDENTIFIER class_formals '{' class_body '}'
-                                | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD class_actuals '{' class_body '}'
+class_definition                : CLASS_KEYWORD IDENTIFIER class_formals '{' class_body '}' ';'
+                                | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD class_actuals '{' class_body '}' ':'
                                 ;
 
 class_formals                   : /* empty */
@@ -175,22 +176,13 @@ class_body                      : /* empty */
                                 | class_body method_definition
                                 ;
 
-
 /* properties definitions */
-property_definition             : VAR_KEYWORD IDENTIFIER property_signature
-                                ;
-
-property_signature              : type property_value
-                                | property_value
-                                | type
-                                ;
-
-property_value                  : '=' expression
+property_definition             : VAR_KEYWORD IDENTIFIER value_definition ';'
                                 ;
 
 /* methods definitions */
-method_definition               : ABSTRACT_KEYWORD method_visibility method_signature
-                                | method_final method_overwrite method_visibility method_signature method_value
+method_definition               : ABSTRACT_KEYWORD method_visibility method_signature ';'
+                                | method_final method_overwrite method_visibility method_signature value ';'
                                 ;
 
 method_final                    : /* empty */
@@ -211,14 +203,11 @@ method_signature                : FUNC_KEYWORD METHOD_NAME formals_definition
                                 | FUNC_KEYWORD METHOD_NAME formals_definition type
                                 ;
 
-method_value                    : '=' block_expression
-                                ;
-
 formals_definition              : '(' formals ')'
                                 ;
 
 formals                         : /* empty */
-                                | formals ',' formal
+                                | formals formal ','
                                 ;
 
 formal                          : LAZY_KEYWORD IDENTIFIER type
@@ -228,33 +217,18 @@ formal                          : LAZY_KEYWORD IDENTIFIER type
 
 /* expressions */
 
-block_expression                : expression ';'
-                                |'{' expressions '}'
-                                ;
-
-expressions                     : /* empty */
-                                | expressions expression ';'
-                                ;
-
-expression                      : INTEGER_LITERAL
-                                | DECIMAL_LITERAL
-                                | STRING_LITERAL
-                                | NULL_LITERAL
-                                | THIS_LITERAL
-                                | TRUE_LITERAL
-                                | FALSE_LITERAL
-                                | IDENTIFIER
-                                | assignment_expression
+expression                      : assignment_expression
                                 | binary_expression
                                 | cast_expression
-                                | comparison_expression
                                 | constructor_call_expression
                                 | dispatch_expression
                                 | if_else_expression
                                 | let_expression
+                                | literal_expression
                                 | unary_expression
-                                | '(' expression ')'
                                 | while_expression
+                                | '(' expression ')'
+                                | '{' expressions '}'
                                 ;
 
 assignment_expression           : IDENTIFIER ASSIGNMENT expression
@@ -272,30 +246,37 @@ binary_expression               : expression '+' expression
                                 | expression '|' expression
                                 | expression DOUBLE_AND_OPERATOR expression
                                 | expression DOUBLE_PIPE_OPERATOR expression
+                                | expression RELATIONAL expression
+                                | expression EQUALITY expression
                                 ;
 
 cast_expression                 : expression AS_KEYWORD IDENTIFIER
-                                ;
-
-comparison_expression           : expression RELATIONAL expression
-                                | expression EQUALITY expression
                                 ;
 
 constructor_call_expression     : NEW_KEYWORD IDENTIFIER actuals_definition
                                 ;
 
 dispatch_expression             : expression '.' method_call_expression
+                                | expression '.' IDENTIFIER
                                 | SUPER_LITERAL '.' method_call_expression
+                                | SUPER_LITERAL '.' IDENTIFIER
                                 ;
 
-if_else_expression              : IF_KEYWORD '(' expression ')' block_expression %prec NO_ELSE
-                                | IF_KEYWORD '(' expression ')' block_expression ELSE_KEYWORD block_expression
+if_else_expression              : IF_KEYWORD '(' expression ')' expression %prec NO_ELSE
+                                | IF_KEYWORD '(' expression ')' expression ELSE_KEYWORD expression
                                 ;
 
-let_expression                  : LET_KEYWORD initializations IN_KEYWORD block_expression
+let_expression                  : LET_KEYWORD initializations IN_KEYWORD expression
                                 ;
 
-method_call_expression          : METHOD_NAME actuals_definition
+literal_expression              : INTEGER_LITERAL
+                                | DECIMAL_LITERAL
+                                | STRING_LITERAL
+                                | NULL_LITERAL
+                                | THIS_LITERAL
+                                | TRUE_LITERAL
+                                | FALSE_LITERAL
+                                | IDENTIFIER
                                 ;
 
 unary_expression                : '-' expression %prec UMINUS
@@ -304,7 +285,19 @@ unary_expression                : '-' expression %prec UMINUS
                                 | DOUBLE_MINUS_OPERATOR expression
                                 ;
 
-while_expression                : WHILE_KEYWORD '(' expression ')' block_expression
+while_expression                : WHILE_KEYWORD '(' expression ')' expression
+                                ;
+
+expressions                     : /* empty */
+                                | expression
+                                | expressions_list
+                                ;
+
+expressions_list                : expression ';'
+                                | expressions_list expression ';'
+                                ;
+
+method_call_expression          : METHOD_NAME actuals_definition
                                 ;
 
 
@@ -314,23 +307,27 @@ actuals_definition              : '(' actuals ')'
                                 ;
 
 actuals                         : /* empty */
-                                | actuals ',' expression
+                                | actuals expression ','
                                 ;
 
 initializations                 : initialization_expression
-                                | initializations ',' initialization_expression
+                                | initializations initialization_expression ','
                                 ;
 
-initialization_expression       : IDENTIFIER initialization_definition
+initialization_expression       : IDENTIFIER value_definition
                                 ;
 
-initialization_definition       : type '=' expression
+value_definition                : type value
                                 | type
-                                | '=' expression
+                                | value
                                 ;
 
 type                            : ':' IDENTIFIER
                                 ;
+
+value                           : '=' expression
+                                ;
+
 
 %%
 

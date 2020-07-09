@@ -178,9 +178,12 @@ static int blink_needs_semicolon() {
         case DECIMAL_LITERAL:
         case STRING_LITERAL:
         case NULL_LITERAL:
+        case THIS_LITERAL:
         case TRUE_LITERAL:
         case FALSE_LITERAL:
         case IDENTIFIER:
+        case ')':
+        case '}':
             return 1;
     }
     return 0;
