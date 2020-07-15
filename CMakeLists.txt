@@ -10,5 +10,6 @@ project(blink
         )
 
 add_subdirectory(app)
+add_subdirectory(library/ast)
 add_subdirectory(library/parser)
 add_subdirectory(library/utils)

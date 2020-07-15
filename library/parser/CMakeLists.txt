@@ -38,4 +38,4 @@ target_sources(parser
 
 target_include_directories(parser PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/include")
 
-target_link_libraries(parser PUBLIC utils)
+target_link_libraries(parser PUBLIC ast utils)

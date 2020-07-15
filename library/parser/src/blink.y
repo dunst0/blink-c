@@ -5,6 +5,7 @@
 %code requires {
 
 #include "blink/str.h"
+#include "blink/ast.h"
 
 #include <stdio.h>
 
@@ -75,16 +76,31 @@ typedef struct YYLTYPE {
 
 %union{
     int operator;
+    str value;
+    ast_assignment *assignment;
+    ast_binary_expression *binary_expression;
+    ast_block *block;
+    ast_cast *cast;
+    ast_constructor_call *constructor_call;
+    ast_expression *expression;
+    ast_expression_list *expressions;
+    ast_if_else *if_else_expression;
+    ast_initialization *initialization;
+    ast_initialization_list *initializations;
+    ast_let *let;
+    ast_reference *reference;
+    ast_unary_expression *unary_expression;
+    ast_while *while_expression;
 }
 
-%token INTEGER_LITERAL
-%token DECIMAL_LITERAL
-%token STRING_LITERAL
-%token FALSE_LITERAL
+%token <value> INTEGER_LITERAL
+%token <value> DECIMAL_LITERAL
+%token <value> STRING_LITERAL
+%token <value> FALSE_LITERAL
+%token <value> TRUE_LITERAL
 %token NULL_LITERAL
 %token SUPER_LITERAL
 %token THIS_LITERAL
-%token TRUE_LITERAL
 
 %token METHOD_NAME
 %token IDENTIFIER
@@ -136,6 +152,24 @@ typedef struct YYLTYPE {
 %nonassoc   IN_KEYWORD
 %left       '(' ')' '.'
 
+%type <expressions>        actuals_definition actuals
+%type <assignment>         assignment
+%type <binary_expression>  binary_expression
+%type <block>              block
+%type <constructor_call>   constructor_call
+%type <cast>               cast
+%type <expression>         dispatch
+%type <expression>         expression
+%type <expressions>        expressions expressions_list
+%type <if_else_expression> if_else
+%type <initialization>     initialization
+%type <initializations>    initialization_list;
+%type <let>                let
+%type <expression>         literal
+%type <reference>          type
+%type <unary_expression>   unary_expression
+%type <expression>         value
+%type <while_expression>   while
 
 %start program
 
@@ -160,7 +194,7 @@ classes                         : class_definition
 
 /* class definitions */
 class_definition                : CLASS_KEYWORD IDENTIFIER class_formals '{' class_body '}' ';'
-                                | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD class_actuals '{' class_body '}' ':'
+                                | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD class_actuals '{' class_body '}' ';'
                                 ;
 
 class_formals                   : /* empty */
@@ -177,7 +211,9 @@ class_body                      : /* empty */
                                 ;
 
 /* properties definitions */
-property_definition             : VAR_KEYWORD IDENTIFIER value_definition ';'
+property_definition             : VAR_KEYWORD IDENTIFIER type value ';'
+                                | VAR_KEYWORD IDENTIFIER type ';'
+                                | VAR_KEYWORD IDENTIFIER value ';'
                                 ;
 
 /* methods definitions */
@@ -217,115 +253,352 @@ formal                          : LAZY_KEYWORD IDENTIFIER type
 
 /* expressions */
 
-expression                      : assignment_expression
-                                | binary_expression
-                                | cast_expression
-                                | constructor_call_expression
-                                | dispatch_expression
-                                | if_else_expression
-                                | let_expression
-                                | literal_expression
-                                | unary_expression
-                                | while_expression
-                                | '(' expression ')'
-                                | '{' expressions '}'
+expression                      : assignment            { $$ = (ast_expression *) $1; }
+                                | binary_expression     { $$ = (ast_expression *) $1; }
+                                | block                 { $$ = (ast_expression *) $1; }
+                                | cast                  { $$ = (ast_expression *) $1; }
+                                | constructor_call      { $$ = (ast_expression *) $1; }
+                                | dispatch              { $$ = (ast_expression *) $1; }
+                                | if_else               { $$ = (ast_expression *) $1; }
+                                | let                   { $$ = (ast_expression *) $1; }
+                                | literal               { $$ = (ast_expression *) $1; }
+                                | unary_expression      { $$ = (ast_expression *) $1; }
+                                | while                 { $$ = (ast_expression *) $1; }
+                                | '(' expression ')'    { $$ = $2; }
                                 ;
 
-assignment_expression           : IDENTIFIER ASSIGNMENT expression
+assignment                      : IDENTIFIER ASSIGNMENT expression
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str operator = STR_NULL;
+
+                                        switch ($2) {
+                                            case LESS_OPERATOR:
+                                                STR_STATIC_SET(&operator, "<");
+                                                break;
+                                            case LESS_EQUAL_OPERATOR:
+                                                STR_STATIC_SET(&operator, "<=");
+                                                break;
+                                            case GREATER_OPERATOR:
+                                                STR_STATIC_SET(&operator, ">");
+                                                break;
+                                            case GREATER_EQUAL_OPERATOR:
+                                                STR_STATIC_SET(&operator, ">=");
+                                                break;
+                                        }
+
+                                        $$ = ast_assignment_new(@1.first_line, @1.first_column, dummy, operator, $3);
+                                    }
                                 | IDENTIFIER '=' expression
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str operator = STR_STATIC_INIT("=");
+                                        $$ = ast_assignment_new(@1.first_line, @1.first_column, dummy, operator, $3);
+                                    }
                                 ;
 
 binary_expression               : expression '+' expression
+                                    {
+                                        str operator = STR_STATIC_INIT("+");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression '-' expression
+                                    {
+                                        str operator = STR_STATIC_INIT("-");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression '*' expression
+                                    {
+                                        str operator = STR_STATIC_INIT("*");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression '/' expression
+                                    {
+                                        str operator = STR_STATIC_INIT("/");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression '%' expression
+                                    {
+                                        str operator = STR_STATIC_INIT("%");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression '&' expression
+                                    {
+                                        str operator = STR_STATIC_INIT("&");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression '~' expression
+                                    {
+                                        str operator = STR_STATIC_INIT("~");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression '^' expression
+                                    {
+                                        str operator = STR_STATIC_INIT("^");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression '|' expression
+                                    {
+                                        str operator = STR_STATIC_INIT("|");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression DOUBLE_AND_OPERATOR expression
+                                    {
+                                        str operator = STR_STATIC_INIT("&&");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression DOUBLE_PIPE_OPERATOR expression
+                                    {
+                                        str operator = STR_STATIC_INIT("||");
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression RELATIONAL expression
+                                    {
+                                        str operator = STR_NULL;
+
+                                        switch ($2) {
+                                            case LESS_OPERATOR:
+                                                STR_STATIC_SET(&operator, "<");
+                                                break;
+                                            case LESS_EQUAL_OPERATOR:
+                                                STR_STATIC_SET(&operator, "<=");
+                                                break;
+                                            case GREATER_OPERATOR:
+                                                STR_STATIC_SET(&operator, ">");
+                                                break;
+                                            case GREATER_EQUAL_OPERATOR:
+                                                STR_STATIC_SET(&operator, ">=");
+                                                break;
+                                        }
+
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 | expression EQUALITY expression
+                                    {
+                                        str operator = STR_NULL;
+
+                                        switch ($2) {
+                                            case EQUAL_OPERATOR:
+                                                STR_STATIC_SET(&operator, "==");
+                                                break;
+                                            case NOT_EQUAL_OPERATOR:
+                                                STR_STATIC_SET(&operator, "!=");
+                                                break;
+                                        }
+
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                    }
                                 ;
 
-cast_expression                 : expression AS_KEYWORD IDENTIFIER
+block                           : '{' expressions '}'
+                                    {
+                                        $$ = ast_block_new(@1.first_line, @1.first_column, $2);
+                                    }
                                 ;
 
-constructor_call_expression     : NEW_KEYWORD IDENTIFIER actuals_definition
+cast                            : expression AS_KEYWORD IDENTIFIER
+                                    {
+                                        str type = STR_STATIC_INIT("Unit"); // TODO: fix me
+                                        $$ = ast_cast_new(@1.first_line, @1.first_column, $1,type);
+                                    }
                                 ;
 
-dispatch_expression             : expression '.' method_call_expression
-                                | expression '.' IDENTIFIER
-                                | SUPER_LITERAL '.' method_call_expression
-                                | SUPER_LITERAL '.' IDENTIFIER
+constructor_call                : NEW_KEYWORD IDENTIFIER actuals_definition
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        $$ = ast_constructor_call_new(@1.first_line, @1.first_column, dummy, $3);
+                                    }
                                 ;
 
-if_else_expression              : IF_KEYWORD '(' expression ')' expression %prec NO_ELSE
+dispatch                        : expression '.' METHOD_NAME actuals_definition
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        $$ = (ast_expression *) ast_function_call_new(@1.first_line, @1.first_column, $1, dummy, $4);
+                                    }
+                                | SUPER_LITERAL '.' METHOD_NAME actuals_definition
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        $$ = (ast_expression *) ast_super_function_call_new(@1.first_line, @1.first_column, dummy, $4);
+                                    }
+                                ;
+
+if_else                         : IF_KEYWORD '(' expression ')' expression %prec NO_ELSE
+                                    {
+                                        $$ = ast_if_else_new(@1.first_line, @1.first_column, $3, $5, NULL);
+                                    }
                                 | IF_KEYWORD '(' expression ')' expression ELSE_KEYWORD expression
+                                    {
+                                        $$ = ast_if_else_new(@1.first_line, @1.first_column, $3, $5, $7);
+                                    }
                                 ;
 
-let_expression                  : LET_KEYWORD initializations IN_KEYWORD expression
+let                             : LET_KEYWORD initialization_list IN_KEYWORD expression
+                                    {
+                                        $$ = ast_let_new(@1.first_line, @1.first_column, $2, $4);
+                                    }
                                 ;
 
-literal_expression              : INTEGER_LITERAL
+literal                         : INTEGER_LITERAL
+                                    {
+                                        $$ = (ast_expression *) ast_integer_literal_new(@1.first_line, @1.first_column, $1);
+                                    }
                                 | DECIMAL_LITERAL
+                                    {
+                                        $$ = (ast_expression *) ast_decimal_literal_new(@1.first_line, @1.first_column, $1);
+                                    }
                                 | STRING_LITERAL
+                                    {
+                                        $$ = (ast_expression *) ast_string_literal_new(@1.first_line, @1.first_column, $1);
+                                    }
                                 | NULL_LITERAL
+                                    {
+                                        $$ = (ast_expression *) ast_null_literal_new(@1.first_line, @1.first_column);
+                                    }
                                 | THIS_LITERAL
+                                    {
+                                        $$ = (ast_expression *) ast_this_literal_new(@1.first_line, @1.first_column);
+                                    }
                                 | TRUE_LITERAL
+                                    {
+                                        $$ = (ast_expression *) ast_boolean_literal_new(@1.first_line, @1.first_column, $1);
+                                    }
                                 | FALSE_LITERAL
+                                    {
+                                        $$ = (ast_expression *) ast_boolean_literal_new(@1.first_line, @1.first_column, $1);
+                                    }
                                 | IDENTIFIER
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        $$ = (ast_expression *) ast_reference_new(@1.first_line, @1.first_column, dummy);
+                                    }
                                 ;
 
 unary_expression                : '-' expression %prec UMINUS
+                                    {
+                                        str operator = STR_STATIC_INIT("-");
+                                        $$ = ast_unary_expression_new(@1.first_line, @1.first_column, operator, $2);
+                                    }
                                 | NOT_OPERATOR expression
+                                    {
+                                        str operator = STR_STATIC_INIT("!");
+                                        $$ = ast_unary_expression_new(@1.first_line, @1.first_column, operator, $2);
+                                    }
                                 | DOUBLE_PLUS_OPERATOR expression
+                                    {
+                                        str operator = STR_STATIC_INIT("++");
+                                        $$ = ast_unary_expression_new(@1.first_line, @1.first_column, operator, $2);
+                                    }
                                 | DOUBLE_MINUS_OPERATOR expression
+                                    {
+                                        str operator = STR_STATIC_INIT("--");
+                                        $$ = ast_unary_expression_new(@1.first_line, @1.first_column, operator, $2);
+                                    }
                                 ;
 
-while_expression                : WHILE_KEYWORD '(' expression ')' expression
+while                           : WHILE_KEYWORD '(' expression ')' expression
+                                    {
+                                        $$ = ast_while_new(@1.first_line, @1.first_column, $3, $5);
+                                    }
                                 ;
 
 expressions                     : /* empty */
+                                    {
+                                        $$ = ast_expression_list_new();
+                                    }
                                 | expression
+                                    {
+                                        ast_expression *expression = $1;
+                                        $$ = ast_expression_list_new();
+                                        ast_expression_list_prepend($$, expression);
+                                    }
                                 | expressions_list
+                                    {
+                                        $$ = $1;
+                                    }
                                 ;
 
 expressions_list                : expression ';'
+                                    {
+                                        ast_expression *expression = $1;
+                                        $$ = ast_expression_list_new();
+                                        ast_expression_list_prepend($$, expression);
+                                    }
                                 | expressions_list expression ';'
-                                ;
-
-method_call_expression          : METHOD_NAME actuals_definition
+                                    {
+                                        ast_expression *expression = $2;
+                                        $$ = $1;
+                                        ast_expression_list_prepend($$, expression);
+                                    }
                                 ;
 
 
 /* general */
 
 actuals_definition              : '(' actuals ')'
+                                    {
+                                        $$ = $2;
+                                    }
                                 ;
 
 actuals                         : /* empty */
+                                    {
+                                        $$ = ast_expression_list_new();
+                                    }
                                 | actuals expression ','
+                                    {
+                                        ast_expression *expression = $2;
+                                        $$ = $1;
+                                        ast_expression_list_prepend($$, expression);
+                                    }
                                 ;
 
-initializations                 : initialization_expression
-                                | initializations initialization_expression ','
+initialization_list             : initialization
+                                    {
+                                        ast_initialization *initialization = $1;
+                                        $$ = ast_initialization_list_new();
+                                        ast_initialization_list_prepend($$, initialization);
+                                    }
+                                | initialization_list initialization ','
+                                    {
+                                        ast_initialization *initialization = $2;
+                                        $$ = $1;
+                                        ast_initialization_list_prepend($$, initialization);
+                                    }
                                 ;
 
-initialization_expression       : IDENTIFIER value_definition
-                                ;
-
-value_definition                : type value
-                                | type
-                                | value
+initialization                  : IDENTIFIER type value
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str type = $2->identifier;
+                                        $$ = ast_initialization_new(@1.first_line, @1.first_column, dummy, type, $3);
+                                        ast_reference_destroy(&$2);
+                                    }
+                                | IDENTIFIER type
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str type = $2->identifier;
+                                        $$ = ast_initialization_new(@1.first_line, @1.first_column, dummy, type, NULL);
+                                        ast_reference_destroy(&$2);
+                                    }
+                                | IDENTIFIER value
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str emtpy = STR_NULL;
+                                        $$ = ast_initialization_new(@1.first_line, @1.first_column, dummy, emtpy, $2);
+                                    }
                                 ;
 
 type                            : ':' IDENTIFIER
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        $$ = ast_reference_new(@1.first_line, @1.first_column, dummy);
+                                    }
                                 ;
 
 value                           : '=' expression
+                                    {
+                                        $$ = $2;
+                                    }
                                 ;
 
 

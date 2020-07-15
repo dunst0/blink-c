@@ -96,7 +96,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 "class"                                                                                 RETURN(CLASS_KEYWORD);
 "else"                                                                                  RETURN(ELSE_KEYWORD);
 "extends"                                                                               RETURN(EXTENDS_KEYWORD);
-"false"                                                                                 RETURN(FALSE_LITERAL);
+"false"                                                                                 { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(FALSE_LITERAL); }
 "final"                                                                                 RETURN(FINAL_KEYWORD);
 "func"                                                                                  {
                                                                                             BEGIN(METHOD);
@@ -113,7 +113,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 "protected"                                                                             RETURN(PROTECTED_KEYWORD);
 "super"                                                                                 RETURN(SUPER_LITERAL);
 "this"                                                                                  RETURN(THIS_LITERAL);
-"true"                                                                                  RETURN(TRUE_LITERAL);
+"true"                                                                                  { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(TRUE_LITERAL); }
 "var"                                                                                   RETURN(VAR_KEYWORD);
 "while"                                                                                 RETURN(WHILE_KEYWORD);
 
@@ -144,9 +144,9 @@ not_whitespace      [^ \a\f\t\r\v\n]
 
 [-.=+*%/&^~|:,{\[(}\]);]                                                                RETURN(yytext[0]);
 
-0|{positive_number}                                                                     { printf("<INTEGER_LITERAL: %s>\n", yytext); RETURN(INTEGER_LITERAL); }
-((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { printf("<DECIMAL_LITERAL: %s>\n", yytext); RETURN(DECIMAL_LITERAL); }
-\"(\\.|[^"\\])*\"                                                                       { printf("<STRING_LITERAL: %s>\n", yytext); RETURN(STRING_LITERAL); }
+0|{positive_number}                                                                     { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(INTEGER_LITERAL); }
+((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(DECIMAL_LITERAL); }
+\"(\\.|[^"\\])*\"                                                                       { yylval.value.s = yytext + 1; yylval.value.len = yyleng - 1; RETURN(STRING_LITERAL); }
 
 <METHOD>(operator{operator})|(({letter}|_)({letter}|{digit}|_)*)                        {
                                                                                             printf("<METHOD_NAME: %s>\n", yytext);
