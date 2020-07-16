@@ -109,6 +109,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 "new"                                                                                   RETURN(NEW_KEYWORD);
 "null"                                                                                  RETURN(NULL_LITERAL);
 "overwrite"                                                                             RETURN(OVERWRITE_KEYWORD);
+"public"                                                                                RETURN(PUBLIC_KEYWORD);
 "private"                                                                               RETURN(PRIVATE_KEYWORD);
 "protected"                                                                             RETURN(PROTECTED_KEYWORD);
 "super"                                                                                 RETURN(SUPER_LITERAL);

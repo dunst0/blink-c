@@ -84,10 +84,14 @@ typedef struct YYLTYPE {
     ast_constructor_call *constructor_call;
     ast_expression *expression;
     ast_expression_list *expressions;
+    ast_formal *formal;
+    ast_formal_list *formals;
+    ast_function *function;
     ast_if_else *if_else_expression;
     ast_initialization *initialization;
     ast_initialization_list *initializations;
     ast_let *let;
+    ast_property *property;
     ast_reference *reference;
     ast_unary_expression *unary_expression;
     ast_while *while_expression;
@@ -121,6 +125,7 @@ typedef struct YYLTYPE {
 %token NEW_KEYWORD
 %token OVERWRITE_KEYWORD
 %token PACKAGE_KEYWORD
+%token PUBLIC_KEYWORD
 %token PRIVATE_KEYWORD
 %token PROTECTED_KEYWORD
 %token VAR_KEYWORD
@@ -152,23 +157,24 @@ typedef struct YYLTYPE {
 %nonassoc   IN_KEYWORD
 %left       '(' ')' '.'
 
-%type <expressions>        actuals_definition actuals
 %type <assignment>         assignment
 %type <binary_expression>  binary_expression
 %type <block>              block
 %type <constructor_call>   constructor_call
 %type <cast>               cast
-%type <expression>         dispatch
-%type <expression>         expression
-%type <expressions>        expressions expressions_list
+%type <expression>         dispatch expression value literal
+%type <expressions>        expressions expressions_list actuals_definition actuals
+%type <formal>             formal
+%type <formals>            formals_definition formals
+%type <function>           method_signature method_definition
 %type <if_else_expression> if_else
 %type <initialization>     initialization
 %type <initializations>    initialization_list;
+%type <operator>           method_visibility method_overwrite method_final
 %type <let>                let
-%type <expression>         literal
+%type <property>           property_definition
 %type <reference>          type
 %type <unary_expression>   unary_expression
-%type <expression>         value
 %type <while_expression>   while
 
 %start program
@@ -212,42 +218,132 @@ class_body                      : /* empty */
 
 /* properties definitions */
 property_definition             : VAR_KEYWORD IDENTIFIER type value ';'
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str type = $3->identifier;
+                                        $$ = ast_property_new(@1.first_line, @1.first_column, dummy, type, $4);
+                                        ast_reference_destroy(&$3);
+                                    }
                                 | VAR_KEYWORD IDENTIFIER type ';'
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str type = $3->identifier;
+                                        $$ = ast_property_new(@1.first_line, @1.first_column, dummy, type, NULL);
+                                        ast_reference_destroy(&$3);
+                                    }
                                 | VAR_KEYWORD IDENTIFIER value ';'
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str type = STR_NULL;
+                                        $$ = ast_property_new(@1.first_line, @1.first_column, dummy, type, $3);
+                                    }
                                 ;
 
 /* methods definitions */
 method_definition               : ABSTRACT_KEYWORD method_visibility method_signature ';'
+                                    {
+                                        $$ = $3;
+
+                                        $$->isAbstract = 1;
+                                        $$->visibility = $2;
+                                    }
                                 | method_final method_overwrite method_visibility method_signature value ';'
+                                    {
+                                        $$ = $4;
+
+                                        $$->isFinal = $1;
+                                        $$->isOverwrite = $2;
+                                        $$->visibility = $3;
+                                        $$->body = $5;
+                                    }
                                 ;
 
 method_final                    : /* empty */
+                                    {
+                                        $$ = 0;
+                                    }
                                 | FINAL_KEYWORD
+                                    {
+                                        $$ = 1;
+                                    }
                                 ;
 
 method_overwrite                : /* empty */
+                                    {
+                                        $$ = 0;
+                                    }
                                 | OVERWRITE_KEYWORD
+                                    {
+                                        $$ = 1;
+                                    }
                                 ;
 
 
 method_visibility               : /* empty */
+                                    {
+                                        $$ = AST_FUNCTION_VISIBILITY_PRIVATE;
+                                    }
+                                | PUBLIC_KEYWORD
+                                    {
+                                        $$ = AST_FUNCTION_VISIBILITY_PUBLIC;
+                                    }
                                 | PROTECTED_KEYWORD
+                                    {
+                                        $$ = AST_FUNCTION_VISIBILITY_PROTECTED;
+                                    }
                                 | PRIVATE_KEYWORD
+                                    {
+                                        $$ = AST_FUNCTION_VISIBILITY_PRIVATE;
+                                    }
                                 ;
 
 method_signature                : FUNC_KEYWORD METHOD_NAME formals_definition
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str type = STR_STATIC_INIT("Unit"); // FIXME: this needs to be redone
+                                        $$ = ast_function_new(@1.first_line, @1.first_column, dummy, $3, type, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
+                                    }
                                 | FUNC_KEYWORD METHOD_NAME formals_definition type
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str type = $4->identifier;
+                                        $$ = ast_function_new(@1.first_line, @1.first_column, dummy, $3, type, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
+                                        ast_reference_destroy(&$4);
+                                    }
                                 ;
 
 formals_definition              : '(' formals ')'
+                                    {
+                                        $$ = $2;
+                                    }
                                 ;
 
 formals                         : /* empty */
+                                    {
+                                        $$ = ast_formal_list_new();
+                                    }
                                 | formals formal ','
+                                    {
+                                        ast_formal *formal = $2;
+                                        $$ = $1;
+                                        ast_formal_list_prepend($$, formal);
+                                    }
                                 ;
 
 formal                          : LAZY_KEYWORD IDENTIFIER type
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str type = $3->identifier;
+                                        $$ = ast_formal_new(@1.first_line, @1.first_column, dummy, type, 1);
+                                        ast_reference_destroy(&$3);
+                                    }
                                 | IDENTIFIER type
+                                    {
+                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str type = $2->identifier;
+                                        $$ = ast_formal_new(@1.first_line, @1.first_column, dummy, type, 0);
+                                        ast_reference_destroy(&$2);
+                                    }
                                 ;
 
 

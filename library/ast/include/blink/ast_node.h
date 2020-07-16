@@ -37,6 +37,7 @@ typedef struct ast_property ast_property;
 typedef struct ast_property_list_node ast_property_list_node;
 typedef struct ast_property_list ast_property_list;
 
+typedef enum ast_function_visibility ast_function_visibility;
 typedef struct ast_function ast_function;
 typedef struct ast_function_list_node ast_function_list_node;
 typedef struct ast_function_list ast_function_list;
@@ -145,10 +146,11 @@ extern ast_formal *ast_formal_new(unsigned long int line,
                                   str type, int isLazy);
 extern void ast_formal_destroy(ast_formal **this);
 
-extern ast_function *ast_function_new(unsigned long int line,
-                                      unsigned long int column, str name,
-                                      str returnType, ast_expression *body,
-                                      int isPrivate, int isOverride);
+extern ast_function *
+ast_function_new(unsigned long int line, unsigned long int column, str name,
+                 ast_formal_list *parameters, str returnType,
+                 ast_expression *body, ast_function_visibility visibility,
+                 int isAbstract, int isFinal, int isOverwrite);
 extern void ast_function_destroy(ast_function **this);
 
 extern ast_property *ast_property_new(unsigned long int line,
@@ -280,8 +282,8 @@ CREATE_LIST_TYPE(INTERFACE, ast_initialization, initialization)
 // -----------------------------------------------------------------------------
 
 enum ast_node_type {
-    AST_NODE_EXPRESSION,
-    AST_NODE_DEFINITION,
+    AST_NODE_TYPE_EXPRESSION,
+    AST_NODE_TYPE_DEFINITION,
 };
 
 #define AST_NODE_PROPERTIES                                                    \
@@ -424,14 +426,22 @@ struct ast_property_list {
     unsigned long int length;
 };
 
+enum ast_function_visibility {
+    AST_FUNCTION_VISIBILITY_PUBLIC,
+    AST_FUNCTION_VISIBILITY_PROTECTED,
+    AST_FUNCTION_VISIBILITY_PRIVATE,
+};
+
 struct ast_function {
     AST_DEFINITION_PROPERTIES
     str name;
     ast_formal_list *parameters;
     str returnType;
     ast_expression *body;
-    int isPrivate;
-    int isOverride;
+    ast_function_visibility visibility;
+    int isAbstract;
+    int isFinal;
+    int isOverwrite;
 };
 
 struct ast_function_list_node {

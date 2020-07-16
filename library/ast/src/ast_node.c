@@ -127,7 +127,7 @@
     type *this = calloc(1, sizeof(*this));                                     \
     if (!this) { return NULL; }                                                \
                                                                                \
-    this->astNodeType = AST_NODE_##node_type;                                  \
+    this->astNodeType = AST_NODE_TYPE_##node_type;                             \
     AST_NODE_##node_type##_INIT(node_subtype);                                 \
     this->line   = node_line;                                                  \
     this->column = node_column
@@ -301,15 +301,20 @@ void ast_formal_destroy(ast_formal **this) {
 }
 
 ast_function *ast_function_new(unsigned long int line, unsigned long int column,
-                               str name, str returnType, ast_expression *body,
-                               int isPrivate, int isOverride) {
+                               str name, ast_formal_list *parameters,
+                               str returnType, ast_expression *body,
+                               ast_function_visibility visibility,
+                               int isAbstract, int isFinal, int isOverwrite) {
     AST_NODE_ALLOC_INIT(ast_function, DEFINITION, FUNCTION, line, column);
 
-    this->name       = name;
-    this->returnType = returnType;
-    this->body       = body;
-    this->isPrivate  = isPrivate;
-    this->isOverride = isOverride;
+    this->name        = name;
+    this->parameters  = parameters;
+    this->returnType  = returnType;
+    this->body        = body;
+    this->visibility  = visibility;
+    this->isAbstract  = isAbstract;
+    this->isFinal     = isFinal;
+    this->isOverwrite = isOverwrite;
 
     return this;
 }
