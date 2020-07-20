@@ -64,10 +64,19 @@ typedef struct YYLTYPE {
         }                                                                                   \
     } while(0)
 
+extern ast *parser_get_ast();
+
 }
 
 %code {
 #include <stdlib.h>
+
+ast *astResult = NULL;
+
+ast *parser_get_ast() {
+    return astResult;
+}
+
 }
 
 %verbose
@@ -77,10 +86,13 @@ typedef struct YYLTYPE {
 %union{
     int operator;
     str value;
+    ast_program *program;
     ast_assignment *assignment;
     ast_binary_expression *binary_expression;
     ast_block *block;
     ast_cast *cast;
+    ast_class *class;
+    ast_class_list *classes;
     ast_constructor_call *constructor_call;
     ast_expression *expression;
     ast_expression_list *expressions;
@@ -157,15 +169,18 @@ typedef struct YYLTYPE {
 %nonassoc   IN_KEYWORD
 %left       '(' ')' '.'
 
+%type <program>            program
 %type <assignment>         assignment
 %type <binary_expression>  binary_expression
 %type <block>              block
 %type <constructor_call>   constructor_call
 %type <cast>               cast
+%type <class>              class_body class_definition
+%type <classes>            classes package
 %type <expression>         dispatch expression value literal
-%type <expressions>        expressions expressions_list actuals_definition actuals
+%type <expressions>        expressions expressions_list actuals_definition actuals class_actuals
 %type <formal>             formal
-%type <formals>            formals_definition formals
+%type <formals>            formals_definition formals class_formals
 %type <function>           method_signature method_definition
 %type <if_else_expression> if_else
 %type <initialization>     initialization
@@ -185,6 +200,11 @@ typedef struct YYLTYPE {
 
 /* program definitions */
 program                         : imports package
+                                    {
+                                        $$ = ast_program_new($2); // TODO: use $1
+
+                                        astResult = ast_new($$);
+                                    }
                                 ;
 
 imports                         : /* empty */
@@ -192,28 +212,82 @@ imports                         : /* empty */
                                 ;
 
 package                         : PACKAGE_KEYWORD classes
+                                    {
+                                        $$ = $2;
+                                    }
                                 ;
 
 classes                         : class_definition
+                                    {
+                                        ast_class *class = $1;
+                                        $$ = ast_class_list_new();
+                                        ast_class_list_prepend($$, class);
+                                    }
                                 | classes class_definition
+                                    {
+                                        ast_class *class = $2;
+                                        $$ = $1;
+                                        ast_class_list_prepend($$, class);
+                                    }
                                 ;
 
 /* class definitions */
 class_definition                : CLASS_KEYWORD IDENTIFIER class_formals '{' class_body '}' ';'
-                                | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD class_actuals '{' class_body '}' ';'
+                                    {
+                                        str name = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        $$ = $5;
+                                        $$->name = name;
+                                    }
+                                | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' ';'
+                                    {
+                                        str name = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        str superClass = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        $$ = $8;
+                                        $$->name = name;
+                                        $$->superClass = superClass;
+                                    }
                                 ;
 
 class_formals                   : /* empty */
+                                    {
+                                        $$ = ast_formal_list_new();
+                                    }
                                 | formals_definition
+                                    {
+                                        $$ = $1;
+                                    }
                                 ;
 
 class_actuals                   : /* empty */
+                                    {
+                                        $$ = ast_expression_list_new();
+                                    }
                                 | actuals_definition
+                                    {
+                                        $$ = $1;
+                                    }
                                 ;
 
 class_body                      : /* empty */
+                                    {
+                                        str name = STR_NULL;
+                                        str superClass = STR_STATIC_INIT("Object"); // FIXME: this needs to be redone
+                                        ast_property_list *properties = ast_property_list_new();
+                                        ast_function_list *functions = ast_function_list_new();
+                                        $$ = ast_class_new(0, 0, name, NULL, superClass, NULL, properties, functions);
+                                    }
                                 | class_body property_definition
+                                    {
+                                        ast_property *property = $2;
+                                        $$ = $1;
+                                        ast_property_list_prepend($$->properties, property);
+                                    }
                                 | class_body method_definition
+                                    {
+                                        ast_function *function = $2;
+                                        $$ = $1;
+                                        ast_function_list_prepend($$->functions, function);
+                                    }
                                 ;
 
 /* properties definitions */
@@ -243,14 +317,12 @@ property_definition             : VAR_KEYWORD IDENTIFIER type value ';'
 method_definition               : ABSTRACT_KEYWORD method_visibility method_signature ';'
                                     {
                                         $$ = $3;
-
                                         $$->isAbstract = 1;
                                         $$->visibility = $2;
                                     }
                                 | method_final method_overwrite method_visibility method_signature value ';'
                                     {
                                         $$ = $4;
-
                                         $$->isFinal = $1;
                                         $$->isOverwrite = $2;
                                         $$->visibility = $3;

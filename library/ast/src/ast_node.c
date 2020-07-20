@@ -136,8 +136,9 @@
     free(*this);                                                               \
     *this = NULL
 
+
 // -----------------------------------------------------------------------------
-// Implementation of public functions
+// Public functions
 // -----------------------------------------------------------------------------
 
 void ast_definition_destroy(ast_definition **this) {
@@ -255,11 +256,6 @@ ast_class *ast_class_new(unsigned long int line, unsigned long int column,
                          ast_expression_list *superClassArgs,
                          ast_property_list *properties,
                          ast_function_list *functions) {
-    assert(parameters != NULL);
-    assert(superClassArgs != NULL);
-    assert(properties != NULL);
-    assert(functions != NULL);
-
     AST_NODE_ALLOC_INIT(ast_class, DEFINITION, CLASS, line, column);
 
     this->name           = name;

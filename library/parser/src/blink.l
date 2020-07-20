@@ -22,29 +22,27 @@ static struct blink_yy_state {
 } import_stack[MAX_IMPORT_DEPTH];
 int import_stack_ptr = 0;
 
-#define YY_USER_ACTION                          \
-    yylloc.filename     = yylloc.filename;      \
-    yylloc.first_line   = yylloc.last_line;     \
-    yylloc.first_column = yylloc.last_column;   \
-    for(int i = 0; yytext[i] != '\0'; ++i) {    \
-        if(yytext[i] == '\n') {                 \
-            yylloc.last_line++;                 \
-            yylloc.last_column = 0;             \
-        } else {                                \
-            yylloc.last_column++;               \
-        }                                       \
+#define YY_USER_ACTION                                                         \
+    yylloc.filename     = yylloc.filename;                                     \
+    yylloc.first_line   = yylloc.last_line;                                    \
+    yylloc.first_column = yylloc.last_column;                                  \
+    for(int i = 0; yytext[i] != '\0'; ++i) {                                   \
+        if(yytext[i] == '\n') {                                                \
+            yylloc.last_line++;                                                \
+            yylloc.last_column = 0;                                            \
+        } else {                                                               \
+            yylloc.last_column++;                                              \
+        }                                                                      \
     }
 
-static int blink_push_yy_state(char *import, int importLength);
-static int blink_pop_yy_state();
+static int lexer_push_yy_state(char *import, int importLength);
+static int lexer_pop_yy_state();
 
-static int blink_needs_semicolon();
+static int lexer_needs_semicolon();
 
 static int lastToken = -1;
-#define RETURN(token)                                                       \
-    lastToken = token;                                                      \
-    fprintf(stdout, "Token: %s\tType: %d\tLine: %d\tColumn: %d\n",          \
-            yytext, token, yylloc.first_line + 1, yylloc.first_column + 1); \
+#define RETURN(token)                                                          \
+    lastToken = token;                                                         \
     return token;
 
 %}
@@ -71,7 +69,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 <IMPORT>{not_whitespace}+                                                               {
                                                                                             printf("<IMPORT_KEYWORD: %s>\n", yytext);
 
-                                                                                            if (!blink_push_yy_state(yytext, yyleng)) {
+                                                                                            if (!lexer_push_yy_state(yytext, yyleng)) {
                                                                                                 exit(1);
                                                                                             }
 
@@ -85,7 +83,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
                                                                                         }
 
 <<EOF>>                                                                                 {
-                                                                                            if (!blink_pop_yy_state()) {
+                                                                                            if (!lexer_pop_yy_state()) {
                                                                                                 yyterminate();
                                                                                             }
                                                                                         }
@@ -160,7 +158,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
                                                                                         }
 
 \n+                                                                                     {
-                                                                                            if (blink_needs_semicolon()) {
+                                                                                            if (lexer_needs_semicolon()) {
                                                                                                 printf("$insert: ';'\n");
                                                                                                 RETURN(';');
                                                                                             }
@@ -173,7 +171,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 
 %%
 
-static int blink_needs_semicolon() {
+static int lexer_needs_semicolon() {
     switch (lastToken) {
         case INTEGER_LITERAL:
         case DECIMAL_LITERAL:
@@ -208,7 +206,7 @@ static int blink_getFileNameForImport(char *import, int importLength, str *resul
     return 1;
 }
 
-static int blink_push_yy_state(char *import, int importLength) {
+static int lexer_push_yy_state(char *import, int importLength) {
     str sourceFileName = STR_NULL;
 
     if (import_stack_ptr >= MAX_IMPORT_DEPTH) {
@@ -244,7 +242,7 @@ static int blink_push_yy_state(char *import, int importLength) {
     return 1;
 }
 
-static int blink_pop_yy_state() {
+static int lexer_pop_yy_state() {
     if (import_stack[import_stack_ptr].filename.s) {
         free(import_stack[import_stack_ptr].filename.s);
         import_stack[import_stack_ptr].filename.s   = NULL;

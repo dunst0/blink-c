@@ -7,17 +7,19 @@
 int main(int argc, char **argv) {
     extern FILE *yyin;
 
-    char *sourceFile = "stdin";
+    FILE *graphFile    = NULL;
+    char *sourceFile   = "stdin";
     str sourceFileName = STR_NULL;
-    int loadFromFile = 0;
+    int loadFromFile   = 0;
+    ast *astResult     = NULL;
 
     if (argc == 2) {
-        sourceFile = argv[1];
+        sourceFile   = argv[1];
         loadFromFile = 1;
     }
 
     sourceFileName.len = snprintf(NULL, 0, "%s", sourceFile) + 1;
-    sourceFileName.s = calloc(sourceFileName.len, sizeof(*sourceFileName.s));
+    sourceFileName.s   = calloc(sourceFileName.len, sizeof(*sourceFileName.s));
     if (!sourceFileName.s) {
         fprintf(stderr, "Error: could not allocate memory for filename\n");
         return 2;
@@ -32,7 +34,7 @@ int main(int argc, char **argv) {
 
     printf("%s: start parsing from '%.*s'\n", argv[0], STR_FMT(&sourceFileName));
 
-    yydebug = 1;
+    yydebug         = 0;
     yylloc.filename = sourceFileName;
 
     if (yyparse() != 0) {
@@ -40,6 +42,17 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("blink parse worked\n");
+
+    astResult = parser_get_ast();
+    if (!astResult) {
+        fprintf(stderr, "Error: could not allocate memory for ast\n");
+        return 1;
+    }
+
+    graphFile = fopen("graph.dot", "w");
+    ast_generate_graph(astResult, graphFile);
+
+    ast_destroy(&astResult);
 
     return 0;
 }
