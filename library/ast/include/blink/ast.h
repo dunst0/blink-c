@@ -32,6 +32,9 @@ typedef struct ast_callbacks {
     ast_class_callback classCallback;
     ast_formal_callback formalCallback;
     ast_function_callback functionCallback;
+    ast_expression_callback expressionCallback;
+    ast_assignment_callback assignmentCallback;
+    ast_string_literal_callback stringLiteralCallback;
 } ast_callbacks;
 
 
@@ -42,16 +45,22 @@ typedef struct ast_callbacks {
 /**
  * @brief Create the AST.
  * @param[in] program The program node for the AST
- * @return On success a pointer to ast, else NULL
+ * @return On success a pointer to AST, else NULL
  */
 extern ast *ast_new(ast_program *program);
 
 /**
  * @brief Destroy the AST and its content.
- * @param[in,out] this The ast to destroy
+ * @param[in,out] this The AST to destroy
  */
 extern void ast_destroy(ast **this);
 
+/**
+ * @brief Walk the AST with ast_callbacks and args.
+ * @param[in,out] this The AST to walk
+ * @param[in] callbacks TODO
+ * @param args TODO
+ */
 extern void ast_walk(ast *this, ast_callbacks *callbacks, void *args);
 
 /**

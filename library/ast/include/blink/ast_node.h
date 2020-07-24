@@ -8,6 +8,7 @@
 #ifndef BLINK_AST_NODE_H
 #define BLINK_AST_NODE_H
 
+#include <blink/list.h>
 #include <blink/str.h>
 
 
@@ -71,8 +72,8 @@ typedef enum ast_expression_type {
  */
 #define AST_NODE_PROPERTIES                                                    \
     ast_node_type astNodeType;                                                 \
-    unsigned long int line;                                                    \
-    unsigned long int column;
+    unsigned long long line;                                                   \
+    unsigned long long column;
 
 /**
  * @brief Properties for a definition AST node in general.
@@ -106,41 +107,31 @@ typedef struct ast_definition ast_definition;
 typedef struct ast_expression ast_expression;
 
 /**
- * @brief Type representing an expression list node.
- */
-typedef struct ast_expression_list_node ast_expression_list_node;
-
-/**
  * @brief Type representing an expression list.
  */
-typedef struct ast_expression_list ast_expression_list;
+typedef list ast_expression_list;
 
 typedef struct ast_program ast_program;
 
 typedef struct ast_class ast_class;
-typedef struct ast_class_list_node ast_class_list_node;
-typedef struct ast_class_list ast_class_list;
+typedef list ast_class_list;
 
 typedef struct ast_formal ast_formal;
-typedef struct ast_formal_list_node ast_formal_list_node;
-typedef struct ast_formal_list ast_formal_list;
+typedef list ast_formal_list;
 
 typedef struct ast_property ast_property;
-typedef struct ast_property_list_node ast_property_list_node;
-typedef struct ast_property_list ast_property_list;
+typedef list ast_property_list;
 
 typedef enum ast_function_visibility ast_function_visibility;
 typedef struct ast_function ast_function;
-typedef struct ast_function_list_node ast_function_list_node;
-typedef struct ast_function_list ast_function_list;
+typedef list ast_function_list;
 
 typedef struct ast_block ast_block;
 
 typedef struct ast_let ast_let;
 
 typedef struct ast_initialization ast_initialization;
-typedef struct ast_initialization_list_node ast_initialization_list_node;
-typedef struct ast_initialization_list ast_initialization_list;
+typedef list ast_initialization_list;
 
 typedef struct ast_assignment ast_assignment;
 typedef struct ast_cast ast_cast;
@@ -167,6 +158,15 @@ typedef struct ast_decimal_literal ast_decimal_literal;
 typedef struct ast_null_literal ast_null_literal;
 typedef struct ast_string_literal ast_string_literal;
 
+typedef void (*ast_program_callback)(ast_program *program, void *args);
+typedef void (*ast_class_callback)(ast_class *class, void *args);
+typedef void (*ast_formal_callback)(ast_formal *formal, void *args);
+typedef void (*ast_function_callback)(ast_function *function, void *args);
+typedef void (*ast_expression_callback)(ast_expression *expression, void *args);
+typedef void (*ast_assignment_callback)(ast_assignment *assignment, void *args);
+typedef void (*ast_string_literal_callback)(ast_string_literal *stringLiteral,
+                                            void *args);
+
 struct ast_node {
     AST_NODE_PROPERTIES
 };
@@ -177,18 +177,6 @@ struct ast_definition {
 
 struct ast_expression {
     AST_EXPRESSION_PROPERTIES
-};
-
-struct ast_expression_list_node {
-    ast_expression *expression;
-    ast_expression_list_node *next;
-    ast_expression_list_node *prev;
-};
-
-struct ast_expression_list {
-    ast_expression_list_node *head;
-    ast_expression_list_node *tail;
-    unsigned long int length;
 };
 
 struct ast_program {
@@ -206,18 +194,6 @@ struct ast_class {
     ast_function_list *functions;
 };
 
-struct ast_class_list_node {
-    ast_class *class;
-    ast_class_list_node *next;
-    ast_class_list_node *prev;
-};
-
-struct ast_class_list {
-    ast_class_list_node *head;
-    ast_class_list_node *tail;
-    unsigned long int length;
-};
-
 struct ast_formal {
     AST_DEFINITION_PROPERTIES
     str identifier;
@@ -225,35 +201,11 @@ struct ast_formal {
     int isLazy;
 };
 
-struct ast_formal_list_node {
-    ast_formal *formal;
-    ast_formal_list_node *next;
-    ast_formal_list_node *prev;
-};
-
-struct ast_formal_list {
-    ast_formal_list_node *head;
-    ast_formal_list_node *tail;
-    unsigned long int length;
-};
-
 struct ast_property {
     AST_DEFINITION_PROPERTIES
     str name;
     str type;
     ast_expression *value;
-};
-
-struct ast_property_list_node {
-    ast_property *property;
-    ast_property_list_node *next;
-    ast_property_list_node *prev;
-};
-
-struct ast_property_list {
-    ast_property_list_node *head;
-    ast_property_list_node *tail;
-    unsigned long int length;
 };
 
 enum ast_function_visibility {
@@ -274,18 +226,6 @@ struct ast_function {
     int isOverwrite;
 };
 
-struct ast_function_list_node {
-    ast_function *function;
-    ast_function_list_node *next;
-    ast_function_list_node *prev;
-};
-
-struct ast_function_list {
-    ast_function_list_node *head;
-    ast_function_list_node *tail;
-    unsigned long int length;
-};
-
 struct ast_block {
     AST_EXPRESSION_PROPERTIES
     ast_expression_list *expressions;
@@ -302,18 +242,6 @@ struct ast_initialization {
     str identifier;
     str type;
     ast_expression *value;
-};
-
-struct ast_initialization_list_node {
-    ast_initialization *initialization;
-    ast_initialization_list_node *next;
-    ast_initialization_list_node *prev;
-};
-
-struct ast_initialization_list {
-    ast_initialization_list_node *head;
-    ast_initialization_list_node *tail;
-    unsigned long int length;
 };
 
 struct ast_assignment {
@@ -424,17 +352,6 @@ struct ast_string_literal {
 
 
 // -----------------------------------------------------------------------------
-// Callback types
-// -----------------------------------------------------------------------------
-
-typedef void (*ast_program_callback)(ast_program *program, void *args);
-typedef void (*ast_class_callback)(ast_class *class, void *args);
-typedef void (*ast_formal_callback)(ast_formal *formal, void *args);
-typedef void (*ast_function_callback)(ast_function *function, void *args);
-typedef void (*ast_function_callback)(ast_function *function, void *args);
-
-
-// -----------------------------------------------------------------------------
 // Defines
 // -----------------------------------------------------------------------------
 
@@ -449,15 +366,19 @@ typedef void (*ast_function_callback)(ast_function *function, void *args);
 #define INTERFACE_LIST_POP(type, elem)                                         \
     extern type *type##_list_pop(type##_list *this)
 
-#define INTERFACE_LIST_PREPEND(type, elem)                                     \
-    extern int type##_list_prepend(type##_list *this, type *elem)
+#define INTERFACE_LIST_UNSHIFT(type, elem)                                     \
+    extern int type##_list_unshift(type##_list *this, type *elem)
+
+#define INTERFACE_LIST_SHIFT(type, elem)                                       \
+    extern type *type##_list_shift(type##_list *this)
 
 #define CREATE_LIST_TYPE(kind, type, elem)                                     \
     kind##_LIST_NEW(type);                                                     \
     kind##_LIST_DESTROY(type, elem);                                           \
     kind##_LIST_PUSH(type, elem);                                              \
     kind##_LIST_POP(type, elem);                                               \
-    kind##_LIST_PREPEND(type, elem);
+    kind##_LIST_UNSHIFT(type, elem);                                           \
+    kind##_LIST_SHIFT(type, elem);
 
 
 // -----------------------------------------------------------------------------

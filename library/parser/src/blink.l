@@ -145,7 +145,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 
 0|{positive_number}                                                                     { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(INTEGER_LITERAL); }
 ((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(DECIMAL_LITERAL); }
-\"(\\.|[^"\\])*\"                                                                       { yylval.value.s = yytext + 1; yylval.value.len = yyleng - 1; RETURN(STRING_LITERAL); }
+\"(\\.|[^"\\])*\"                                                                       { yylval.value.s = yytext + 1; yylval.value.len = yyleng - 2; RETURN(STRING_LITERAL); }
 
 <METHOD>(operator{operator})|(({letter}|_)({letter}|{digit}|_)*)                        {
                                                                                             printf("<METHOD_NAME: %s>\n", yytext);

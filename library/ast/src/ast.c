@@ -1,6 +1,9 @@
-//
-// Created by rick on 26.03.20.
-//
+/**
+ * @file ast.c
+ * @author rick
+ * @date 26.03.20
+ * @brief File for the AST implementation
+ */
 
 #include "blink/ast.h"
 
@@ -11,12 +14,13 @@
 //  Local types
 // -----------------------------------------------------------------------------
 
+/**
+ * @brief Type for the printing the AST.
+ */
 typedef struct ast_printer {
     FILE *outFile;
     ast_callbacks callbacks;
-    unsigned long int classCount;
-    unsigned long int formalCount;
-    unsigned long int functionCount;
+    unsigned long long nodeCount;
 } ast_printer;
 
 
@@ -25,69 +29,70 @@ typedef struct ast_printer {
 // -----------------------------------------------------------------------------
 
 static void ast_program_printer(ast_program *program, void *args) {
-    ast_printer *printer      = (ast_printer *) args;
-    ast_class_list_node *node = NULL;
+    ast_printer *printer = (ast_printer *) args;
+    list_node *node      = NULL;
 
     fprintf(printer->outFile, "digraph AST {\n");
     fprintf(printer->outFile, "\tnode [shape=record]\n");
     fprintf(printer->outFile, "\tprogram [label=\"{ %s }\"];\n", "ast_program");
     for (node = program->classes->head; node; node = node->next) {
+        ast_class *class = (ast_class *) node->element;
         fprintf(printer->outFile, "\tprogram -> ");
-        printer->callbacks.classCallback(node->class, args);
+        printer->callbacks.classCallback(class, args);
     }
     fprintf(printer->outFile, "}\n");
 }
 
 static void ast_class_printer(ast_class *class, void *args) {
-    ast_printer *printer = (ast_printer *) args;
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+    list_node *node              = NULL;
 
-    fprintf(printer->outFile, "class%lu;\n", printer->classCount);
+    fprintf(printer->outFile, "class%llu;\n", nodeCount);
     fprintf(printer->outFile,
-            "\tclass%lu"
+            "\tclass%llu"
             " [label=\"{ %s"
             " | { name: %.*s  }"
             " | { super: %.*s }"
             " }\"];\n",
-            printer->classCount, "ast_class", STR_FMT(&class->name),
+            nodeCount, "ast_class", STR_FMT(&class->name),
             STR_FMT(&class->superClass));
     if (class->parameters) {
-        ast_formal_list_node *node = NULL;
         for (node = class->parameters->head; node; node = node->next) {
-            fprintf(printer->outFile, "\tclass%lu -> ", printer->classCount);
-            printer->callbacks.formalCallback(node->formal, args);
+            ast_formal *formal = (ast_formal *) node->element;
+            fprintf(printer->outFile, "\tclass%llu -> ", nodeCount);
+            printer->callbacks.formalCallback(formal, args);
         }
     }
 
     if (class->functions) {
-        ast_function_list_node *node = NULL;
         for (node = class->functions->head; node; node = node->next) {
-            fprintf(printer->outFile, "\tclass%lu -> ", printer->classCount);
-            printer->callbacks.functionCallback(node->function, args);
+            ast_function *function = (ast_function *) node->element;
+            fprintf(printer->outFile, "\tclass%llu -> ", nodeCount);
+            printer->callbacks.functionCallback(function, args);
         }
     }
-
-    printer->classCount++;
 }
 
 static void ast_formal_printer(ast_formal *formal, void *args) {
-    ast_printer *printer = (ast_printer *) args;
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
 
-    fprintf(printer->outFile, "formal%lu;\n", printer->formalCount);
+    fprintf(printer->outFile, "formal%llu;\n", nodeCount);
     fprintf(printer->outFile,
-            "\tformal%lu"
+            "\tformal%llu"
             " [label=\"{ %s"
             " | { identifier: %.*s  }"
             " | { type: %.*s }"
             " | { isLazy: %s }"
             " }\"];\n",
-            printer->formalCount, "ast_formal", STR_FMT(&formal->identifier),
+            nodeCount, "ast_formal", STR_FMT(&formal->identifier),
             STR_FMT(&formal->type), (formal->isLazy ? "true" : "false"));
-
-    printer->formalCount++;
 }
 
 static void ast_function_printer(ast_function *function, void *args) {
-    ast_printer *printer = (ast_printer *) args;
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
 
     str visibility = STR_NULL;
     switch (function->visibility) {
@@ -102,9 +107,9 @@ static void ast_function_printer(ast_function *function, void *args) {
             break;
     }
 
-    fprintf(printer->outFile, "function%lu;\n", printer->functionCount);
+    fprintf(printer->outFile, "function%llu;\n", nodeCount);
     fprintf(printer->outFile,
-            "\tfunction%lu"
+            "\tfunction%llu"
             " [label=\"{ %s "
             " | { name: %.*s  }"
             " | { returnType: %.*s }"
@@ -113,13 +118,102 @@ static void ast_function_printer(ast_function *function, void *args) {
             " | { isFinal: %s }"
             " | { isOverwrite: %s }"
             " }\"];\n",
-            printer->functionCount, "ast_function", STR_FMT(&function->name),
+            nodeCount, "ast_function", STR_FMT(&function->name),
             STR_FMT(&function->returnType), STR_FMT(&visibility),
             (function->isAbstract ? "true" : "false"),
             (function->isFinal ? "true" : "false"),
             (function->isOverwrite ? "true" : "false"));
+    if (function->body) {
+        fprintf(printer->outFile, "\tfunction%llu -> ", nodeCount);
+        printer->callbacks.expressionCallback(function->body, args);
+    }
+}
 
-    printer->functionCount++;
+static void ast_expression_printer(ast_expression *expression, void *args) {
+    ast_printer *printer = (ast_printer *) args;
+
+    switch (expression->astExpressionType) {
+        case AST_EXPRESSION_TYPE_INTEGER_LITERAL:
+            break;
+        case AST_EXPRESSION_TYPE_BOOLEAN_LITERAL:
+            break;
+        case AST_EXPRESSION_TYPE_DECIMAL_LITERAL:
+            break;
+        case AST_EXPRESSION_TYPE_NULL_LITERAL:
+            break;
+        case AST_EXPRESSION_TYPE_STRING_LITERAL:
+            printer->callbacks.stringLiteralCallback(
+                    (ast_string_literal *) expression, args);
+            break;
+        case AST_EXPRESSION_TYPE_THIS_LITERAL:
+            break;
+        case AST_EXPRESSION_TYPE_ASSIGNMENT:
+            printer->callbacks.assignmentCallback((ast_assignment *) expression,
+                                                  args);
+            break;
+        case AST_EXPRESSION_TYPE_REFERENCE:
+            break;
+        case AST_EXPRESSION_TYPE_CAST:
+            break;
+        case AST_EXPRESSION_TYPE_INITIALIZATION:
+            break;
+        case AST_EXPRESSION_TYPE_LET:
+            break;
+        case AST_EXPRESSION_TYPE_BLOCK:
+            break;
+        case AST_EXPRESSION_TYPE_CONSTRUCTOR_CALL:
+            break;
+        case AST_EXPRESSION_TYPE_FUNCTION_CALL:
+            break;
+        case AST_EXPRESSION_TYPE_SUPER_FUNCTION_CALL:
+            break;
+        case AST_EXPRESSION_TYPE_BINARY_EXPRESSION:
+            break;
+        case AST_EXPRESSION_TYPE_UNARY_EXPRESSION:
+            break;
+        case AST_EXPRESSION_TYPE_IF_ELSE:
+            break;
+        case AST_EXPRESSION_TYPE_WHILE:
+            break;
+        case AST_EXPRESSION_TYPE_LAZY_EXPRESSION:
+            break;
+        case AST_EXPRESSION_TYPE_NATIVE_EXPRESSION:
+            break;
+    }
+}
+
+static void ast_assignment_printer(ast_assignment *assignment, void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    fprintf(printer->outFile, "assignment%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tassignment%llu"
+            " [label=\"{ %s "
+            " | { identifier: %.*s  }"
+            " | { operator: %.*s }"
+            " }\"];\n",
+            nodeCount, "ast_assignment", STR_FMT(&assignment->identifier),
+            STR_FMT(&assignment->operator));
+
+    if (assignment->value) {
+        fprintf(printer->outFile, "\tassignment%llu -> ", nodeCount);
+        printer->callbacks.expressionCallback(assignment->value, args);
+    }
+}
+
+static void ast_string_literal_printer(ast_string_literal *stringLiteral,
+                                       void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    fprintf(printer->outFile, "string_literal%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tstring_literal%llu"
+            " [label=\"{ %s "
+            " | { value: %.*s }"
+            " }\"];\n",
+            nodeCount, "ast_string_literal", STR_FMT(&stringLiteral->value));
 }
 
 
@@ -157,10 +251,13 @@ void ast_walk(ast *this, ast_callbacks *callbacks, void *args) {
 
 void ast_generate_graph(const ast *this, FILE *file) {
     ast_callbacks callbacks = {
-            .programCallback  = ast_program_printer,
-            .classCallback    = ast_class_printer,
-            .formalCallback   = ast_formal_printer,
-            .functionCallback = ast_function_printer,
+            .programCallback       = ast_program_printer,
+            .classCallback         = ast_class_printer,
+            .formalCallback        = ast_formal_printer,
+            .functionCallback      = ast_function_printer,
+            .expressionCallback    = ast_expression_printer,
+            .assignmentCallback    = ast_assignment_printer,
+            .stringLiteralCallback = ast_string_literal_printer,
     };
     ast_printer printer = {
             .callbacks = callbacks,

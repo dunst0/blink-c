@@ -1,6 +1,9 @@
-//
-// Created by rick on 08.03.20.
-//
+/**
+ * @file ast_node.c
+ * @author rick
+ * @date 08.03.20
+ * @brief File for the AST node implementation
+ */
 
 #include "blink/ast_node.h"
 
@@ -14,107 +17,34 @@
 
 #define IMPLEMENTATION_LIST_NEW(type)                                          \
     type##_list *type##_list_new() {                                           \
-        type##_list *this = calloc(1, sizeof(*this));                          \
-        if (!this) { return NULL; }                                            \
-                                                                               \
-        this->head   = NULL;                                                   \
-        this->tail   = NULL;                                                   \
-        this->length = 0;                                                      \
-                                                                               \
-        return this;                                                           \
+        return (type##_list *) list_new(                                       \
+                (list_element_destroy) type##_destroy);                        \
     }
 
 #define IMPLEMENTATION_LIST_DESTROY(type, elem)                                \
     void type##_list_destroy(type##_list **this) {                             \
-        if (!this || !(*this)) { return; }                                     \
-                                                                               \
-        while ((*this)->head) {                                                \
-            type##_list_node *temp = (*this)->head;                            \
-            (*this)->head          = (*this)->head->next;                      \
-                                                                               \
-            type##_destroy(&temp->elem);                                       \
-            free(temp);                                                        \
-        }                                                                      \
-                                                                               \
-        free(*this);                                                           \
-        *this = NULL;                                                          \
+        list_destroy((list **) this);                                          \
     }
 
 #define IMPLEMENTATION_LIST_PUSH(type, elem)                                   \
     int type##_list_push(type##_list *this, type *elem) {                      \
-        type##_list_node *node = NULL;                                         \
-                                                                               \
-        if (!this || !elem) { return 0; }                                      \
-                                                                               \
-        node = calloc(1, sizeof(*node));                                       \
-        if (!node) { return 0; }                                               \
-                                                                               \
-        node->elem = elem;                                                     \
-                                                                               \
-        if (this->tail == NULL) {                                              \
-            this->head = this->tail = node;                                    \
-        } else {                                                               \
-            node->prev       = this->tail;                                     \
-            this->tail->next = node;                                           \
-            this->tail       = node;                                           \
-        }                                                                      \
-                                                                               \
-        this->length++;                                                        \
-                                                                               \
-        return 1;                                                              \
+        return list_push((list *) this, (void *) elem);                        \
     }
 
 #define IMPLEMENTATION_LIST_POP(type, elem)                                    \
     type *type##_list_pop(type##_list *this) {                                 \
-        type##_list_node *node = NULL;                                         \
-        type *elem             = NULL;                                         \
-                                                                               \
-        if (!this || this->length == 0) { return NULL; }                       \
-                                                                               \
-        node = this->tail;                                                     \
-        elem = node->elem;                                                     \
-                                                                               \
-        this->tail = this->tail->prev;                                         \
-        this->length--;                                                        \
-        if (this->tail != NULL) {                                              \
-            this->tail->next = NULL;                                           \
-        } else {                                                               \
-            this->head = NULL;                                                 \
-        }                                                                      \
-                                                                               \
-        free(node);                                                            \
-                                                                               \
-        return elem;                                                           \
+        return (type *) list_pop((list *) this);                               \
     }
 
-#define IMPLEMENTATION_LIST_PREPEND(type, elem)                                \
-    int type##_list_prepend(type##_list *this, type *elem) {                   \
-        type##_list_node *node = NULL;                                         \
-                                                                               \
-        if (!this || !elem) { return 0; }                                      \
-                                                                               \
-        node = calloc(1, sizeof(*node));                                       \
-        if (!node) { return 0; }                                               \
-                                                                               \
-        node->elem = elem;                                                     \
-                                                                               \
-        if (this->head == NULL) {                                              \
-            this->head = this->tail = node;                                    \
-        } else {                                                               \
-            node->next       = this->head;                                     \
-            this->head->prev = node;                                           \
-            this->head       = node;                                           \
-        }                                                                      \
-                                                                               \
-        this->length++;                                                        \
-                                                                               \
-        return 1;                                                              \
+#define IMPLEMENTATION_LIST_UNSHIFT(type, elem)                                \
+    int type##_list_unshift(type##_list *this, type *elem) {                   \
+        return list_unshift((list *) this, (void *) elem);                     \
     }
 
-
-// -----------------------------------------------------------------------------
-// Local functions
-// -----------------------------------------------------------------------------
+#define IMPLEMENTATION_LIST_SHIFT(type, elem)                                  \
+    type *type##_list_shift(type##_list *this) {                               \
+        return (type *) list_shift((list *) this);                             \
+    }
 
 #define AST_NODE_DEFINITION_INIT(node_subtype)                                 \
     this->astDefinitionType = AST_DEFINITION_TYPE_##node_subtype
@@ -135,6 +65,11 @@
 #define AST_NODE_FREE()                                                        \
     free(*this);                                                               \
     *this = NULL
+
+
+// -----------------------------------------------------------------------------
+// Local functions
+// -----------------------------------------------------------------------------
 
 
 // -----------------------------------------------------------------------------
@@ -234,8 +169,6 @@ void ast_expression_destroy(ast_expression **this) {
 }
 
 ast_program *ast_program_new(ast_class_list *classes) {
-    assert(classes != NULL && "class list is not allowed to be NULL");
-
     AST_NODE_ALLOC_INIT(ast_program, DEFINITION, PROGRAM, 0, 0);
 
     this->classes = classes;

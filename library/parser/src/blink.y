@@ -221,13 +221,13 @@ classes                         : class_definition
                                     {
                                         ast_class *class = $1;
                                         $$ = ast_class_list_new();
-                                        ast_class_list_prepend($$, class);
+                                        ast_class_list_unshift($$, class);
                                     }
                                 | classes class_definition
                                     {
                                         ast_class *class = $2;
                                         $$ = $1;
-                                        ast_class_list_prepend($$, class);
+                                        ast_class_list_unshift($$, class);
                                     }
                                 ;
 
@@ -280,13 +280,13 @@ class_body                      : /* empty */
                                     {
                                         ast_property *property = $2;
                                         $$ = $1;
-                                        ast_property_list_prepend($$->properties, property);
+                                        ast_property_list_unshift($$->properties, property);
                                     }
                                 | class_body method_definition
                                     {
                                         ast_function *function = $2;
                                         $$ = $1;
-                                        ast_function_list_prepend($$->functions, function);
+                                        ast_function_list_unshift($$->functions, function);
                                     }
                                 ;
 
@@ -398,7 +398,7 @@ formals                         : /* empty */
                                     {
                                         ast_formal *formal = $2;
                                         $$ = $1;
-                                        ast_formal_list_prepend($$, formal);
+                                        ast_formal_list_unshift($$, formal);
                                     }
                                 ;
 
@@ -677,7 +677,7 @@ expressions                     : /* empty */
                                     {
                                         ast_expression *expression = $1;
                                         $$ = ast_expression_list_new();
-                                        ast_expression_list_prepend($$, expression);
+                                        ast_expression_list_unshift($$, expression);
                                     }
                                 | expressions_list
                                     {
@@ -689,13 +689,13 @@ expressions_list                : expression ';'
                                     {
                                         ast_expression *expression = $1;
                                         $$ = ast_expression_list_new();
-                                        ast_expression_list_prepend($$, expression);
+                                        ast_expression_list_unshift($$, expression);
                                     }
                                 | expressions_list expression ';'
                                     {
                                         ast_expression *expression = $2;
                                         $$ = $1;
-                                        ast_expression_list_prepend($$, expression);
+                                        ast_expression_list_unshift($$, expression);
                                     }
                                 ;
 
@@ -716,7 +716,7 @@ actuals                         : /* empty */
                                     {
                                         ast_expression *expression = $2;
                                         $$ = $1;
-                                        ast_expression_list_prepend($$, expression);
+                                        ast_expression_list_unshift($$, expression);
                                     }
                                 ;
 
@@ -724,13 +724,13 @@ initialization_list             : initialization
                                     {
                                         ast_initialization *initialization = $1;
                                         $$ = ast_initialization_list_new();
-                                        ast_initialization_list_prepend($$, initialization);
+                                        ast_initialization_list_unshift ($$, initialization);
                                     }
                                 | initialization_list initialization ','
                                     {
                                         ast_initialization *initialization = $2;
                                         $$ = $1;
-                                        ast_initialization_list_prepend($$, initialization);
+                                        ast_initialization_list_unshift($$, initialization);
                                     }
                                 ;
 

@@ -21,5 +21,4 @@ target_sources(ast
 
 target_include_directories(ast PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-target_link_libraries(ast PUBLIC utils)
-
+target_link_libraries(ast PUBLIC list utils)
