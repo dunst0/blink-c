@@ -40,6 +40,64 @@ typedef struct list {
 
 
 // -----------------------------------------------------------------------------
+// Defines
+// -----------------------------------------------------------------------------
+
+#define INTERFACE_LIST_TYPEDEF(type) typedef list type##_list
+#define IMPLEMENTATION_LIST_TYPEDEF(type)
+
+#define INTERFACE_LIST_NEW(type) extern type##_list *type##_list_new()
+#define IMPLEMENTATION_LIST_NEW(type)                                          \
+    type##_list *type##_list_new() {                                           \
+        return (type##_list *) list_new(                                       \
+                (list_element_destroy) type##_destroy);                        \
+    }
+
+#define INTERFACE_LIST_DESTROY(type)                                           \
+    extern void type##_list_destroy(type##_list **this)
+#define IMPLEMENTATION_LIST_DESTROY(type)                                      \
+    void type##_list_destroy(type##_list **this) {                             \
+        list_destroy((list **) this);                                          \
+    }
+
+#define INTERFACE_LIST_PUSH(type, elem)                                        \
+    extern int type##_list_push(type##_list *this, type *elem)
+#define IMPLEMENTATION_LIST_PUSH(type, elem)                                   \
+    int type##_list_push(type##_list *this, type *elem) {                      \
+        return list_push((list *) this, (void *) elem);                        \
+    }
+
+#define INTERFACE_LIST_POP(type) extern type *type##_list_pop(type##_list *this)
+#define IMPLEMENTATION_LIST_POP(type)                                          \
+    type *type##_list_pop(type##_list *this) {                                 \
+        return (type *) list_pop((list *) this);                               \
+    }
+
+#define INTERFACE_LIST_UNSHIFT(type, elem)                                     \
+    extern int type##_list_unshift(type##_list *this, type *elem)
+#define IMPLEMENTATION_LIST_UNSHIFT(type, elem)                                \
+    int type##_list_unshift(type##_list *this, type *elem) {                   \
+        return list_unshift((list *) this, (void *) elem);                     \
+    }
+
+#define INTERFACE_LIST_SHIFT(type)                                             \
+    extern type *type##_list_shift(type##_list *this)
+#define IMPLEMENTATION_LIST_SHIFT(type)                                        \
+    type *type##_list_shift(type##_list *this) {                               \
+        return (type *) list_shift((list *) this);                             \
+    }
+
+#define CREATE_LIST_TYPE(kind, type, elem)                                     \
+    kind##_LIST_TYPEDEF(type);                                                 \
+    kind##_LIST_NEW(type);                                                     \
+    kind##_LIST_DESTROY(type);                                                 \
+    kind##_LIST_PUSH(type, elem);                                              \
+    kind##_LIST_POP(type);                                                     \
+    kind##_LIST_UNSHIFT(type, elem);                                           \
+    kind##_LIST_SHIFT(type);
+
+
+// -----------------------------------------------------------------------------
 // Public functions
 // -----------------------------------------------------------------------------
 

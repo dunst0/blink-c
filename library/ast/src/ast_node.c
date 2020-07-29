@@ -7,44 +7,12 @@
 
 #include "blink/ast_node.h"
 
-#include <assert.h>
 #include <stdlib.h>
 
 
 // -----------------------------------------------------------------------------
 // Local definitions
 // -----------------------------------------------------------------------------
-
-#define IMPLEMENTATION_LIST_NEW(type)                                          \
-    type##_list *type##_list_new() {                                           \
-        return (type##_list *) list_new(                                       \
-                (list_element_destroy) type##_destroy);                        \
-    }
-
-#define IMPLEMENTATION_LIST_DESTROY(type, elem)                                \
-    void type##_list_destroy(type##_list **this) {                             \
-        list_destroy((list **) this);                                          \
-    }
-
-#define IMPLEMENTATION_LIST_PUSH(type, elem)                                   \
-    int type##_list_push(type##_list *this, type *elem) {                      \
-        return list_push((list *) this, (void *) elem);                        \
-    }
-
-#define IMPLEMENTATION_LIST_POP(type, elem)                                    \
-    type *type##_list_pop(type##_list *this) {                                 \
-        return (type *) list_pop((list *) this);                               \
-    }
-
-#define IMPLEMENTATION_LIST_UNSHIFT(type, elem)                                \
-    int type##_list_unshift(type##_list *this, type *elem) {                   \
-        return list_unshift((list *) this, (void *) elem);                     \
-    }
-
-#define IMPLEMENTATION_LIST_SHIFT(type, elem)                                  \
-    type *type##_list_shift(type##_list *this) {                               \
-        return (type *) list_shift((list *) this);                             \
-    }
 
 #define AST_NODE_DEFINITION_INIT(node_subtype)                                 \
     this->astDefinitionType = AST_DEFINITION_TYPE_##node_subtype
@@ -65,11 +33,6 @@
 #define AST_NODE_FREE()                                                        \
     free(*this);                                                               \
     *this = NULL
-
-
-// -----------------------------------------------------------------------------
-// Local functions
-// -----------------------------------------------------------------------------
 
 
 // -----------------------------------------------------------------------------

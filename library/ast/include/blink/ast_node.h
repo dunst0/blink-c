@@ -68,30 +68,6 @@ typedef enum ast_expression_type {
 } ast_expression_type;
 
 /**
- * @brief Properties for an AST node in general.
- */
-#define AST_NODE_PROPERTIES                                                    \
-    ast_node_type astNodeType;                                                 \
-    unsigned long long line;                                                   \
-    unsigned long long column;
-
-/**
- * @brief Properties for a definition AST node in general.
- */
-#define AST_DEFINITION_PROPERTIES                                              \
-    AST_NODE_PROPERTIES                                                        \
-    ast_definition_type astDefinitionType;
-
-/**
- * @brief Properties for an expression AST node in general.
- */
-#define AST_EXPRESSION_PROPERTIES                                              \
-    AST_NODE_PROPERTIES                                                        \
-    ast_expression_type astExpressionType;                                     \
-    void *expressionType;// FIXME: not specified
-
-
-/**
  * @brief Type representing an AST node.
  */
 typedef struct ast_node ast_node;
@@ -106,32 +82,27 @@ typedef struct ast_definition ast_definition;
  */
 typedef struct ast_expression ast_expression;
 
-/**
- * @brief Type representing an expression list.
- */
-typedef list ast_expression_list;
-
 typedef struct ast_program ast_program;
 
 typedef struct ast_class ast_class;
-typedef list ast_class_list;
 
 typedef struct ast_formal ast_formal;
-typedef list ast_formal_list;
 
 typedef struct ast_property ast_property;
-typedef list ast_property_list;
 
-typedef enum ast_function_visibility ast_function_visibility;
+typedef enum ast_function_visibility {
+    AST_FUNCTION_VISIBILITY_PUBLIC,
+    AST_FUNCTION_VISIBILITY_PROTECTED,
+    AST_FUNCTION_VISIBILITY_PRIVATE,
+} ast_function_visibility;
+
 typedef struct ast_function ast_function;
-typedef list ast_function_list;
 
 typedef struct ast_block ast_block;
 
 typedef struct ast_let ast_let;
 
 typedef struct ast_initialization ast_initialization;
-typedef list ast_initialization_list;
 
 typedef struct ast_assignment ast_assignment;
 typedef struct ast_cast ast_cast;
@@ -167,218 +138,40 @@ typedef void (*ast_assignment_callback)(ast_assignment *assignment, void *args);
 typedef void (*ast_string_literal_callback)(ast_string_literal *stringLiteral,
                                             void *args);
 
-struct ast_node {
-    AST_NODE_PROPERTIES
-};
-
-struct ast_definition {
-    AST_DEFINITION_PROPERTIES
-};
-
-struct ast_expression {
-    AST_EXPRESSION_PROPERTIES
-};
-
-struct ast_program {
-    AST_DEFINITION_PROPERTIES
-    ast_class_list *classes;
-};
-
-struct ast_class {
-    AST_DEFINITION_PROPERTIES
-    str name;
-    ast_formal_list *parameters;
-    str superClass;
-    ast_expression_list *superClassArgs;
-    ast_property_list *properties;
-    ast_function_list *functions;
-};
-
-struct ast_formal {
-    AST_DEFINITION_PROPERTIES
-    str identifier;
-    str type;
-    int isLazy;
-};
-
-struct ast_property {
-    AST_DEFINITION_PROPERTIES
-    str name;
-    str type;
-    ast_expression *value;
-};
-
-enum ast_function_visibility {
-    AST_FUNCTION_VISIBILITY_PUBLIC,
-    AST_FUNCTION_VISIBILITY_PROTECTED,
-    AST_FUNCTION_VISIBILITY_PRIVATE,
-};
-
-struct ast_function {
-    AST_DEFINITION_PROPERTIES
-    str name;
-    ast_formal_list *parameters;
-    str returnType;
-    ast_expression *body;
-    ast_function_visibility visibility;
-    int isAbstract;
-    int isFinal;
-    int isOverwrite;
-};
-
-struct ast_block {
-    AST_EXPRESSION_PROPERTIES
-    ast_expression_list *expressions;
-};
-
-struct ast_let {
-    AST_EXPRESSION_PROPERTIES
-    ast_initialization_list *initializations;
-    ast_expression *body;
-};
-
-struct ast_initialization {
-    AST_EXPRESSION_PROPERTIES
-    str identifier;
-    str type;
-    ast_expression *value;
-};
-
-struct ast_assignment {
-    AST_EXPRESSION_PROPERTIES
-    str identifier;
-    str operator;
-    ast_expression *value;
-};
-
-struct ast_cast {
-    AST_EXPRESSION_PROPERTIES
-    str type;
-    ast_expression *object;
-};
-
-struct ast_if_else {
-    AST_EXPRESSION_PROPERTIES
-    ast_expression *condition;
-    ast_expression *thenBranch;
-    ast_expression *elseBranch;
-};
-
-struct ast_while {
-    AST_EXPRESSION_PROPERTIES
-    ast_expression *condition;
-    ast_expression *body;
-};
-
-struct ast_binary_expression {
-    AST_EXPRESSION_PROPERTIES
-    ast_expression *left;
-    str operator;
-    ast_expression *right;
-};
-
-struct ast_unary_expression {
-    AST_EXPRESSION_PROPERTIES
-    str operator;
-    ast_expression *expression;
-};
-
-struct ast_lazy_expression {
-    AST_EXPRESSION_PROPERTIES
-    ast_expression *expression;
-    void *context;// FIXME: not specified
-};
-
-struct ast_native_expression {
-    AST_EXPRESSION_PROPERTIES
-    void *func;// FIXME: not specified
-};
-
-struct ast_constructor_call {
-    AST_EXPRESSION_PROPERTIES
-    str type;
-    ast_expression_list *args;
-};
-
-struct ast_function_call {
-    AST_EXPRESSION_PROPERTIES
-    ast_expression *object;
-    str functionName;
-    ast_expression_list *args;
-};
-
-struct ast_super_function_call {
-    AST_EXPRESSION_PROPERTIES
-    str functionName;
-    ast_expression_list *args;
-};
-
-struct ast_reference {
-    AST_EXPRESSION_PROPERTIES
-    str identifier;
-};
-
-struct ast_this_literal {
-    AST_EXPRESSION_PROPERTIES
-};
-
-struct ast_super_literal {
-    AST_EXPRESSION_PROPERTIES
-};
-
-struct ast_integer_literal {
-    AST_EXPRESSION_PROPERTIES
-    str value;
-};
-
-struct ast_boolean_literal {
-    AST_EXPRESSION_PROPERTIES
-    str value;
-};
-
-struct ast_decimal_literal {
-    AST_EXPRESSION_PROPERTIES
-    str value;
-};
-
-struct ast_null_literal {
-    AST_EXPRESSION_PROPERTIES
-};
-
-struct ast_string_literal {
-    AST_EXPRESSION_PROPERTIES
-    str value;
-};
+CREATE_LIST_TYPE(INTERFACE, ast_class, class)
+CREATE_LIST_TYPE(INTERFACE, ast_expression, expression)
+CREATE_LIST_TYPE(INTERFACE, ast_formal, formal)
+CREATE_LIST_TYPE(INTERFACE, ast_property, property)
+CREATE_LIST_TYPE(INTERFACE, ast_function, function)
+CREATE_LIST_TYPE(INTERFACE, ast_initialization, initialization)
 
 
 // -----------------------------------------------------------------------------
 // Defines
 // -----------------------------------------------------------------------------
 
-#define INTERFACE_LIST_NEW(type) extern type##_list *type##_list_new()
+/**
+ * @brief Properties for an AST node in general.
+ */
+#define AST_NODE_PROPERTIES                                                    \
+    ast_node_type astNodeType;                                                 \
+    unsigned long long line;                                                   \
+    unsigned long long column;
 
-#define INTERFACE_LIST_DESTROY(type, elem)                                     \
-    extern void type##_list_destroy(type##_list **this)
+/**
+ * @brief Properties for a definition AST node in general.
+ */
+#define AST_DEFINITION_PROPERTIES                                              \
+    AST_NODE_PROPERTIES                                                        \
+    ast_definition_type astDefinitionType;
 
-#define INTERFACE_LIST_PUSH(type, elem)                                        \
-    extern int type##_list_push(type##_list *this, type *elem)
-
-#define INTERFACE_LIST_POP(type, elem)                                         \
-    extern type *type##_list_pop(type##_list *this)
-
-#define INTERFACE_LIST_UNSHIFT(type, elem)                                     \
-    extern int type##_list_unshift(type##_list *this, type *elem)
-
-#define INTERFACE_LIST_SHIFT(type, elem)                                       \
-    extern type *type##_list_shift(type##_list *this)
-
-#define CREATE_LIST_TYPE(kind, type, elem)                                     \
-    kind##_LIST_NEW(type);                                                     \
-    kind##_LIST_DESTROY(type, elem);                                           \
-    kind##_LIST_PUSH(type, elem);                                              \
-    kind##_LIST_POP(type, elem);                                               \
-    kind##_LIST_UNSHIFT(type, elem);                                           \
-    kind##_LIST_SHIFT(type, elem);
+/**
+ * @brief Properties for an expression AST node in general.
+ */
+#define AST_EXPRESSION_PROPERTIES                                              \
+    AST_NODE_PROPERTIES                                                        \
+    ast_expression_type astExpressionType;                                     \
+    void *expressionType;// FIXME: not specified
 
 
 // -----------------------------------------------------------------------------
@@ -563,12 +356,186 @@ extern ast_string_literal *ast_string_literal_new(unsigned long int line,
                                                   str value);
 extern void ast_string_literal_destroy(ast_string_literal **this);
 
-CREATE_LIST_TYPE(INTERFACE, ast_class, class)
-CREATE_LIST_TYPE(INTERFACE, ast_expression, expression)
-CREATE_LIST_TYPE(INTERFACE, ast_formal, formal)
-CREATE_LIST_TYPE(INTERFACE, ast_property, property)
-CREATE_LIST_TYPE(INTERFACE, ast_function, function)
-CREATE_LIST_TYPE(INTERFACE, ast_initialization, initialization)
 
+// -----------------------------------------------------------------------------
+//  Types implementation
+// -----------------------------------------------------------------------------
+
+struct ast_node {
+    AST_NODE_PROPERTIES
+};
+
+struct ast_definition {
+    AST_DEFINITION_PROPERTIES
+};
+
+struct ast_expression {
+    AST_EXPRESSION_PROPERTIES
+};
+
+struct ast_program {
+    AST_DEFINITION_PROPERTIES
+    ast_class_list *classes;
+};
+
+struct ast_class {
+    AST_DEFINITION_PROPERTIES
+    str name;
+    ast_formal_list *parameters;
+    str superClass;
+    ast_expression_list *superClassArgs;
+    ast_property_list *properties;
+    ast_function_list *functions;
+};
+
+struct ast_formal {
+    AST_DEFINITION_PROPERTIES
+    str identifier;
+    str type;
+    int isLazy;
+};
+
+struct ast_property {
+    AST_DEFINITION_PROPERTIES
+    str name;
+    str type;
+    ast_expression *value;
+};
+
+struct ast_function {
+    AST_DEFINITION_PROPERTIES
+    str name;
+    ast_formal_list *parameters;
+    str returnType;
+    ast_expression *body;
+    ast_function_visibility visibility;
+    int isAbstract;
+    int isFinal;
+    int isOverwrite;
+};
+
+struct ast_block {
+    AST_EXPRESSION_PROPERTIES
+    ast_expression_list *expressions;
+};
+
+struct ast_let {
+    AST_EXPRESSION_PROPERTIES
+    ast_initialization_list *initializations;
+    ast_expression *body;
+};
+
+struct ast_initialization {
+    AST_EXPRESSION_PROPERTIES
+    str identifier;
+    str type;
+    ast_expression *value;
+};
+
+struct ast_assignment {
+    AST_EXPRESSION_PROPERTIES
+    str identifier;
+    str operator;
+    ast_expression *value;
+};
+
+struct ast_cast {
+    AST_EXPRESSION_PROPERTIES
+    str type;
+    ast_expression *object;
+};
+
+struct ast_if_else {
+    AST_EXPRESSION_PROPERTIES
+    ast_expression *condition;
+    ast_expression *thenBranch;
+    ast_expression *elseBranch;
+};
+
+struct ast_while {
+    AST_EXPRESSION_PROPERTIES
+    ast_expression *condition;
+    ast_expression *body;
+};
+
+struct ast_binary_expression {
+    AST_EXPRESSION_PROPERTIES
+    ast_expression *left;
+    str operator;
+    ast_expression *right;
+};
+
+struct ast_unary_expression {
+    AST_EXPRESSION_PROPERTIES
+    str operator;
+    ast_expression *expression;
+};
+
+struct ast_lazy_expression {
+    AST_EXPRESSION_PROPERTIES
+    ast_expression *expression;
+    void *context;// FIXME: not specified
+};
+
+struct ast_native_expression {
+    AST_EXPRESSION_PROPERTIES
+    void *func;// FIXME: not specified
+};
+
+struct ast_constructor_call {
+    AST_EXPRESSION_PROPERTIES
+    str type;
+    ast_expression_list *args;
+};
+
+struct ast_function_call {
+    AST_EXPRESSION_PROPERTIES
+    ast_expression *object;
+    str functionName;
+    ast_expression_list *args;
+};
+
+struct ast_super_function_call {
+    AST_EXPRESSION_PROPERTIES
+    str functionName;
+    ast_expression_list *args;
+};
+
+struct ast_reference {
+    AST_EXPRESSION_PROPERTIES
+    str identifier;
+};
+
+struct ast_this_literal {
+    AST_EXPRESSION_PROPERTIES
+};
+
+struct ast_super_literal {
+    AST_EXPRESSION_PROPERTIES
+};
+
+struct ast_integer_literal {
+    AST_EXPRESSION_PROPERTIES
+    str value;
+};
+
+struct ast_boolean_literal {
+    AST_EXPRESSION_PROPERTIES
+    str value;
+};
+
+struct ast_decimal_literal {
+    AST_EXPRESSION_PROPERTIES
+    str value;
+};
+
+struct ast_null_literal {
+    AST_EXPRESSION_PROPERTIES
+};
+
+struct ast_string_literal {
+    AST_EXPRESSION_PROPERTIES
+    str value;
+};
 
 #endif// BLINK_AST_NODE_H
