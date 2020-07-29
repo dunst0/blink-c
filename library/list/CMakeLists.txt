@@ -14,7 +14,7 @@ target_sources(list
         PRIVATE
         "src/list.c"
         PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/blink/list.h"
+        "include/blink/list.h"
         )
 
-target_include_directories(list PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(list PUBLIC "include")

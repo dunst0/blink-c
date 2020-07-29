@@ -18,10 +18,10 @@ target_sources(hashtable
         PRIVATE
         "src/hashtable.c"
         PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/blink/hashtable.h"
+        "include/blink/hashtable.h"
         )
 
-target_include_directories(hashtable PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(hashtable PUBLIC "include")
 
 target_link_libraries(hashtable PUBLIC utils)
 

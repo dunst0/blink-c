@@ -15,10 +15,10 @@ target_sources(ast
         "src/ast.c"
         "src/ast_node.c"
         PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/blink/ast.h"
-        "${CMAKE_CURRENT_SOURCE_DIR}/include/blink/ast_node.h"
+        "include/blink/ast.h"
+        "include/blink/ast_node.h"
         )
 
-target_include_directories(ast PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(ast PUBLIC "include")
 
 target_link_libraries(ast PUBLIC list utils)
