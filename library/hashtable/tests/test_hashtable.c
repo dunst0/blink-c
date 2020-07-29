@@ -15,6 +15,7 @@
 #include "blink/hashtable.h"
 
 typedef struct value {
+    int count;
     int i;
 } value;
 
@@ -33,6 +34,15 @@ static void value_destroy(value **this) {
     free(*this);
     *this = NULL;
 }
+
+static int value_check_counter(value *this, int *count) {
+    if (!this) { return 0; }
+    return this->count == *count;
+}
+
+CREATE_HASHTABLE_TYPE(INTERFACE, value, value)
+
+CREATE_HASHTABLE_TYPE(IMPLEMENTATION, value, value)
 
 static int setup(void **state) {
     *state = hashtable_new(997, (hashtable_value_destroy) value_destroy);
@@ -101,11 +111,102 @@ static void test_hashtable_insert_has_lookup_collision(void **state) {
     hashtable_destroy(&table);
 }
 
+static void test_hashtable_double_insert_fail_without_check(void **state) {
+    (void) state; /* unused */
+
+    hashtable *table =
+            hashtable_new(1, (hashtable_value_destroy) value_destroy);
+    assert_non_null(table);
+
+    str key1      = STR_STATIC_INIT("foo1");
+    value *value1 = value_new(1337);
+
+    value *valueLookup1 = NULL;
+
+    assert_true(hashtable_insert(table, key1, (void *) value1));
+    assert_true(hashtable_has(table, key1));
+    assert_false(hashtable_insert(table, key1, (void *) value1));
+    assert_true(hashtable_has(table, key1));
+    valueLookup1 = (value *) hashtable_lookup(table, key1);
+    assert_non_null(valueLookup1);
+    assert_int_equal(valueLookup1->i, 1337);
+
+    hashtable_destroy(&table);
+}
+
+static void test_hashtable_double_insert_lookup_with_check(void **state) {
+    (void) state; /* unused */
+
+    hashtable *table =
+            hashtable_new(1, (hashtable_value_destroy) value_destroy);
+    assert_non_null(table);
+
+    str key1      = STR_STATIC_INIT("foo1");
+    value *value1 = value_new(1337);
+    value *value2 = value_new(1337);
+    value2->count = 1;
+
+    int counter = 0;
+
+
+    value *valueLookup1 = NULL;
+
+    assert_true(hashtable_insert_check(
+            table, key1, (void *) value1,
+            (hashtable_value_check) value_check_counter, &counter));
+    assert_true(hashtable_has_check(table, key1,
+                                    (hashtable_value_check) value_check_counter,
+                                    &counter));
+    assert_false(hashtable_insert_check(
+            table, key1, (void *) value1,
+            (hashtable_value_check) value_check_counter, &counter));
+    assert_true(hashtable_has_check(table, key1,
+                                    (hashtable_value_check) value_check_counter,
+                                    &counter));
+
+    counter = 1;
+
+    assert_true(hashtable_insert_check(
+            table, key1, (void *) value2,
+            (hashtable_value_check) value_check_counter, &counter));
+    assert_true(hashtable_has_check(table, key1,
+                                    (hashtable_value_check) value_check_counter,
+                                    &counter));
+    assert_false(hashtable_insert_check(
+            table, key1, (void *) value2,
+            (hashtable_value_check) value_check_counter, &counter));
+    assert_true(hashtable_has_check(table, key1,
+                                    (hashtable_value_check) value_check_counter,
+                                    &counter));
+
+
+    valueLookup1 = (value *) hashtable_lookup(table, key1);
+    assert_non_null(valueLookup1);
+    assert_int_equal(valueLookup1->i, 1337);
+
+    hashtable_destroy(&table);
+    assert_null(table);
+}
+
+static void test_value_hashtable(void **state) {
+    (void) state; /* unused */
+
+    value_hashtable *table =
+            value_hashtable_new(1);
+    assert_non_null(table);
+
+    value_hashtable_destroy(&table);
+    assert_null(table);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
             cmocka_unit_test_setup_teardown(test_hashtable_insert_has_lookup,
                                             setup, teardown),
             cmocka_unit_test(test_hashtable_insert_has_lookup_collision),
+            cmocka_unit_test(test_hashtable_double_insert_fail_without_check),
+            cmocka_unit_test(test_hashtable_double_insert_lookup_with_check),
+            cmocka_unit_test(test_value_hashtable),
     };
 
     return cmocka_run_group_tests(tests, NULL, NULL);

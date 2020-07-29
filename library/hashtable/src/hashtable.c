@@ -29,7 +29,7 @@ unsigned long int hashtable_hash(hashtable *this, str key) {
     for (unsigned long int i = 0; i < key.len; ++i) { hashValue += key.s[i]; }
     hashValue += key.s[0] % 11 + (((unsigned char) key.s[0]) << 3U) - key.s[0];
 
-    return hashValue % this->length;
+    return hashValue % this->size;
 }
 
 
@@ -37,21 +37,21 @@ unsigned long int hashtable_hash(hashtable *this, str key) {
 // Public functions
 // -----------------------------------------------------------------------------
 
-hashtable *hashtable_new(unsigned long int length,
+hashtable *hashtable_new(unsigned long int size,
                          hashtable_value_destroy valueDestroyCallback) {
     hashtable *this = NULL;
 
     this = calloc(1, sizeof(*this));
     if (!this) { return NULL; }
 
-    this->length               = length;
+    this->size                 = size;
     this->valueDestroyCallback = valueDestroyCallback;
-    this->list                 = calloc(length, sizeof(this->list));
+    this->list                 = calloc(size, sizeof(this->list));
     if (!this->list) {
         free(this);
         return NULL;
     } else {
-        for (unsigned long int i = 0; i < this->length; ++i) {
+        for (unsigned long int i = 0; i < this->size; ++i) {
             this->list[i] = NULL;
         }
     }
@@ -62,7 +62,7 @@ hashtable *hashtable_new(unsigned long int length,
 void hashtable_destroy(hashtable **this) {
     if (!this || !(*this)) { return; }
 
-    for (unsigned long int i = 0; i < (*this)->length; ++i) {
+    for (unsigned long int i = 0; i < (*this)->size; ++i) {
         while ((*this)->list[i]) {
             hashtable_node *temp = (*this)->list[i];
             (*this)->list[i]     = (*this)->list[i]->next;
@@ -79,15 +79,19 @@ void hashtable_destroy(hashtable **this) {
     *this = NULL;
 }
 
-int hashtable_insert(hashtable *this, str key, void *value) {
+int hashtable_insert_check(hashtable *this, str key, void *value,
+                           hashtable_value_check valueCheckCallback,
+                           void *arg) {
     if (!this) { return 0; }
 
     unsigned long int hashSlot = hashtable_hash(this, key);
     hashtable_node *node       = this->list[hashSlot];
     str keyCopy                = STR_NULL;
 
-    while (node && (key.len != node->key.len ||
-                    memcmp(key.s, node->key.s, key.len) != 0)) {
+    while (node &&
+           (key.len != node->key.len ||
+            memcmp(key.s, node->key.s, key.len) != 0 ||
+            (valueCheckCallback && !valueCheckCallback(node->value, arg)))) {
         node = node->next;
     }
 
@@ -112,14 +116,18 @@ int hashtable_insert(hashtable *this, str key, void *value) {
     return 1;
 }
 
-void *hashtable_lookup(hashtable *this, str key) {
+void *hashtable_lookup_check(hashtable *this, str key,
+                             hashtable_value_check valueCheckCallback,
+                             void *arg) {
     if (!this) { return NULL; }
 
     unsigned long int hashValue = hashtable_hash(this, key);
     hashtable_node *node        = this->list[hashValue];
 
-    while (node && (key.len != node->key.len ||
-                    memcmp(key.s, node->key.s, key.len) != 0)) {
+    while (node &&
+           (key.len != node->key.len ||
+            memcmp(key.s, node->key.s, key.len) != 0 ||
+            (valueCheckCallback && !valueCheckCallback(node->value, arg)))) {
         node = node->next;
     }
 
@@ -128,16 +136,31 @@ void *hashtable_lookup(hashtable *this, str key) {
     return node->value;
 }
 
-int hashtable_has(hashtable *this, str key) {
+int hashtable_has_check(hashtable *this, str key,
+                        hashtable_value_check valueCheckCallback, void *arg) {
     if (!this) { return 0; }
 
     unsigned long int hashValue = hashtable_hash(this, key);
     hashtable_node *node        = this->list[hashValue];
 
-    while (node && (key.len != node->key.len ||
-                    memcmp(key.s, node->key.s, key.len) != 0)) {
+    while (node &&
+           (key.len != node->key.len ||
+            memcmp(key.s, node->key.s, key.len) != 0 ||
+            (valueCheckCallback && !valueCheckCallback(node->value, arg)))) {
         node = node->next;
     }
 
     return node != NULL;
+}
+
+int hashtable_insert(hashtable *this, str key, void *value) {
+    return hashtable_insert_check(this, key, value, NULL, NULL);
+}
+
+void *hashtable_lookup(hashtable *this, str key) {
+    return hashtable_lookup_check(this, key, NULL, NULL);
+}
+
+int hashtable_has(hashtable *this, str key) {
+    return hashtable_has_check(this, key, NULL, NULL);
 }
