@@ -67,7 +67,9 @@ void hashtable_destroy(hashtable **this) {
             hashtable_node *temp = (*this)->list[i];
             (*this)->list[i]     = (*this)->list[i]->next;
 
-            (*this)->valueDestroyCallback(&temp->value);
+            if (!temp->isStolen) {
+                (*this)->valueDestroyCallback(&temp->value);
+            }
             free(temp->key.s);
             free(temp);
         }
@@ -153,6 +155,28 @@ int hashtable_has_check(hashtable *this, str key,
     return node != NULL;
 }
 
+int hashtable_mark_stolen_check(hashtable *this, str key,
+                                hashtable_value_check valueCheckCallback,
+                                void *arg) {
+    if (!this) { return 0; }
+
+    unsigned long int hashValue = hashtable_hash(this, key);
+    hashtable_node *node        = this->list[hashValue];
+
+    while (node &&
+           (key.len != node->key.len ||
+            memcmp(key.s, node->key.s, key.len) != 0 ||
+            (valueCheckCallback && !valueCheckCallback(node->value, arg)))) {
+        node = node->next;
+    }
+
+    if (!node) { return 0; }
+
+    node->isStolen = 1;
+
+    return 1;
+}
+
 int hashtable_insert(hashtable *this, str key, void *value) {
     return hashtable_insert_check(this, key, value, NULL, NULL);
 }
@@ -163,4 +187,8 @@ void *hashtable_lookup(hashtable *this, str key) {
 
 int hashtable_has(hashtable *this, str key) {
     return hashtable_has_check(this, key, NULL, NULL);
+}
+
+int hashtable_mark_stolen(hashtable *this, str key) {
+    return hashtable_mark_stolen_check(this, key, NULL, NULL);
 }

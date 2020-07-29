@@ -22,6 +22,7 @@ typedef struct hashtable_node hashtable_node;
 struct hashtable_node {
     str key;
     void *value;
+    int isStolen;
     hashtable_node *next;
 };
 
@@ -164,7 +165,7 @@ extern void hashtable_destroy(hashtable **this);
  * @param[in] key The key to insert the value for
  * @param[in] value The value to insert
  * @param[in] valueCheckCallback The value checking function to call
- * @param[in] arg The value for the second parameter to the valueCheckCallback.
+ * @param[in] arg The value for the second parameter to the valueCheckCallback
  * @retval 1 Ok
  * @retval 0 Memory allocation failed or key already exists
  */
@@ -177,7 +178,7 @@ extern int hashtable_insert_check(hashtable *this, str key, void *value,
  * @param[in] this The HashTable to lookup the key
  * @param[in] key The key to search for in the HashTable
  * @param[in] valueCheckCallback The value checking function to call
- * @param[in] arg The value for the second parameter to the valueCheckCallback.
+ * @param[in] arg The value for the second parameter to the valueCheckCallback
  * @return The pointer to the value or NULL if not found
  */
 extern void *hashtable_lookup_check(hashtable *this, str key,
@@ -189,13 +190,26 @@ extern void *hashtable_lookup_check(hashtable *this, str key,
  * @param[in] this The HashTable to check for the key
  * @param[in] key The key to look for in the HashTable
  * @param[in] valueCheckCallback The value checking function to call
- * @param[in] arg The value for the second parameter to the valueCheckCallback.
+ * @param[in] arg The value for the second parameter to the valueCheckCallback
  * @retval 1 The HashTable has the key
  * @retval 0 The HashTable does not have the key
  */
 extern int hashtable_has_check(hashtable *this, str key,
                                hashtable_value_check valueCheckCallback,
                                void *arg);
+
+/**
+ * @brief Mark value for key as stolen in the HashTable.
+ * @param[in] this The HashTable to check for the key
+ * @param[in] key The key to look for in the HashTable
+ * @param[in] valueCheckCallback The value checking function to call
+ * @param[in] arg The value for the second parameter to the valueCheckCallback
+ * @retval 1 The HashTable has the key
+ * @retval 0 The HashTable does not have the key
+ */
+extern int hashtable_mark_stolen_check(hashtable *this, str key,
+                                       hashtable_value_check valueCheckCallback,
+                                       void *arg);
 
 /**
  * @brief Insert a value for the key into the HashTable.
@@ -223,5 +237,14 @@ extern void *hashtable_lookup(hashtable *this, str key);
  * @retval 0 The HashTable does not have the key
  */
 extern int hashtable_has(hashtable *this, str key);
+
+/**
+ * @brief Mark value for key as stolen in the HashTable.
+ * @param[in] this The HashTable to check for the key
+ * @param[in] key The key to look for in the HashTable
+ * @retval 1 The HashTable has the key
+ * @retval 0 The HashTable does not have the key
+ */
+extern int hashtable_mark_stolen(hashtable *this, str key);
 
 #endif//BLINK_HASHTABLE_H
