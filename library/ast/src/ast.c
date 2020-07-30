@@ -25,9 +25,14 @@ typedef struct ast_printer {
 
 
 // -----------------------------------------------------------------------------
-// Local functions
+//  Local functions
 // -----------------------------------------------------------------------------
 
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
 static void ast_program_printer(ast_program *program, void *args) {
     ast_printer *printer = (ast_printer *) args;
     list_node *node      = NULL;
@@ -43,6 +48,11 @@ static void ast_program_printer(ast_program *program, void *args) {
     fprintf(printer->outFile, "}\n");
 }
 
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
 static void ast_class_printer(ast_class *class, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
@@ -74,6 +84,11 @@ static void ast_class_printer(ast_class *class, void *args) {
     }
 }
 
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
 static void ast_formal_printer(ast_formal *formal, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
@@ -90,6 +105,11 @@ static void ast_formal_printer(ast_formal *formal, void *args) {
             STR_FMT(&formal->type), (formal->isLazy ? "true" : "false"));
 }
 
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
 static void ast_function_printer(ast_function *function, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
@@ -129,6 +149,11 @@ static void ast_function_printer(ast_function *function, void *args) {
     }
 }
 
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
 static void ast_expression_printer(ast_expression *expression, void *args) {
     ast_printer *printer = (ast_printer *) args;
 
@@ -182,6 +207,11 @@ static void ast_expression_printer(ast_expression *expression, void *args) {
     }
 }
 
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
 static void ast_assignment_printer(ast_assignment *assignment, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
@@ -202,6 +232,11 @@ static void ast_assignment_printer(ast_assignment *assignment, void *args) {
     }
 }
 
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
 static void ast_string_literal_printer(ast_string_literal *stringLiteral,
                                        void *args) {
     ast_printer *printer         = (ast_printer *) args;
@@ -218,7 +253,7 @@ static void ast_string_literal_printer(ast_string_literal *stringLiteral,
 
 
 // -----------------------------------------------------------------------------
-// Implementation of public functions
+//  Public functions
 // -----------------------------------------------------------------------------
 
 ast *ast_new(ast_program *program) {

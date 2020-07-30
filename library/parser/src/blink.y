@@ -1,5 +1,8 @@
 /**
- * Parser for the blink language
+ * @file blink.y
+ * @author rick
+ * @date 26.03.20
+ * @brief Parser for the blink language
  */
 
 %code requires {

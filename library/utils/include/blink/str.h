@@ -1,16 +1,32 @@
-//
-// Created by rick on 19.02.20.
-//
+/**
+ * @file list.h
+ * @author rick
+ * @date 19.02.20
+ * @brief File for the String implementation
+ */
 
 #ifndef BLINK_STR_H
 #define BLINK_STR_H
 
 #include <stdlib.h>
 
+
+// -----------------------------------------------------------------------------
+//  Public types
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief Type for strings that do not need to be '\0' terminated.
+ */
 typedef struct str {
     char *s;
     unsigned long int len;
 } str;
+
+
+// -----------------------------------------------------------------------------
+//  Public defines
+// -----------------------------------------------------------------------------
 
 #define STR_NULL \
     { NULL, 0 }

@@ -9,7 +9,7 @@
 
 
 // -----------------------------------------------------------------------------
-// Implementation of public functions
+//  Public functions
 // -----------------------------------------------------------------------------
 
 symbol_reference *symbol_reference_new(unsigned long int line,

@@ -11,7 +11,7 @@
 
 
 // -----------------------------------------------------------------------------
-// Local definitions
+//  Local defines
 // -----------------------------------------------------------------------------
 
 #define AST_NODE_DEFINITION_INIT(node_subtype)                                 \
@@ -36,8 +36,15 @@
 
 
 // -----------------------------------------------------------------------------
-// Public functions
+//  Public functions
 // -----------------------------------------------------------------------------
+
+CREATE_LIST_TYPE(IMPLEMENTATION, ast_class, class)
+CREATE_LIST_TYPE(IMPLEMENTATION, ast_expression, expression)
+CREATE_LIST_TYPE(IMPLEMENTATION, ast_formal, formal)
+CREATE_LIST_TYPE(IMPLEMENTATION, ast_property, property)
+CREATE_LIST_TYPE(IMPLEMENTATION, ast_function, function)
+CREATE_LIST_TYPE(IMPLEMENTATION, ast_initialization, initialization)
 
 void ast_definition_destroy(ast_definition **this) {
     if (!this || !(*this)) { return; }
@@ -638,10 +645,3 @@ void ast_string_literal_destroy(ast_string_literal **this) {
 
     AST_NODE_FREE();
 }
-
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_class, class)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_expression, expression)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_formal, formal)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_property, property)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_function, function)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_initialization, initialization)

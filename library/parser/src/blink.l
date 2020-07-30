@@ -1,26 +1,30 @@
 /**
- * Lexer for the blink language
+ * @file blink.l
+ * @author rick
+ * @date 26.03.20
+ * @brief Lexer for the blink language
  */
 
 %option noyywrap
 
 %{
 
-#include "blink/str.h"
 #include "blink/parser.h"
+
+#include <blink/str.h>
 
 #include <stdio.h>
 
 #define MAX_IMPORT_DEPTH 1024
-static struct blink_yy_state {
+static struct lexer_yy_state {
     YY_BUFFER_STATE state;
     str filename;
     int first_line;
     int last_line;
     int first_column;
     int last_column;
-} import_stack[MAX_IMPORT_DEPTH];
-int import_stack_ptr = 0;
+} lexer_import_stack[MAX_IMPORT_DEPTH];
+static int lexer_import_stack_ptr = 0;
 
 #define YY_USER_ACTION                                                         \
     yylloc.filename     = yylloc.filename;                                     \
@@ -40,10 +44,10 @@ static int lexer_pop_yy_state();
 
 static int lexer_needs_semicolon();
 
-static int lastToken = -1;
+static int lexer_last_token = -1;
 #define RETURN(token)                                                          \
-    lastToken = token;                                                         \
-    return token;
+    lexer_last_token = (token);                                                \
+    return (token);
 
 %}
 
@@ -172,7 +176,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 %%
 
 static int lexer_needs_semicolon() {
-    switch (lastToken) {
+    switch (lexer_last_token) {
         case INTEGER_LITERAL:
         case DECIMAL_LITERAL:
         case STRING_LITERAL:
@@ -188,8 +192,10 @@ static int lexer_needs_semicolon() {
     return 0;
 }
 
+// TODO: move into a config file
 #define FILE_EXTENSION ".blink"
 
+// TODO: move that to a different location
 static int blink_getFileNameForImport(char *import, int importLength, str *result) {
     result->len = importLength + sizeof(FILE_EXTENSION);
     result->s   = calloc(result->len, sizeof(*result->s));
@@ -209,7 +215,7 @@ static int blink_getFileNameForImport(char *import, int importLength, str *resul
 static int lexer_push_yy_state(char *import, int importLength) {
     str sourceFileName = STR_NULL;
 
-    if (import_stack_ptr >= MAX_IMPORT_DEPTH) {
+    if (lexer_import_stack_ptr >= MAX_IMPORT_DEPTH) {
         fprintf(stderr, "Error: imports nested too deeply\n");
         return 0;
     }
@@ -219,13 +225,13 @@ static int lexer_push_yy_state(char *import, int importLength) {
     }
     fprintf(stdout, "current import filename: '%.*s'\n", STR_FMT(&sourceFileName));
 
-    import_stack[import_stack_ptr].state        = YY_CURRENT_BUFFER;
-    import_stack[import_stack_ptr].filename     = yylloc.filename;
-    import_stack[import_stack_ptr].first_line   = yylloc.first_line;
-    import_stack[import_stack_ptr].last_line    = yylloc.last_line;
-    import_stack[import_stack_ptr].first_column = yylloc.first_column;
-    import_stack[import_stack_ptr].last_column  = yylloc.last_column;
-    import_stack_ptr++;
+    lexer_import_stack[lexer_import_stack_ptr].state        = YY_CURRENT_BUFFER;
+    lexer_import_stack[lexer_import_stack_ptr].filename     = yylloc.filename;
+    lexer_import_stack[lexer_import_stack_ptr].first_line   = yylloc.first_line;
+    lexer_import_stack[lexer_import_stack_ptr].last_line    = yylloc.last_line;
+    lexer_import_stack[lexer_import_stack_ptr].first_column = yylloc.first_column;
+    lexer_import_stack[lexer_import_stack_ptr].last_column  = yylloc.last_column;
+    lexer_import_stack_ptr++;
 
     yylloc.first_line   = yylloc.last_line   = 0;
     yylloc.first_column = yylloc.last_column = 0;
@@ -243,24 +249,24 @@ static int lexer_push_yy_state(char *import, int importLength) {
 }
 
 static int lexer_pop_yy_state() {
-    if (import_stack[import_stack_ptr].filename.s) {
-        free(import_stack[import_stack_ptr].filename.s);
-        import_stack[import_stack_ptr].filename.s   = NULL;
-        import_stack[import_stack_ptr].filename.len = 0;
+    if (lexer_import_stack[lexer_import_stack_ptr].filename.s) {
+        free(lexer_import_stack[lexer_import_stack_ptr].filename.s);
+        lexer_import_stack[lexer_import_stack_ptr].filename.s   = NULL;
+        lexer_import_stack[lexer_import_stack_ptr].filename.len = 0;
     }
 
-    if (--import_stack_ptr < 0) {
+    if (--lexer_import_stack_ptr < 0) {
         return 0;
     }
 
     yy_delete_buffer(YY_CURRENT_BUFFER);
-    yy_switch_to_buffer(import_stack[import_stack_ptr].state);
+    yy_switch_to_buffer(lexer_import_stack[lexer_import_stack_ptr].state);
 
-    yylloc.filename     = import_stack[import_stack_ptr].filename;
-    yylloc.first_line   = import_stack[import_stack_ptr].first_line;
-    yylloc.last_line    = import_stack[import_stack_ptr].last_line;
-    yylloc.first_column = import_stack[import_stack_ptr].first_column;
-    yylloc.last_column  = import_stack[import_stack_ptr].last_column;
+    yylloc.filename     = lexer_import_stack[lexer_import_stack_ptr].filename;
+    yylloc.first_line   = lexer_import_stack[lexer_import_stack_ptr].first_line;
+    yylloc.last_line    = lexer_import_stack[lexer_import_stack_ptr].last_line;
+    yylloc.first_column = lexer_import_stack[lexer_import_stack_ptr].first_column;
+    yylloc.last_column  = lexer_import_stack[lexer_import_stack_ptr].last_column;
 
     return 1;
 }

@@ -16,4 +16,4 @@ target_sources(blink
         "src/main.c"
         )
 
-target_link_libraries(blink PRIVATE ast list parser)
+target_link_libraries(blink PRIVATE ast list parser symboltable)

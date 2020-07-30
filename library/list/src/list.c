@@ -11,7 +11,7 @@
 
 
 // -----------------------------------------------------------------------------
-// Public functions
+//  Public functions
 // -----------------------------------------------------------------------------
 
 list *list_new(list_element_destroy elementDestroyCallback) {

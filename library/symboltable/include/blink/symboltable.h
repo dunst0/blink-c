@@ -14,7 +14,7 @@
 
 
 // -----------------------------------------------------------------------------
-//  Types
+//  Public types
 // -----------------------------------------------------------------------------
 
 CREATE_HASHTABLE_TYPE(INTERFACE, symbol, symbol);
@@ -29,7 +29,7 @@ typedef struct symboltable {
 
 
 // -----------------------------------------------------------------------------
-// Public functions
+//  Public functions
 // -----------------------------------------------------------------------------
 
 /**
@@ -44,17 +44,52 @@ extern symboltable *symboltable_new();
  */
 extern void symboltable_destroy(symboltable **this);
 
+/**
+ * @brief TODO
+ * @param this TODO
+ * @return TODO
+ */
 extern int symboltable_enter_scope(symboltable *this);
 
+/**
+ * @brief TODO
+ * @param this TODO
+ * @return TODO
+ */
 extern int symboltable_exit_scope(symboltable *this);
 
+/**
+ * @brief TODO
+ * @param this TODO
+ * @param newSymbol TODO
+ * @return TODO
+ */
 extern int symboltable_add_symbol(symboltable *this, symbol *newSymbol);
 
+/**
+ * @brief TODO
+ * @param this TODO
+ * @param identifier TODO
+ * @param newReference TODO
+ * @return TODO
+ */
 extern int symboltable_add_reference(symboltable *this, str identifier,
                                      symbol_reference *newReference);
 
+/**
+ * @brief TODO
+ * @param this TODO
+ * @param identifier TODO
+ * @return TODO
+ */
 extern int symboltable_has(symboltable *this, str identifier);
 
+/**
+ * @brief TODO
+ * @param this TODO
+ * @param identifier TODO
+ * @return TODO
+ */
 extern symbol *symboltable_lookup(symboltable *this, str identifier);
 
 #endif//BLINK_SYMBOLTABLE_H
