@@ -5,49 +5,49 @@
  * @brief Lexer for the blink language
  */
 
-%option noyywrap
+%option noinput nounput noyywrap nodefault
+%option reentrant bison-bridge bison-locations
+%option debug
+%option extra-type="parser_extra_lexer *"
 
 %{
+#include "blink/parser_impl.h"
 
-#include "blink/parser.h"
-
-#include <blink/str.h>
+#include "blink/parser_helper.h"
 
 #include <stdio.h>
 
-#define MAX_IMPORT_DEPTH 1024
-static struct lexer_yy_state {
-    YY_BUFFER_STATE state;
-    str filename;
-    int first_line;
-    int last_line;
-    int first_column;
-    int last_column;
-} lexer_import_stack[MAX_IMPORT_DEPTH];
-static int lexer_import_stack_ptr = 0;
-
 #define YY_USER_ACTION                                                         \
-    yylloc.filename     = yylloc.filename;                                     \
-    yylloc.first_line   = yylloc.last_line;                                    \
-    yylloc.first_column = yylloc.last_column;                                  \
+    yylloc->filename     = yylloc->filename;                                   \
+    yylloc->first_line   = yylloc->last_line;                                  \
+    yylloc->first_column = yylloc->last_column;                                \
     for(int i = 0; yytext[i] != '\0'; ++i) {                                   \
         if(yytext[i] == '\n') {                                                \
-            yylloc.last_line++;                                                \
-            yylloc.last_column = 0;                                            \
+            yylloc->last_line++;                                               \
+            yylloc->last_column = 0;                                           \
         } else {                                                               \
-            yylloc.last_column++;                                              \
+            yylloc->last_column++;                                             \
         }                                                                      \
     }
 
-static int lexer_push_yy_state(char *import, int importLength);
-static int lexer_pop_yy_state();
-
-static int lexer_needs_semicolon();
-
-static int lexer_last_token = -1;
 #define RETURN(token)                                                          \
-    lexer_last_token = (token);                                                \
+    yyextra->lastToken = token;                                                \
     return (token);
+
+#define RETURN_SEMICOLON_IF_NEEDED                                             \
+    switch (yyextra->lastToken) {                                              \
+        case INTEGER_LITERAL:                                                  \
+        case DECIMAL_LITERAL:                                                  \
+        case STRING_LITERAL:                                                   \
+        case NULL_LITERAL:                                                     \
+        case THIS_LITERAL:                                                     \
+        case TRUE_LITERAL:                                                     \
+        case FALSE_LITERAL:                                                    \
+        case IDENTIFIER:                                                       \
+        case ')':                                                              \
+        case '}':                                                              \
+            RETURN(';');                                                       \
+    }
 
 %}
 
@@ -73,10 +73,6 @@ not_whitespace      [^ \a\f\t\r\v\n]
 <IMPORT>{not_whitespace}+                                                               {
                                                                                             printf("<IMPORT_KEYWORD: %s>\n", yytext);
 
-                                                                                            if (!lexer_push_yy_state(yytext, yyleng)) {
-                                                                                                exit(1);
-                                                                                            }
-
                                                                                             BEGIN(INITIAL);
                                                                                             RETURN(IMPORT_KEYWORD);
                                                                                         }
@@ -87,9 +83,9 @@ not_whitespace      [^ \a\f\t\r\v\n]
                                                                                         }
 
 <<EOF>>                                                                                 {
-                                                                                            if (!lexer_pop_yy_state()) {
+                                                                                            /*if (!lexer_pop_yy_state()) {*/
                                                                                                 yyterminate();
-                                                                                            }
+                                                                                            /*}*/
                                                                                         }
 
 
@@ -98,7 +94,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 "class"                                                                                 RETURN(CLASS_KEYWORD);
 "else"                                                                                  RETURN(ELSE_KEYWORD);
 "extends"                                                                               RETURN(EXTENDS_KEYWORD);
-"false"                                                                                 { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(FALSE_LITERAL); }
+"false"                                                                                 RETURN(FALSE_LITERAL);
 "final"                                                                                 RETURN(FINAL_KEYWORD);
 "func"                                                                                  {
                                                                                             BEGIN(METHOD);
@@ -116,40 +112,40 @@ not_whitespace      [^ \a\f\t\r\v\n]
 "protected"                                                                             RETURN(PROTECTED_KEYWORD);
 "super"                                                                                 RETURN(SUPER_LITERAL);
 "this"                                                                                  RETURN(THIS_LITERAL);
-"true"                                                                                  { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(TRUE_LITERAL); }
+"true"                                                                                  RETURN(TRUE_LITERAL);
 "var"                                                                                   RETURN(VAR_KEYWORD);
 "while"                                                                                 RETURN(WHILE_KEYWORD);
 
 "++"                                                                                    RETURN(DOUBLE_PLUS_OPERATOR);
 "--"                                                                                    RETURN(DOUBLE_MINUS_OPERATOR);
 
-"+="                                                                                    { yylval.operator = PLUS_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
-"-="                                                                                    { yylval.operator = MINUS_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
-"*="                                                                                    { yylval.operator = TIMES_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
-"/="                                                                                    { yylval.operator = DIV_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
-"%="                                                                                    { yylval.operator = MODULO_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
-"&="                                                                                    { yylval.operator = AND_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
-"^="                                                                                    { yylval.operator = CARET_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
-"~="                                                                                    { yylval.operator = TILDE_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
-"|="                                                                                    { yylval.operator = PIPE_EQUAL_OPERATOR; RETURN(ASSIGNMENT); }
+"+="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL; RETURN(ASSIGNMENT); }
+"-="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL; RETURN(ASSIGNMENT); }
+"*="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_TIMES_EQUAL; RETURN(ASSIGNMENT); }
+"/="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_DIV_EQUAL; RETURN(ASSIGNMENT); }
+"%="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_MODULO_EQUAL; RETURN(ASSIGNMENT); }
+"&="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_AND_EQUAL; RETURN(ASSIGNMENT); }
+"^="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_CARET_EQUAL; RETURN(ASSIGNMENT); }
+"~="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL; RETURN(ASSIGNMENT); }
+"|="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL; RETURN(ASSIGNMENT); }
 
 "&&"                                                                                    RETURN(DOUBLE_AND_OPERATOR);
 "||"                                                                                    RETURN(DOUBLE_PIPE_OPERATOR);
 "!"                                                                                     RETURN(NOT_OPERATOR);
 
-"=="                                                                                    { yylval.operator = EQUAL_OPERATOR; RETURN(EQUALITY); }
-"!="                                                                                    { yylval.operator = NOT_EQUAL_OPERATOR; RETURN(EQUALITY); }
+"=="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_EQUAL; RETURN(EQUALITY); }
+"!="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_NOT_EQUAL; RETURN(EQUALITY); }
 
-"<"                                                                                     { yylval.operator = LESS_OPERATOR; RETURN(RELATIONAL); }
-"<="                                                                                    { yylval.operator = LESS_EQUAL_OPERATOR; RETURN(RELATIONAL); }
-">="                                                                                    { yylval.operator = GREATER_EQUAL_OPERATOR; RETURN(RELATIONAL); }
-">"                                                                                     { yylval.operator = GREATER_OPERATOR; RETURN(RELATIONAL); }
+"<"                                                                                     { yylval->operator = AST_BINARY_OPERATOR_LESS; RETURN(RELATIONAL); }
+"<="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_LESS_EQUAL; RETURN(RELATIONAL); }
+">="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_GREATER; RETURN(RELATIONAL); }
+">"                                                                                     { yylval->operator = AST_BINARY_OPERATOR_GREATER_EQUAL; RETURN(RELATIONAL); }
 
 [-.=+*%/&^~|:,{\[(}\]);]                                                                RETURN(yytext[0]);
 
-0|{positive_number}                                                                     { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(INTEGER_LITERAL); }
-((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { yylval.value.s = yytext; yylval.value.len = yyleng; RETURN(DECIMAL_LITERAL); }
-\"(\\.|[^"\\])*\"                                                                       { yylval.value.s = yytext + 1; yylval.value.len = yyleng - 2; RETURN(STRING_LITERAL); }
+0|{positive_number}                                                                     { yylval->value.s = yytext; yylval->value.len = yyleng; RETURN(INTEGER_LITERAL); }
+((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { yylval->value.s = yytext; yylval->value.len = yyleng; RETURN(DECIMAL_LITERAL); }
+\"(\\.|[^"\\])*\"                                                                       { yylval->value.s = yytext + 1; yylval->value.len = yyleng - 2; RETURN(STRING_LITERAL); }
 
 <METHOD>(operator{operator})|(({letter}|_)({letter}|{digit}|_)*)                        {
                                                                                             printf("<METHOD_NAME: %s>\n", yytext);
@@ -161,112 +157,10 @@ not_whitespace      [^ \a\f\t\r\v\n]
                                                                                             RETURN(IDENTIFIER);
                                                                                         }
 
-\n+                                                                                     {
-                                                                                            if (lexer_needs_semicolon()) {
-                                                                                                printf("$insert: ';'\n");
-                                                                                                RETURN(';');
-                                                                                            }
-                                                                                            /* else skip */
-                                                                                        }
+\n+                                                                                     RETURN_SEMICOLON_IF_NEEDED;
 
 "//".*                                                                                  /* this is a comment skip */
 
-.                                                                                       { yyerror("unexpected input"); exit(1); }
+<*>.                                                                                    { yyerror(yylloc, yyextra->extraParser, "unexpected input"); exit(1); }
 
 %%
-
-static int lexer_needs_semicolon() {
-    switch (lexer_last_token) {
-        case INTEGER_LITERAL:
-        case DECIMAL_LITERAL:
-        case STRING_LITERAL:
-        case NULL_LITERAL:
-        case THIS_LITERAL:
-        case TRUE_LITERAL:
-        case FALSE_LITERAL:
-        case IDENTIFIER:
-        case ')':
-        case '}':
-            return 1;
-    }
-    return 0;
-}
-
-// TODO: move into a config file
-#define FILE_EXTENSION ".blink"
-
-// TODO: move that to a different location
-static int blink_getFileNameForImport(char *import, int importLength, str *result) {
-    result->len = importLength + sizeof(FILE_EXTENSION);
-    result->s   = calloc(result->len, sizeof(*result->s));
-    if(!result->s) {
-        fprintf(stderr, "Error: could not allocate memory for import filename\n");
-        return 0;
-    }
-
-    for(int i = 0; i < importLength; ++i) {
-        result->s[i] = (import[i] == '.') ? '/' : import[i];
-    }
-    memcpy(result->s + importLength, FILE_EXTENSION, sizeof(FILE_EXTENSION) - 1);
-
-    return 1;
-}
-
-static int lexer_push_yy_state(char *import, int importLength) {
-    str sourceFileName = STR_NULL;
-
-    if (lexer_import_stack_ptr >= MAX_IMPORT_DEPTH) {
-        fprintf(stderr, "Error: imports nested too deeply\n");
-        return 0;
-    }
-
-    if (!blink_getFileNameForImport(import, importLength, &sourceFileName)) {
-        return 0;
-    }
-    fprintf(stdout, "current import filename: '%.*s'\n", STR_FMT(&sourceFileName));
-
-    lexer_import_stack[lexer_import_stack_ptr].state        = YY_CURRENT_BUFFER;
-    lexer_import_stack[lexer_import_stack_ptr].filename     = yylloc.filename;
-    lexer_import_stack[lexer_import_stack_ptr].first_line   = yylloc.first_line;
-    lexer_import_stack[lexer_import_stack_ptr].last_line    = yylloc.last_line;
-    lexer_import_stack[lexer_import_stack_ptr].first_column = yylloc.first_column;
-    lexer_import_stack[lexer_import_stack_ptr].last_column  = yylloc.last_column;
-    lexer_import_stack_ptr++;
-
-    yylloc.first_line   = yylloc.last_line   = 0;
-    yylloc.first_column = yylloc.last_column = 0;
-    yylloc.filename     = sourceFileName;
-
-    yyin = fopen(sourceFileName.s, "r");
-    if(!yyin) {
-        fprintf(stderr, "Error: could not open file: '%.*s'\n", STR_FMT(&sourceFileName));
-        return 0;
-    }
-
-    yy_switch_to_buffer(yy_create_buffer(yyin, YY_BUF_SIZE));
-
-    return 1;
-}
-
-static int lexer_pop_yy_state() {
-    if (lexer_import_stack[lexer_import_stack_ptr].filename.s) {
-        free(lexer_import_stack[lexer_import_stack_ptr].filename.s);
-        lexer_import_stack[lexer_import_stack_ptr].filename.s   = NULL;
-        lexer_import_stack[lexer_import_stack_ptr].filename.len = 0;
-    }
-
-    if (--lexer_import_stack_ptr < 0) {
-        return 0;
-    }
-
-    yy_delete_buffer(YY_CURRENT_BUFFER);
-    yy_switch_to_buffer(lexer_import_stack[lexer_import_stack_ptr].state);
-
-    yylloc.filename     = lexer_import_stack[lexer_import_stack_ptr].filename;
-    yylloc.first_line   = lexer_import_stack[lexer_import_stack_ptr].first_line;
-    yylloc.last_line    = lexer_import_stack[lexer_import_stack_ptr].last_line;
-    yylloc.first_column = lexer_import_stack[lexer_import_stack_ptr].first_column;
-    yylloc.last_column  = lexer_import_stack[lexer_import_stack_ptr].last_column;
-
-    return 1;
-}

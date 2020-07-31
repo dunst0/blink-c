@@ -5,86 +5,29 @@
  * @brief Parser for the blink language
  */
 
-%code requires {
-
-#include "blink/str.h"
-#include "blink/ast.h"
-
-#include <stdio.h>
-
-enum relational_operator {
-    LESS_OPERATOR,
-    LESS_EQUAL_OPERATOR,
-    GREATER_OPERATOR,
-    GREATER_EQUAL_OPERATOR,
-};
-
-enum equality_operator {
-    EQUAL_OPERATOR,
-    NOT_EQUAL_OPERATOR,
-};
-
-enum assignment_operator {
-    PLUS_EQUAL_OPERATOR,
-    MINUS_EQUAL_OPERATOR,
-    TIMES_EQUAL_OPERATOR,
-    DIV_EQUAL_OPERATOR,
-    MODULO_EQUAL_OPERATOR,
-    AND_EQUAL_OPERATOR,
-    CARET_EQUAL_OPERATOR,
-    TILDE_EQUAL_OPERATOR,
-    PIPE_EQUAL_OPERATOR,
-};
-
-extern int yyerror(char *s);
-extern int yylex(void);
-
-typedef struct YYLTYPE {
-    int first_line;
-    int first_column;
-    int last_line;
-    int last_column;
-    str filename;
-} YYLTYPE;
-
-/* alert the parser that we have our own definition */
-#define YYLTYPE_IS_DECLARED 1
-
-#define YYLLOC_DEFAULT(Current, Rhs, N)                                                     \
-    do {                                                                                    \
-        if(N) {                                                                             \
-            (Current).first_line   = YYRHSLOC(Rhs, 1).first_line;                           \
-            (Current).first_column = YYRHSLOC(Rhs, 1).first_column;                         \
-            (Current).last_line    = YYRHSLOC(Rhs, N).last_line;                            \
-            (Current).last_column  = YYRHSLOC(Rhs, N).last_column;                          \
-            (Current).filename     = YYRHSLOC(Rhs, 1).filename;                             \
-        } else {                                                                            \
-            /* empty RHS */                                                                 \
-            (Current).first_line = (Current).last_line = YYRHSLOC(Rhs, 0).last_line;        \
-            (Current).first_column = (Current).last_column = YYRHSLOC (Rhs, 0).last_column; \
-            (Current).filename.s = NULL ; /* new */                                         \
-            (Current).filename.len = 0 ;  /* new */                                         \
-        }                                                                                   \
-    } while(0)
-
-extern ast *parser_get_ast();
-
-}
-
-%code {
-#include <stdlib.h>
-
-ast *astResult = NULL;
-
-ast *parser_get_ast() {
-    return astResult;
-}
-
-}
+%define api.pure full
+%locations
 
 %verbose
 %define parse.trace
-%locations
+
+%parse-param { parser_extra_parser *extraParser }
+%lex-param   { void *scanner }
+
+%initial-action
+{
+    @$.first_line   = 1;
+    @$.first_column = 1;
+    @$.last_line    = 1;
+    @$.last_column  = 1;
+    @$.filename     = extraParser->sourceFileName;
+}
+
+%code requires {
+#include "blink/parser_helper.h"
+
+#include <blink/ast.h>
+}
 
 %union{
     int operator;
@@ -112,11 +55,52 @@ ast *parser_get_ast() {
     ast_while *while_expression;
 }
 
+%code requires {
+#define YYLTYPE YYLTYPE
+typedef struct YYLTYPE {
+    int first_line;
+    int first_column;
+    int last_line;
+    int last_column;
+    str filename;
+} YYLTYPE;
+
+void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
+}
+
+%code {
+#include "blink/parser_impl.h"
+
+#include "blink/lexer_impl.h"
+
+#include <stdlib.h>
+
+#define scanner extraParser->scanner
+
+#define YYLLOC_DEFAULT(Current, Rhs, N)                                                     \
+    do {                                                                                    \
+        if(N) {                                                                             \
+            (Current).first_line   = YYRHSLOC(Rhs, 1).first_line;                           \
+            (Current).first_column = YYRHSLOC(Rhs, 1).first_column;                         \
+            (Current).last_line    = YYRHSLOC(Rhs, N).last_line;                            \
+            (Current).last_column  = YYRHSLOC(Rhs, N).last_column;                          \
+            (Current).filename     = YYRHSLOC(Rhs, 1).filename;                             \
+        } else {                                                                            \
+            /* empty RHS */                                                                 \
+            (Current).first_line = (Current).last_line = YYRHSLOC(Rhs, 0).last_line;        \
+            (Current).first_column = (Current).last_column = YYRHSLOC (Rhs, 0).last_column; \
+            (Current).filename.s = NULL ; /* new */                                         \
+            (Current).filename.len = 0 ;  /* new */                                         \
+        }                                                                                   \
+    } while(0)
+
+}
+
 %token <value> INTEGER_LITERAL
 %token <value> DECIMAL_LITERAL
 %token <value> STRING_LITERAL
-%token <value> FALSE_LITERAL
-%token <value> TRUE_LITERAL
+%token FALSE_LITERAL
+%token TRUE_LITERAL
 %token NULL_LITERAL
 %token SUPER_LITERAL
 %token THIS_LITERAL
@@ -206,7 +190,7 @@ program                         : imports package
                                     {
                                         $$ = ast_program_new($2); // TODO: use $1
 
-                                        astResult = ast_new($$);
+                                        ast_new($$); // FIXME: assign result
                                     }
                                 ;
 
@@ -273,7 +257,7 @@ class_actuals                   : /* empty */
 
 class_body                      : /* empty */
                                     {
-                                        str name = STR_NULL;
+                                        str name = STR_NULL_INIT;
                                         str superClass = STR_STATIC_INIT("Object"); // FIXME: this needs to be redone
                                         ast_property_list *properties = ast_property_list_new();
                                         ast_function_list *functions = ast_function_list_new();
@@ -311,7 +295,7 @@ property_definition             : VAR_KEYWORD IDENTIFIER type value ';'
                                 | VAR_KEYWORD IDENTIFIER value ';'
                                     {
                                         str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = STR_NULL;
+                                        str type = STR_NULL_INIT;
                                         $$ = ast_property_new(@1.first_line, @1.first_column, dummy, type, $3);
                                     }
                                 ;
@@ -441,123 +425,66 @@ expression                      : assignment            { $$ = (ast_expression *
 assignment                      : IDENTIFIER ASSIGNMENT expression
                                     {
                                         str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str operator = STR_NULL;
-
-                                        switch ($2) {
-                                            case LESS_OPERATOR:
-                                                STR_STATIC_SET(&operator, "<");
-                                                break;
-                                            case LESS_EQUAL_OPERATOR:
-                                                STR_STATIC_SET(&operator, "<=");
-                                                break;
-                                            case GREATER_OPERATOR:
-                                                STR_STATIC_SET(&operator, ">");
-                                                break;
-                                            case GREATER_EQUAL_OPERATOR:
-                                                STR_STATIC_SET(&operator, ">=");
-                                                break;
-                                        }
-
-                                        $$ = ast_assignment_new(@1.first_line, @1.first_column, dummy, operator, $3);
+                                        $$ = ast_assignment_new(@1.first_line, @1.first_column, dummy, $2, $3);
                                     }
                                 | IDENTIFIER '=' expression
                                     {
                                         str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str operator = STR_STATIC_INIT("=");
-                                        $$ = ast_assignment_new(@1.first_line, @1.first_column, dummy, operator, $3);
+                                        $$ = ast_assignment_new(@1.first_line, @1.first_column, dummy, AST_ASSIGNMENT_OPERATOR_EQUAL, $3);
                                     }
                                 ;
 
 binary_expression               : expression '+' expression
                                     {
-                                        str operator = STR_STATIC_INIT("+");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_PLUS, $3);
                                     }
                                 | expression '-' expression
                                     {
-                                        str operator = STR_STATIC_INIT("-");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_MINUS, $3);
                                     }
                                 | expression '*' expression
                                     {
-                                        str operator = STR_STATIC_INIT("*");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_TIMES, $3);
                                     }
                                 | expression '/' expression
                                     {
-                                        str operator = STR_STATIC_INIT("/");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_DIV, $3);
                                     }
                                 | expression '%' expression
                                     {
-                                        str operator = STR_STATIC_INIT("%");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_MODULO, $3);
                                     }
                                 | expression '&' expression
                                     {
-                                        str operator = STR_STATIC_INIT("&");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
-                                    }
-                                | expression '~' expression
-                                    {
-                                        str operator = STR_STATIC_INIT("~");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_AND, $3);
                                     }
                                 | expression '^' expression
                                     {
-                                        str operator = STR_STATIC_INIT("^");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_CARET, $3);
+                                    }
+                                | expression '~' expression
+                                    {
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_TILDE, $3);
                                     }
                                 | expression '|' expression
                                     {
-                                        str operator = STR_STATIC_INIT("|");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_PIPE, $3);
                                     }
                                 | expression DOUBLE_AND_OPERATOR expression
                                     {
-                                        str operator = STR_STATIC_INIT("&&");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_DOUBLE_AND, $3);
                                     }
                                 | expression DOUBLE_PIPE_OPERATOR expression
                                     {
-                                        str operator = STR_STATIC_INIT("||");
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, AST_BINARY_OPERATOR_DOUBLE_PIPE, $3);
                                     }
                                 | expression RELATIONAL expression
                                     {
-                                        str operator = STR_NULL;
-
-                                        switch ($2) {
-                                            case LESS_OPERATOR:
-                                                STR_STATIC_SET(&operator, "<");
-                                                break;
-                                            case LESS_EQUAL_OPERATOR:
-                                                STR_STATIC_SET(&operator, "<=");
-                                                break;
-                                            case GREATER_OPERATOR:
-                                                STR_STATIC_SET(&operator, ">");
-                                                break;
-                                            case GREATER_EQUAL_OPERATOR:
-                                                STR_STATIC_SET(&operator, ">=");
-                                                break;
-                                        }
-
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, $2, $3);
                                     }
                                 | expression EQUALITY expression
                                     {
-                                        str operator = STR_NULL;
-
-                                        switch ($2) {
-                                            case EQUAL_OPERATOR:
-                                                STR_STATIC_SET(&operator, "==");
-                                                break;
-                                            case NOT_EQUAL_OPERATOR:
-                                                STR_STATIC_SET(&operator, "!=");
-                                                break;
-                                        }
-
-                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, operator, $3);
+                                        $$ = ast_binary_expression_new(@1.first_line, @1.first_column, $1, $2, $3);
                                     }
                                 ;
 
@@ -631,11 +558,11 @@ literal                         : INTEGER_LITERAL
                                     }
                                 | TRUE_LITERAL
                                     {
-                                        $$ = (ast_expression *) ast_boolean_literal_new(@1.first_line, @1.first_column, $1);
+                                        $$ = (ast_expression *) ast_boolean_literal_new(@1.first_line, @1.first_column, 1);
                                     }
                                 | FALSE_LITERAL
                                     {
-                                        $$ = (ast_expression *) ast_boolean_literal_new(@1.first_line, @1.first_column, $1);
+                                        $$ = (ast_expression *) ast_boolean_literal_new(@1.first_line, @1.first_column, 0);
                                     }
                                 | IDENTIFIER
                                     {
@@ -754,7 +681,7 @@ initialization                  : IDENTIFIER type value
                                 | IDENTIFIER value
                                     {
                                         str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str emtpy = STR_NULL;
+                                        str emtpy = STR_NULL_INIT;
                                         $$ = ast_initialization_new(@1.first_line, @1.first_column, dummy, emtpy, $2);
                                     }
                                 ;
@@ -775,10 +702,8 @@ value                           : '=' expression
 
 %%
 
-int yyerror(char *s)
-{
-    printf("%.*s (%d:%d): %s in this line:\n%s\n", STR_FMT(&yylloc.filename), yylloc.first_line + 1, yylloc.first_column + 1, s, "");
-    printf("%*s\n", yylloc.first_column + 1, "^");
-
-    return 1;
+void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg) {
+    fprintf(stderr, "Error: %.*s (%d:%d): %s in this line:\n%s\n",
+            STR_FMT(&locp->filename), locp->first_line, locp->first_column + 1, msg, "");
+    /*fprintf(stderr, "%*s\n", yylloc.first_column + 1, "^");*/
 }

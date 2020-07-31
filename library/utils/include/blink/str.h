@@ -9,6 +9,7 @@
 #define BLINK_STR_H
 
 #include <stdlib.h>
+#include <string.h>
 
 
 // -----------------------------------------------------------------------------
@@ -28,22 +29,43 @@ typedef struct str {
 //  Public defines
 // -----------------------------------------------------------------------------
 
-#define STR_NULL \
+#define STR_NULL_INIT                                                          \
     { NULL, 0 }
 
-#define STR_STATIC_INIT(s) \
-    { (s), sizeof((s)) - 1 }
+#define STR_STATIC_INIT(_str_)                                                 \
+    { (_str_), sizeof((_str_)) - 1 }
 
-#define STR_FMT(_pstr_)                                \
-    ((_pstr_ != (str *) 0) ? (int) (_pstr_)->len : 0), \
+#define STR_FMT(_pstr_)                                                        \
+    ((_pstr_ != (str *) 0) ? (int) (_pstr_)->len : 0),                         \
             ((_pstr_ != (str *) 0) ? (_pstr_)->s : "")
 
-#define STR_STATIC_SET(_pstr_, str)            \
-    do {                                       \
-        if ((_pstr_)) {                        \
-            (_pstr_)->s = (str);               \
-            (_pstr_)->len = sizeof((str)) - 1; \
-        }                                      \
+#define STR_STATIC_SET(_pstr_, _str_)                                          \
+    do {                                                                       \
+        if ((_pstr_)) {                                                        \
+            (_pstr_)->s   = (_str_);                                           \
+            (_pstr_)->len = sizeof((_str_)) - 1;                               \
+        }                                                                      \
+    } while (0)
+
+#define STR_STATIC_COPY(_dstr_, _str_)                                         \
+    do {                                                                       \
+        if ((_dstr_)) {                                                        \
+            char *tmp     = (_str_);                                           \
+            (_dstr_)->len = sizeof((_str_)) - 1;                               \
+            (_dstr_)->s   = calloc((_dstr_)->len, sizeof(*(_dstr_)->s));       \
+            if ((_dstr_)->s) { memcpy((_dstr_)->s, tmp, (_dstr_)->len); }      \
+        }                                                                      \
+    } while (0)
+
+#define STR_COPY(_dstr_, _pstr_)                                               \
+    do {                                                                       \
+        if ((_pstr_) && (_dstr_)) {                                            \
+            (_dstr_)->len = (_pstr_)->len;                                     \
+            (_dstr_)->s   = calloc((_pstr_)->len, sizeof(*(_pstr_)->s));       \
+            if ((_dstr_)->s) {                                                 \
+                memcpy((_dstr_)->s, (_pstr_)->s, (_dstr_)->len);               \
+            }                                                                  \
+        }                                                                      \
     } while (0)
 
 #endif// BLINK_STR_H

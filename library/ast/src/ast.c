@@ -114,7 +114,7 @@ static void ast_function_printer(ast_function *function, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
 
-    str visibility = STR_NULL;
+    str visibility = STR_NULL_INIT;
     switch (function->visibility) {
         case AST_FUNCTION_VISIBILITY_PUBLIC:
             STR_STATIC_SET(&visibility, "public");
@@ -215,6 +215,40 @@ static void ast_expression_printer(ast_expression *expression, void *args) {
 static void ast_assignment_printer(ast_assignment *assignment, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
+    str operator                 = STR_NULL_INIT;
+
+    switch (assignment->operator) {
+        case AST_ASSIGNMENT_OPERATOR_EQUAL:
+            STR_STATIC_SET(&operator, "=");
+            break;
+        case AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL:
+            STR_STATIC_SET(&operator, "+=");
+            break;
+        case AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL:
+            STR_STATIC_SET(&operator, "-=");
+            break;
+        case AST_ASSIGNMENT_OPERATOR_TIMES_EQUAL:
+            STR_STATIC_SET(&operator, "*=");
+            break;
+        case AST_ASSIGNMENT_OPERATOR_DIV_EQUAL:
+            STR_STATIC_SET(&operator, "/=");
+            break;
+        case AST_ASSIGNMENT_OPERATOR_MODULO_EQUAL:
+            STR_STATIC_SET(&operator, "%=");
+            break;
+        case AST_ASSIGNMENT_OPERATOR_AND_EQUAL:
+            STR_STATIC_SET(&operator, "&=");
+            break;
+        case AST_ASSIGNMENT_OPERATOR_CARET_EQUAL:
+            STR_STATIC_SET(&operator, "^=");
+            break;
+        case AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL:
+            STR_STATIC_SET(&operator, "~=");
+            break;
+        case AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL:
+            STR_STATIC_SET(&operator, "|=");
+            break;
+    }
 
     fprintf(printer->outFile, "assignment%llu;\n", nodeCount);
     fprintf(printer->outFile,
@@ -224,7 +258,7 @@ static void ast_assignment_printer(ast_assignment *assignment, void *args) {
             " | { operator: %.*s }"
             " }\"];\n",
             nodeCount, "ast_assignment", STR_FMT(&assignment->identifier),
-            STR_FMT(&assignment->operator));
+            STR_FMT(&operator));
 
     if (assignment->value) {
         fprintf(printer->outFile, "\tassignment%llu -> ", nodeCount);

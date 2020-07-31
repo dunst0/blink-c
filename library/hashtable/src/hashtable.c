@@ -88,7 +88,7 @@ int hashtable_insert_check(hashtable *this, str key, void *value,
 
     unsigned long int hashSlot = hashtable_hash(this, key);
     hashtable_node *node       = this->list[hashSlot];
-    str keyCopy                = STR_NULL;
+    str keyCopy                = STR_NULL_INIT;
 
     while (node &&
            (key.len != node->key.len ||

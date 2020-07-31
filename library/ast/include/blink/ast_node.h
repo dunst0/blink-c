@@ -104,12 +104,43 @@ typedef struct ast_let ast_let;
 
 typedef struct ast_initialization ast_initialization;
 
+typedef enum ast_assignment_operator {
+    AST_ASSIGNMENT_OPERATOR_EQUAL,
+    AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL,
+    AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL,
+    AST_ASSIGNMENT_OPERATOR_TIMES_EQUAL,
+    AST_ASSIGNMENT_OPERATOR_DIV_EQUAL,
+    AST_ASSIGNMENT_OPERATOR_MODULO_EQUAL,
+    AST_ASSIGNMENT_OPERATOR_AND_EQUAL,
+    AST_ASSIGNMENT_OPERATOR_CARET_EQUAL,
+    AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL,
+    AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL,
+} ast_assignment_operator;
 typedef struct ast_assignment ast_assignment;
 typedef struct ast_cast ast_cast;
 
 typedef struct ast_if_else ast_if_else;
 typedef struct ast_while ast_while;
 
+typedef enum ast_binary_operator {
+    AST_BINARY_OPERATOR_PLUS,
+    AST_BINARY_OPERATOR_MINUS,
+    AST_BINARY_OPERATOR_TIMES,
+    AST_BINARY_OPERATOR_DIV,
+    AST_BINARY_OPERATOR_MODULO,
+    AST_BINARY_OPERATOR_AND,
+    AST_BINARY_OPERATOR_CARET,
+    AST_BINARY_OPERATOR_TILDE,
+    AST_BINARY_OPERATOR_PIPE,
+    AST_BINARY_OPERATOR_LESS,
+    AST_BINARY_OPERATOR_LESS_EQUAL,
+    AST_BINARY_OPERATOR_GREATER,
+    AST_BINARY_OPERATOR_GREATER_EQUAL,
+    AST_BINARY_OPERATOR_EQUAL,
+    AST_BINARY_OPERATOR_NOT_EQUAL,
+    AST_BINARY_OPERATOR_DOUBLE_AND,
+    AST_BINARY_OPERATOR_DOUBLE_PIPE,
+} ast_binary_operator;
 typedef struct ast_binary_expression ast_binary_expression;
 typedef struct ast_unary_expression ast_unary_expression;
 
@@ -263,7 +294,8 @@ extern void ast_initialization_destroy(ast_initialization **this);
 
 extern ast_assignment *ast_assignment_new(unsigned long int line,
                                           unsigned long int column,
-                                          str identifier, str operator,
+                                          str identifier,
+                                          ast_assignment_operator operator,
                                           ast_expression * value);
 extern void ast_assignment_destroy(ast_assignment **this);
 
@@ -286,7 +318,7 @@ extern void ast_while_destroy(ast_while **this);
 
 extern ast_binary_expression *
 ast_binary_expression_new(unsigned long int line, unsigned long int column,
-                          ast_expression *left, str operator,
+                          ast_expression *left, ast_binary_operator operator,
                           ast_expression * right);
 extern void ast_binary_expression_destroy(ast_binary_expression **this);
 
@@ -339,7 +371,7 @@ extern void ast_integer_literal_destroy(ast_integer_literal **this);
 
 extern ast_boolean_literal *ast_boolean_literal_new(unsigned long int line,
                                                     unsigned long int column,
-                                                    str value);
+                                                    int value);
 extern void ast_boolean_literal_destroy(ast_boolean_literal **this);
 
 extern ast_decimal_literal *ast_decimal_literal_new(unsigned long int line,
@@ -435,7 +467,7 @@ struct ast_initialization {
 struct ast_assignment {
     AST_EXPRESSION_PROPERTIES
     str identifier;
-    str operator;
+    ast_assignment_operator operator;
     ast_expression *value;
 };
 
@@ -461,7 +493,7 @@ struct ast_while {
 struct ast_binary_expression {
     AST_EXPRESSION_PROPERTIES
     ast_expression *left;
-    str operator;
+    ast_binary_operator operator;
     ast_expression *right;
 };
 
@@ -521,7 +553,7 @@ struct ast_integer_literal {
 
 struct ast_boolean_literal {
     AST_EXPRESSION_PROPERTIES
-    str value;
+    int value;
 };
 
 struct ast_decimal_literal {

@@ -306,7 +306,8 @@ void ast_initialization_destroy(ast_initialization **this) {
 
 ast_assignment *ast_assignment_new(unsigned long int line,
                                    unsigned long int column, str identifier,
-                                   str operator, ast_expression * value) {
+                                   ast_assignment_operator operator,
+                                   ast_expression * value) {
     AST_NODE_ALLOC_INIT(ast_assignment, EXPRESSION, ASSIGNMENT, line, column);
 
     this->identifier = identifier;
@@ -387,14 +388,14 @@ void ast_while_destroy(ast_while **this) {
 ast_binary_expression *ast_binary_expression_new(unsigned long int line,
                                                  unsigned long int column,
                                                  ast_expression *left,
-                                                 str operator,
+                                                 ast_binary_operator operator,
                                                  ast_expression * right) {
     AST_NODE_ALLOC_INIT(ast_binary_expression, EXPRESSION, BINARY_EXPRESSION,
                         line, column);
 
-    this->left    = left;
-    this->operator= operator;
-    this->right   = right;
+    this->left     = left;
+    this->operator = operator;
+    this->right    = right;
 
     return this;
 }
@@ -583,7 +584,7 @@ void ast_integer_literal_destroy(ast_integer_literal **this) {
 
 ast_boolean_literal *ast_boolean_literal_new(unsigned long int line,
                                              unsigned long int column,
-                                             str value) {
+                                             int value) {
     AST_NODE_ALLOC_INIT(ast_boolean_literal, EXPRESSION, BOOLEAN_LITERAL, line,
                         column);
 

@@ -1,58 +1,68 @@
-#include "blink/parser.h"
-#include "blink/str.h"
+#include "blink/version.h"
 
+#include <blink/parser.h>
+#include <blink/str.h>
+#include <blink/symboltable.h>
+
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char **argv) {
-    extern FILE *yyin;
 
-    FILE *graphFile    = NULL;
-    char *sourceFile   = "stdin";
-    str sourceFileName = STR_NULL;
-    int loadFromFile   = 0;
-    ast *astResult     = NULL;
+// -----------------------------------------------------------------------------
+//  Local defines
+// -----------------------------------------------------------------------------
+
+#define BLINK_SUCCESS 0
+#define BLINK_FAILURE 1
+#define BLINK_OTHER_ERROR 2
+
+
+// -----------------------------------------------------------------------------
+//  Local variables
+// -----------------------------------------------------------------------------
+
+static str sourceFileName   = STR_STATIC_INIT("stdin");
+static str currentDirectory = STR_NULL_INIT;
+static str graphFileName    = STR_NULL_INIT;
+static int parserDebug      = PARSER_DEBUG_NONE;
+
+
+// -----------------------------------------------------------------------------
+//  Local functions
+// -----------------------------------------------------------------------------
+
+
+// -----------------------------------------------------------------------------
+//  Main function
+// -----------------------------------------------------------------------------
+
+int main(int argc, char **argv) {
+    int result = BLINK_SUCCESS;
+
+    parser *blinkParser = NULL;
 
     if (argc == 2) {
-        sourceFile   = argv[1];
-        loadFromFile = 1;
+        sourceFileName.len = strlen(argv[1]);
+        sourceFileName.s   = argv[1];
     }
 
-    sourceFileName.len = snprintf(NULL, 0, "%s", sourceFile) + 1;
-    sourceFileName.s   = calloc(sourceFileName.len, sizeof(*sourceFileName.s));
-    if (!sourceFileName.s) {
-        fprintf(stderr, "Error: could not allocate memory for filename\n");
-        return 2;
-    }
-    snprintf(sourceFileName.s, sourceFileName.len, "%s", sourceFile);
+    parserDebug = PARSER_DEBUG_LEXER | PARSER_DEBUG_PARSER;
 
-    if (loadFromFile) {
-        yyin = fopen(sourceFileName.s, "r");
-    } else {
-        yyin = stdin;
+    blinkParser = parser_new(sourceFileName, currentDirectory, parserDebug);
+    if (!blinkParser) {
+        result = BLINK_OTHER_ERROR;
+        goto done;
     }
 
-    printf("%s: start parsing from '%.*s'\n", argv[0], STR_FMT(&sourceFileName));
-
-    yydebug         = 0;
-    yylloc.filename = sourceFileName;
-
-    if (yyparse() != 0) {
-        printf("blink parse failed\n");
-        return 1;
-    }
-    printf("blink parse worked\n");
-
-    astResult = parser_get_ast();
-    if (!astResult) {
-        fprintf(stderr, "Error: could not allocate memory for ast\n");
-        return 1;
+    if (!parser_parse(blinkParser)) {
+        fprintf(stderr, "Error: parsing failed\n");
+    } else  {
+        fprintf(stderr, "Debug: parsing worked\n");
     }
 
-    graphFile = fopen("graph.dot", "w");
-    ast_generate_graph(astResult, graphFile);
+done:
+    parser_destroy(&blinkParser);
 
-    ast_destroy(&astResult);
-
-    return 0;
+    return result;
 }
