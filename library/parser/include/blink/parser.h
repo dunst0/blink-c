@@ -19,7 +19,7 @@
 // -----------------------------------------------------------------------------
 
 /**
- * @brief Type TODO
+ * @brief Type for the Parser.
  */
 typedef struct parser {
     FILE *sourceFile;
@@ -46,9 +46,9 @@ typedef struct parser {
 
 /**
  * @brief Create a Parser.
- * @param TODO
- * @param TODO
- * @param TODO
+ * @param[in] sourceFileName The source file to begin the parsing with
+ * @param[in] currentDirectory The current directory to search other files in
+ * @param[in] debug The debug level of the parser
  * @return A pointer to Parser or NULL if memory allocation failed
  */
 extern parser *parser_new(str sourceFileName, str currentDirectory,
@@ -62,14 +62,16 @@ extern void parser_destroy(parser **this);
 
 /**
  * @brief Parse the source file.
- * @param[in] this TODO
- * @return TODO
+ * @param[in] this The parser to run.
+ * @retval 1 Ok
+ * @retval 0 Error while parsing
  */
 extern int parser_parse(parser *this);
 
 /**
- * @brief TODO
- * @return TODO
+ * @brief Return the resulting ast after parsing.
+ * @param[in] this The parser to retrieve the ast from
+ * @return A pointer to a AST or NULL if parsing failed or hasn't run
  */
 extern ast *parser_get_ast(parser *this);
 

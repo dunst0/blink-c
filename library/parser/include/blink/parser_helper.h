@@ -16,7 +16,7 @@
 // -----------------------------------------------------------------------------
 
 /**
- * @brief Type TODO
+ * @brief Type for extra parser data.
  */
 typedef struct parser_extra_parser {
     void *scanner;
@@ -25,7 +25,7 @@ typedef struct parser_extra_parser {
 } parser_extra_parser;
 
 /**
- * @brief Type TODO
+ * @brief Type for extra lexer data.
  */
 typedef struct parser_extra_lexer {
     int lastToken;

@@ -14,9 +14,11 @@ target_sources(ast
         PRIVATE
         "src/ast.c"
         "src/ast_node.c"
+        "src/ast_printer.c"
         PUBLIC
         "include/blink/ast.h"
         "include/blink/ast_node.h"
+        "include/blink/ast_printer.h"
         )
 
 target_include_directories(ast PUBLIC "include")

@@ -221,6 +221,7 @@ ast_function *ast_function_new(unsigned long int line, unsigned long int column,
 void ast_function_destroy(ast_function **this) {
     if (!this || !(*this)) { return; }
 
+    ast_formal_list_destroy(&(*this)->parameters);
     ast_expression_destroy(&(*this)->body);
 
     AST_NODE_FREE();

@@ -53,7 +53,7 @@
 
 %x IMPORT
 %x PACKAGE
-%x METHOD
+%x FUNCTION
 
 letter              [a-zA-Z]
 digit               [0-9]
@@ -65,7 +65,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 
 %%
 
-<INITIAL,METHOD,IMPORT,PACKAGE>{whitespace}*                                            /* eat the whitespace */
+<INITIAL,FUNCTION,IMPORT,PACKAGE>{whitespace}*                                            /* eat the whitespace */
 
 <INITIAL>"import"                                                                       BEGIN(IMPORT);
 <INITIAL>"package"                                                                      BEGIN(PACKAGE);
@@ -97,7 +97,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 "false"                                                                                 RETURN(FALSE_LITERAL);
 "final"                                                                                 RETURN(FINAL_KEYWORD);
 "func"                                                                                  {
-                                                                                            BEGIN(METHOD);
+                                                                                            BEGIN(FUNCTION);
                                                                                             RETURN(FUNC_KEYWORD);
                                                                                         }
 "if"                                                                                    RETURN(IF_KEYWORD);
@@ -147,10 +147,10 @@ not_whitespace      [^ \a\f\t\r\v\n]
 ((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { yylval->value.s = yytext; yylval->value.len = yyleng; RETURN(DECIMAL_LITERAL); }
 \"(\\.|[^"\\])*\"                                                                       { yylval->value.s = yytext + 1; yylval->value.len = yyleng - 2; RETURN(STRING_LITERAL); }
 
-<METHOD>(operator{operator})|(({letter}|_)({letter}|{digit}|_)*)                        {
-                                                                                            printf("<METHOD_NAME: %s>\n", yytext);
+<FUNCTION>(operator{operator})|(({letter}|_)({letter}|{digit}|_)*)                        {
+                                                                                            printf("<FUNCTION_NAME: %s>\n", yytext);
                                                                                             BEGIN(INITIAL);
-                                                                                            RETURN(METHOD_NAME);
+                                                                                            RETURN(FUNCTION_NAME);
                                                                                         }
 ({letter}|_)({letter}|{digit}|_)*                                                       {
                                                                                             printf("<IDENTIFIER: %s>\n", yytext);

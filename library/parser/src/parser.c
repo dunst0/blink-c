@@ -17,7 +17,7 @@
 // -----------------------------------------------------------------------------
 
 /**
- * @brief TODO
+ * @brief The source file name for input from stdin.
  */
 static str parser_source_stdin = STR_STATIC_INIT("stdin");
 
@@ -108,5 +108,5 @@ int parser_parse(parser *this) {
 ast *parser_get_ast(parser *this) {
     if (!this) { return 0; }
 
-    return NULL;
+    return this->extraParser.resultAst;
 }

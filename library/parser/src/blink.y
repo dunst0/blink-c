@@ -105,7 +105,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %token SUPER_LITERAL
 %token THIS_LITERAL
 
-%token METHOD_NAME
+%token FUNCTION_NAME
 %token IDENTIFIER
 
 /* keywords */
@@ -168,11 +168,11 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <expressions>        expressions expressions_list actuals_definition actuals class_actuals
 %type <formal>             formal
 %type <formals>            formals_definition formals class_formals
-%type <function>           method_signature method_definition
+%type <function>           function_signature function_definition
 %type <if_else_expression> if_else
 %type <initialization>     initialization
 %type <initializations>    initialization_list;
-%type <operator>           method_visibility method_overwrite method_final
+%type <operator>           function_visibility function_overwrite function_final
 %type <let>                let
 %type <property>           property_definition
 %type <reference>          type
@@ -189,8 +189,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 program                         : imports package
                                     {
                                         $$ = ast_program_new($2); // TODO: use $1
-
-                                        ast_new($$); // FIXME: assign result
+                                        extraParser->resultAst = ast_new($$);
                                     }
                                 ;
 
@@ -224,6 +223,7 @@ class_definition                : CLASS_KEYWORD IDENTIFIER class_formals '{' cla
                                         str name = STR_STATIC_INIT("dummy"); // TODO: fix me
                                         $$ = $5;
                                         $$->name = name;
+                                        $$->parameters = $3;
                                     }
                                 | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' ';'
                                     {
@@ -231,6 +231,7 @@ class_definition                : CLASS_KEYWORD IDENTIFIER class_formals '{' cla
                                         str superClass = STR_STATIC_INIT("dummy"); // TODO: fix me
                                         $$ = $8;
                                         $$->name = name;
+                                        $$->parameters = $3;
                                         $$->superClass = superClass;
                                     }
                                 ;
@@ -269,7 +270,7 @@ class_body                      : /* empty */
                                         $$ = $1;
                                         ast_property_list_unshift($$->properties, property);
                                     }
-                                | class_body method_definition
+                                | class_body function_definition
                                     {
                                         ast_function *function = $2;
                                         $$ = $1;
@@ -300,14 +301,14 @@ property_definition             : VAR_KEYWORD IDENTIFIER type value ';'
                                     }
                                 ;
 
-/* methods definitions */
-method_definition               : ABSTRACT_KEYWORD method_visibility method_signature ';'
+/* functions definitions */
+function_definition               : ABSTRACT_KEYWORD function_visibility function_signature ';'
                                     {
                                         $$ = $3;
                                         $$->isAbstract = 1;
                                         $$->visibility = $2;
                                     }
-                                | method_final method_overwrite method_visibility method_signature value ';'
+                                | function_final function_overwrite function_visibility function_signature value ';'
                                     {
                                         $$ = $4;
                                         $$->isFinal = $1;
@@ -317,7 +318,7 @@ method_definition               : ABSTRACT_KEYWORD method_visibility method_sign
                                     }
                                 ;
 
-method_final                    : /* empty */
+function_final                    : /* empty */
                                     {
                                         $$ = 0;
                                     }
@@ -327,7 +328,7 @@ method_final                    : /* empty */
                                     }
                                 ;
 
-method_overwrite                : /* empty */
+function_overwrite                : /* empty */
                                     {
                                         $$ = 0;
                                     }
@@ -338,7 +339,7 @@ method_overwrite                : /* empty */
                                 ;
 
 
-method_visibility               : /* empty */
+function_visibility               : /* empty */
                                     {
                                         $$ = AST_FUNCTION_VISIBILITY_PRIVATE;
                                     }
@@ -356,13 +357,13 @@ method_visibility               : /* empty */
                                     }
                                 ;
 
-method_signature                : FUNC_KEYWORD METHOD_NAME formals_definition
+function_signature                : FUNC_KEYWORD FUNCTION_NAME formals_definition
                                     {
                                         str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
                                         str type = STR_STATIC_INIT("Unit"); // FIXME: this needs to be redone
                                         $$ = ast_function_new(@1.first_line, @1.first_column, dummy, $3, type, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
                                     }
-                                | FUNC_KEYWORD METHOD_NAME formals_definition type
+                                | FUNC_KEYWORD FUNCTION_NAME formals_definition type
                                     {
                                         str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
                                         str type = $4->identifier;
@@ -383,9 +384,8 @@ formals                         : /* empty */
                                     }
                                 | formals formal ','
                                     {
-                                        ast_formal *formal = $2;
                                         $$ = $1;
-                                        ast_formal_list_unshift($$, formal);
+                                        ast_formal_list_unshift($$, $2);
                                     }
                                 ;
 
@@ -508,12 +508,12 @@ constructor_call                : NEW_KEYWORD IDENTIFIER actuals_definition
                                     }
                                 ;
 
-dispatch                        : expression '.' METHOD_NAME actuals_definition
+dispatch                        : expression '.' FUNCTION_NAME actuals_definition
                                     {
                                         str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
                                         $$ = (ast_expression *) ast_function_call_new(@1.first_line, @1.first_column, $1, dummy, $4);
                                     }
-                                | SUPER_LITERAL '.' METHOD_NAME actuals_definition
+                                | SUPER_LITERAL '.' FUNCTION_NAME actuals_definition
                                     {
                                         str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
                                         $$ = (ast_expression *) ast_super_function_call_new(@1.first_line, @1.first_column, dummy, $4);

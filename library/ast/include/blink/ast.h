@@ -14,6 +14,25 @@
 
 
 // -----------------------------------------------------------------------------
+//  Public defines
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief Execute the callbacks if set for the given node.
+ */
+#define AST_EXECUTE_CALLBACKS(callbacks, node, args)                           \
+    if ((callbacks)->preNodeCallback) {                                        \
+        (callbacks)->preNodeCallback((ast_node *) (node), (args));             \
+    }                                                                          \
+    if ((callbacks)->nodeCallback) {                                           \
+        (callbacks)->nodeCallback((ast_node *) (node), (args));                \
+    }                                                                          \
+    if ((callbacks)->postNodeCallback) {                                       \
+        (callbacks)->postNodeCallback((ast_node *) (node), (args));            \
+    }
+
+
+// -----------------------------------------------------------------------------
 //  Public types
 // -----------------------------------------------------------------------------
 
@@ -28,13 +47,9 @@ typedef struct ast {
  * @brief Type for AST callbacks for the ast_walk function.
  */
 typedef struct ast_callbacks {
-    ast_program_callback programCallback;
-    ast_class_callback classCallback;
-    ast_formal_callback formalCallback;
-    ast_function_callback functionCallback;
-    ast_expression_callback expressionCallback;
-    ast_assignment_callback assignmentCallback;
-    ast_string_literal_callback stringLiteralCallback;
+    ast_node_callback preNodeCallback;
+    ast_node_callback nodeCallback;
+    ast_node_callback postNodeCallback;
 } ast_callbacks;
 
 
@@ -58,15 +73,15 @@ extern void ast_destroy(ast **this);
 /**
  * @brief Walk the AST with ast_callbacks and args.
  * @param[in,out] this The AST to walk
- * @param[in] callbacks TODO
- * @param args TODO
+ * @param[in] callbacks The struct with the callbacks for the AST nodes.
+ * @param[in] args The extra argument for the callbacks for the AST nodes
  */
 extern void ast_walk(ast *this, ast_callbacks *callbacks, void *args);
 
 /**
  * @brief Generate a dot graph description of the AST into the file.
  * @param[in] this The AST to visualize as graph
- * @param[out] file The file to write the dot graph description
+ * @param[int, out] file The file to write the dot graph description
  */
 extern void ast_generate_graph(const ast *this, FILE *file);
 
