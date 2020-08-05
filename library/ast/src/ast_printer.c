@@ -300,17 +300,104 @@ static void ast_string_literal_printer(ast_string_literal *stringLiteral,
             nodeCount, "ast_string_literal", STR_FMT(&stringLiteral->value));
 }
 
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
+static void ast_integer_literal_printer(ast_integer_literal *integerLiteral,
+                                        void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    fprintf(printer->outFile, "integer_literal%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tinteger_literal%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">value:</TD>"
+            "<TD ALIGN=\"LEFT\"> %.*s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_integer_literal", STR_FMT(&integerLiteral->value));
+}
+
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
+static void ast_null_literal_printer(ast_null_literal *nullLiteral,
+                                     void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    fprintf(printer->outFile, "null_literal%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tnull_literal%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">value:</TD>"
+            "<TD ALIGN=\"LEFT\"> null </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_null_literal");
+}
+
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
+static void ast_boolean_literal_printer(ast_boolean_literal *booleanLiteral,
+                                        void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    fprintf(printer->outFile, "boolean_literal%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tboolean_literal%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">value:</TD>"
+            "<TD ALIGN=\"LEFT\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_boolean_literal",
+            booleanLiteral->value ? "true" : "false");
+}
+
 static void ast_node_printer(ast_node *node, void *args) {
     switch (node->astNodeType) {
         case AST_NODE_TYPE_EXPRESSION:
             switch (((ast_expression *) node)->astExpressionType) {
                 case AST_EXPRESSION_TYPE_INTEGER_LITERAL:
+                    ast_integer_literal_printer((ast_integer_literal *) node,
+                                                args);
                     break;
                 case AST_EXPRESSION_TYPE_BOOLEAN_LITERAL:
+                    ast_boolean_literal_printer((ast_boolean_literal *) node,
+                                                args);
                     break;
                 case AST_EXPRESSION_TYPE_DECIMAL_LITERAL:
                     break;
                 case AST_EXPRESSION_TYPE_NULL_LITERAL:
+                    ast_null_literal_printer((ast_null_literal *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_STRING_LITERAL:
                     ast_string_literal_printer((ast_string_literal *) node,

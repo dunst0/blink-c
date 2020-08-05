@@ -35,15 +35,12 @@ parser *parser_new(str sourceFileName, str currentDirectory,
 
     this->debug = debug;
 
-    /* make string length one longer to have '\0' for fopen */
-    sourceFileName.len++;
-    STR_COPY(&this->sourceFileName, &sourceFileName);
-    STR_COPY(&this->currentDirectory, &currentDirectory);
+    STR_COPY_WITH_NUL(&this->sourceFileName, &sourceFileName);
+    STR_COPY_WITH_NUL(&this->currentDirectory, &currentDirectory);
     if (!this->sourceFileName.s || !this->currentDirectory.s) {
         parser_destroy(&this);
         return NULL;
     }
-    sourceFileName.len--;
 
     this->extraParser.sourceFileName = this->sourceFileName;
 
@@ -88,8 +85,8 @@ void parser_destroy(parser **this) {
         yylex_destroy((*this)->extraParser.scanner);
     }
     if ((*this)->sourceFile) { fclose((*this)->sourceFile); }
-    if ((*this)->sourceFileName.s) { free((*this)->sourceFileName.s); }
-    if ((*this)->currentDirectory.s) { free((*this)->currentDirectory.s); }
+    STR_FREE(&(*this)->sourceFileName);
+    STR_FREE(&(*this)->currentDirectory);
 
     free(*this);
     *this = NULL;

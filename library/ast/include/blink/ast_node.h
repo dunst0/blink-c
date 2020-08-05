@@ -268,10 +268,7 @@ CREATE_LIST_TYPE(INTERFACE, ast_initialization, initialization)
 /**
  * @brief Properties for an AST node in general.
  */
-#define AST_NODE_PROPERTIES                                                    \
-    ast_node_type astNodeType;                                                 \
-    unsigned long long line;                                                   \
-    unsigned long long column;
+#define AST_NODE_PROPERTIES ast_node_type astNodeType;
 
 /**
  * @brief Properties for a definition AST node in general.
@@ -320,8 +317,6 @@ extern void ast_program_destroy(ast_program **this);
 
 /**
  * @brief Create a class node for the AST. TODO
- * @param[in] line
- * @param[in] column
  * @param[in] name
  * @param[in] parameters
  * @param[in] superClass
@@ -330,9 +325,8 @@ extern void ast_program_destroy(ast_program **this);
  * @param[in] functions
  * @return On success a pointer to ast_class, else NULL
  */
-extern ast_class *ast_class_new(unsigned long int line,
-                                unsigned long int column, str name,
-                                ast_formal_list *parameters, str superClass,
+extern ast_class *ast_class_new(str name, ast_formal_list *parameters,
+                                str superClass,
                                 ast_expression_list *superClassArgs,
                                 ast_property_list *properties,
                                 ast_function_list *functions);
@@ -345,16 +339,12 @@ extern void ast_class_destroy(ast_class **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param identifier
  * @param type
  * @param isLazy
  * @return
  */
-extern ast_formal *ast_formal_new(unsigned long int line,
-                                  unsigned long int column, str identifier,
-                                  str type, int isLazy);
+extern ast_formal *ast_formal_new(str identifier, str type, int isLazy);
 
 /**
  * @brief TODO
@@ -364,8 +354,6 @@ extern void ast_formal_destroy(ast_formal **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param name
  * @param parameters
  * @param returnType
@@ -376,11 +364,11 @@ extern void ast_formal_destroy(ast_formal **this);
  * @param isOverwrite
  * @return
  */
-extern ast_function *
-ast_function_new(unsigned long int line, unsigned long int column, str name,
-                 ast_formal_list *parameters, str returnType,
-                 ast_expression *body, ast_function_visibility visibility,
-                 int isAbstract, int isFinal, int isOverwrite);
+extern ast_function *ast_function_new(str name, ast_formal_list *parameters,
+                                      str returnType, ast_expression *body,
+                                      ast_function_visibility visibility,
+                                      int isAbstract, int isFinal,
+                                      int isOverwrite);
 
 /**
  * @brief TODO
@@ -390,16 +378,13 @@ extern void ast_function_destroy(ast_function **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param name
  * @param type
  * @param value
  * @return
  */
-extern ast_property *ast_property_new(unsigned long int line,
-                                      unsigned long int column, str name,
-                                      str type, ast_expression *value);
+extern ast_property *ast_property_new(str name, str type,
+                                      ast_expression *value);
 
 /**
  * @brief TODO
@@ -409,14 +394,10 @@ extern void ast_property_destroy(ast_property **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param expressions
  * @return
  */
-extern ast_block *ast_block_new(unsigned long int line,
-                                unsigned long int column,
-                                ast_expression_list *expressions);
+extern ast_block *ast_block_new(ast_expression_list *expressions);
 
 /**
  * @brief TODO
@@ -426,14 +407,11 @@ extern void ast_block_destroy(ast_block **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param initializations
  * @param body
  * @return
  */
-extern ast_let *ast_let_new(unsigned long int line, unsigned long int column,
-                            ast_initialization_list *initializations,
+extern ast_let *ast_let_new(ast_initialization_list *initializations,
                             ast_expression *body);
 
 /**
@@ -444,16 +422,12 @@ extern void ast_let_destroy(ast_let **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param identifier
  * @param type
  * @param value
  * @return
  */
-extern ast_initialization *ast_initialization_new(unsigned long int line,
-                                                  unsigned long int column,
-                                                  str identifier, str type,
+extern ast_initialization *ast_initialization_new(str identifier, str type,
                                                   ast_expression *value);
 
 /**
@@ -464,16 +438,12 @@ extern void ast_initialization_destroy(ast_initialization **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param identifier
  * @param operator
  * @param value
  * @return
  */
-extern ast_assignment *ast_assignment_new(unsigned long int line,
-                                          unsigned long int column,
-                                          str identifier,
+extern ast_assignment *ast_assignment_new(str identifier,
                                           ast_assignment_operator operator,
                                           ast_expression * value);
 
@@ -485,14 +455,11 @@ extern void ast_assignment_destroy(ast_assignment **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param object
  * @param type
  * @return
  */
-extern ast_cast *ast_cast_new(unsigned long int line, unsigned long int column,
-                              ast_expression *object, str type);
+extern ast_cast *ast_cast_new(ast_expression *object, str type);
 
 /**
  * @brief TODO
@@ -502,16 +469,12 @@ extern void ast_cast_destroy(ast_cast **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param condition
  * @param thenBranch
  * @param elseBranch
  * @return
  */
-extern ast_if_else *ast_if_else_new(unsigned long int line,
-                                    unsigned long int column,
-                                    ast_expression *condition,
+extern ast_if_else *ast_if_else_new(ast_expression *condition,
                                     ast_expression *thenBranch,
                                     ast_expression *elseBranch);
 
@@ -523,15 +486,11 @@ extern void ast_if_else_destroy(ast_if_else **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param condition
  * @param body
  * @return
  */
-extern ast_while *ast_while_new(unsigned long int line,
-                                unsigned long int column,
-                                ast_expression *condition,
+extern ast_while *ast_while_new(ast_expression *condition,
                                 ast_expression *body);
 
 /**
@@ -542,16 +501,13 @@ extern void ast_while_destroy(ast_while **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param left
  * @param operator
  * @param right
  * @return
  */
 extern ast_binary_expression *
-ast_binary_expression_new(unsigned long int line, unsigned long int column,
-                          ast_expression *left, ast_binary_operator operator,
+ast_binary_expression_new(ast_expression *left, ast_binary_operator operator,
                           ast_expression * right);
 
 /**
@@ -562,15 +518,12 @@ extern void ast_binary_expression_destroy(ast_binary_expression **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param operator
  * @param expression
  * @return
  */
 extern ast_unary_expression *
-ast_unary_expression_new(unsigned long int line, unsigned long int column,
-                         str operator, ast_expression * expression);
+        ast_unary_expression_new(str operator, ast_expression * expression);
 
 /**
  * @brief TODO
@@ -580,15 +533,11 @@ extern void ast_unary_expression_destroy(ast_unary_expression **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param expression
  * @param context
  * @return
  */
-extern ast_lazy_expression *ast_lazy_expression_new(unsigned long int line,
-                                                    unsigned long int column,
-                                                    ast_expression *expression,
+extern ast_lazy_expression *ast_lazy_expression_new(ast_expression *expression,
                                                     void *context);
 
 /**
@@ -599,14 +548,10 @@ extern void ast_lazy_expression_destroy(ast_lazy_expression **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param func
  * @return
  */
-extern ast_native_expression *
-ast_native_expression_new(unsigned long int line, unsigned long int column,
-                          void *func);
+extern ast_native_expression *ast_native_expression_new(void *func);
 
 /**
  * @brief TODO
@@ -616,15 +561,12 @@ extern void ast_native_expression_destroy(ast_native_expression **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param type
  * @param args
  * @return
  */
 extern ast_constructor_call *
-ast_constructor_call_new(unsigned long int line, unsigned long int column,
-                         str type, ast_expression_list *args);
+ast_constructor_call_new(str type, ast_expression_list *args);
 
 /**
  * @brief TODO
@@ -634,16 +576,12 @@ extern void ast_constructor_call_destroy(ast_constructor_call **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param object
  * @param functionName
  * @param args
  * @return
  */
-extern ast_function_call *ast_function_call_new(unsigned long int line,
-                                                unsigned long int column,
-                                                ast_expression *object,
+extern ast_function_call *ast_function_call_new(ast_expression *object,
                                                 str functionName,
                                                 ast_expression_list *args);
 
@@ -655,15 +593,12 @@ extern void ast_function_call_destroy(ast_function_call **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param functionName
  * @param args
  * @return
  */
 extern ast_super_function_call *
-ast_super_function_call_new(unsigned long int line, unsigned long int column,
-                            str functionName, ast_expression_list *args);
+ast_super_function_call_new(str functionName, ast_expression_list *args);
 
 /**
  * @brief TODO
@@ -673,14 +608,10 @@ extern void ast_super_function_call_destroy(ast_super_function_call **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param identifier
  * @return
  */
-extern ast_reference *ast_reference_new(unsigned long int line,
-                                        unsigned long int column,
-                                        str identifier);
+extern ast_reference *ast_reference_new(str identifier);
 
 /**
  * @brief TODO
@@ -690,12 +621,9 @@ extern void ast_reference_destroy(ast_reference **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @return
  */
-extern ast_this_literal *ast_this_literal_new(unsigned long int line,
-                                              unsigned long int column);
+extern ast_this_literal *ast_this_literal_new();
 
 /**
  * @brief TODO
@@ -705,14 +633,10 @@ extern void ast_this_literal_destroy(ast_this_literal **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param value
  * @return
  */
-extern ast_integer_literal *ast_integer_literal_new(unsigned long int line,
-                                                    unsigned long int column,
-                                                    str value);
+extern ast_integer_literal *ast_integer_literal_new(str value);
 
 /**
  * @brief TODO
@@ -722,14 +646,10 @@ extern void ast_integer_literal_destroy(ast_integer_literal **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param value
  * @return
  */
-extern ast_boolean_literal *ast_boolean_literal_new(unsigned long int line,
-                                                    unsigned long int column,
-                                                    int value);
+extern ast_boolean_literal *ast_boolean_literal_new(int value);
 
 /**
  * @brief TODO
@@ -739,14 +659,10 @@ extern void ast_boolean_literal_destroy(ast_boolean_literal **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param value
  * @return
  */
-extern ast_decimal_literal *ast_decimal_literal_new(unsigned long int line,
-                                                    unsigned long int column,
-                                                    str value);
+extern ast_decimal_literal *ast_decimal_literal_new(str value);
 
 /**
  * @brief TODO
@@ -756,12 +672,9 @@ extern void ast_decimal_literal_destroy(ast_decimal_literal **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @return
  */
-extern ast_null_literal *ast_null_literal_new(unsigned long int line,
-                                              unsigned long int column);
+extern ast_null_literal *ast_null_literal_new();
 
 /**
  * @brief TODO
@@ -771,14 +684,10 @@ extern void ast_null_literal_destroy(ast_null_literal **this);
 
 /**
  * @brief TODO
- * @param line
- * @param column
  * @param value
  * @return
  */
-extern ast_string_literal *ast_string_literal_new(unsigned long int line,
-                                                  unsigned long int column,
-                                                  str value);
+extern ast_string_literal *ast_string_literal_new(str value);
 
 /**
  * @brief TODO

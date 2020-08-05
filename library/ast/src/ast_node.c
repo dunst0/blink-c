@@ -20,15 +20,12 @@
 #define AST_NODE_EXPRESSION_INIT(node_subtype)                                 \
     this->astExpressionType = AST_EXPRESSION_TYPE_##node_subtype
 
-#define AST_NODE_ALLOC_INIT(type, node_type, node_subtype, node_line,          \
-                            node_column)                                       \
+#define AST_NODE_ALLOC_INIT(type, node_type, node_subtype)                     \
     type *this = calloc(1, sizeof(*this));                                     \
     if (!this) { return NULL; }                                                \
                                                                                \
     this->astNodeType = AST_NODE_TYPE_##node_type;                             \
-    AST_NODE_##node_type##_INIT(node_subtype);                                 \
-    this->line   = node_line;                                                  \
-    this->column = node_column
+    AST_NODE_##node_type##_INIT(node_subtype)
 
 #define AST_NODE_FREE()                                                        \
     free(*this);                                                               \
@@ -139,7 +136,7 @@ void ast_expression_destroy(ast_expression **this) {
 }
 
 ast_program *ast_program_new(ast_class_list *classes) {
-    AST_NODE_ALLOC_INIT(ast_program, DEFINITION, PROGRAM, 0, 0);
+    AST_NODE_ALLOC_INIT(ast_program, DEFINITION, PROGRAM);
 
     this->classes = classes;
 
@@ -154,12 +151,11 @@ void ast_program_destroy(ast_program **this) {
     AST_NODE_FREE();
 }
 
-ast_class *ast_class_new(unsigned long int line, unsigned long int column,
-                         str name, ast_formal_list *parameters, str superClass,
+ast_class *ast_class_new(str name, ast_formal_list *parameters, str superClass,
                          ast_expression_list *superClassArgs,
                          ast_property_list *properties,
                          ast_function_list *functions) {
-    AST_NODE_ALLOC_INIT(ast_class, DEFINITION, CLASS, line, column);
+    AST_NODE_ALLOC_INIT(ast_class, DEFINITION, CLASS);
 
     this->name           = name;
     this->parameters     = parameters;
@@ -182,9 +178,8 @@ void ast_class_destroy(ast_class **this) {
     AST_NODE_FREE();
 }
 
-ast_formal *ast_formal_new(unsigned long int line, unsigned long int column,
-                           str identifier, str type, int isLazy) {
-    AST_NODE_ALLOC_INIT(ast_formal, DEFINITION, FORMAL, line, column);
+ast_formal *ast_formal_new(str identifier, str type, int isLazy) {
+    AST_NODE_ALLOC_INIT(ast_formal, DEFINITION, FORMAL);
 
     this->identifier = identifier;
     this->type       = type;
@@ -199,12 +194,11 @@ void ast_formal_destroy(ast_formal **this) {
     AST_NODE_FREE();
 }
 
-ast_function *ast_function_new(unsigned long int line, unsigned long int column,
-                               str name, ast_formal_list *parameters,
+ast_function *ast_function_new(str name, ast_formal_list *parameters,
                                str returnType, ast_expression *body,
                                ast_function_visibility visibility,
                                int isAbstract, int isFinal, int isOverwrite) {
-    AST_NODE_ALLOC_INIT(ast_function, DEFINITION, FUNCTION, line, column);
+    AST_NODE_ALLOC_INIT(ast_function, DEFINITION, FUNCTION);
 
     this->name        = name;
     this->parameters  = parameters;
@@ -227,9 +221,8 @@ void ast_function_destroy(ast_function **this) {
     AST_NODE_FREE();
 }
 
-ast_property *ast_property_new(unsigned long int line, unsigned long int column,
-                               str name, str type, ast_expression *value) {
-    AST_NODE_ALLOC_INIT(ast_property, DEFINITION, PROPERTY, line, column);
+ast_property *ast_property_new(str name, str type, ast_expression *value) {
+    AST_NODE_ALLOC_INIT(ast_property, DEFINITION, PROPERTY);
 
     this->name  = name;
     this->type  = type;
@@ -246,9 +239,8 @@ void ast_property_destroy(ast_property **this) {
     AST_NODE_FREE();
 }
 
-ast_block *ast_block_new(unsigned long int line, unsigned long int column,
-                         ast_expression_list *expressions) {
-    AST_NODE_ALLOC_INIT(ast_block, EXPRESSION, BLOCK, line, column);
+ast_block *ast_block_new(ast_expression_list *expressions) {
+    AST_NODE_ALLOC_INIT(ast_block, EXPRESSION, BLOCK);
 
     this->expressions = expressions;
 
@@ -263,10 +255,9 @@ void ast_block_destroy(ast_block **this) {
     AST_NODE_FREE();
 }
 
-ast_let *ast_let_new(unsigned long int line, unsigned long int column,
-                     ast_initialization_list *initializations,
+ast_let *ast_let_new(ast_initialization_list *initializations,
                      ast_expression *body) {
-    AST_NODE_ALLOC_INIT(ast_let, EXPRESSION, LET, line, column);
+    AST_NODE_ALLOC_INIT(ast_let, EXPRESSION, LET);
 
     this->initializations = initializations;
     this->body            = body;
@@ -283,12 +274,9 @@ void ast_let_destroy(ast_let **this) {
     AST_NODE_FREE();
 }
 
-ast_initialization *ast_initialization_new(unsigned long int line,
-                                           unsigned long int column,
-                                           str identifier, str type,
+ast_initialization *ast_initialization_new(str identifier, str type,
                                            ast_expression *value) {
-    AST_NODE_ALLOC_INIT(ast_initialization, EXPRESSION, INITIALIZATION, line,
-                        column);
+    AST_NODE_ALLOC_INIT(ast_initialization, EXPRESSION, INITIALIZATION);
 
     this->identifier = identifier;
     this->type       = type;
@@ -305,11 +293,10 @@ void ast_initialization_destroy(ast_initialization **this) {
     AST_NODE_FREE();
 }
 
-ast_assignment *ast_assignment_new(unsigned long int line,
-                                   unsigned long int column, str identifier,
+ast_assignment *ast_assignment_new(str identifier,
                                    ast_assignment_operator operator,
                                    ast_expression * value) {
-    AST_NODE_ALLOC_INIT(ast_assignment, EXPRESSION, ASSIGNMENT, line, column);
+    AST_NODE_ALLOC_INIT(ast_assignment, EXPRESSION, ASSIGNMENT);
 
     this->identifier = identifier;
     this->operator   = operator;
@@ -326,9 +313,8 @@ void ast_assignment_destroy(ast_assignment **this) {
     AST_NODE_FREE();
 }
 
-ast_cast *ast_cast_new(unsigned long int line, unsigned long int column,
-                       ast_expression *object, str type) {
-    AST_NODE_ALLOC_INIT(ast_cast, EXPRESSION, CAST, line, column);
+ast_cast *ast_cast_new(ast_expression *object, str type) {
+    AST_NODE_ALLOC_INIT(ast_cast, EXPRESSION, CAST);
 
     this->object = object;
     this->type   = type;
@@ -344,11 +330,10 @@ void ast_cast_destroy(ast_cast **this) {
     AST_NODE_FREE();
 }
 
-ast_if_else *ast_if_else_new(unsigned long int line, unsigned long int column,
-                             ast_expression *condition,
+ast_if_else *ast_if_else_new(ast_expression *condition,
                              ast_expression *thenBranch,
                              ast_expression *elseBranch) {
-    AST_NODE_ALLOC_INIT(ast_if_else, EXPRESSION, IF_ELSE, line, column);
+    AST_NODE_ALLOC_INIT(ast_if_else, EXPRESSION, IF_ELSE);
 
     this->condition  = condition;
     this->thenBranch = thenBranch;
@@ -367,9 +352,8 @@ void ast_if_else_destroy(ast_if_else **this) {
     AST_NODE_FREE();
 }
 
-ast_while *ast_while_new(unsigned long int line, unsigned long int column,
-                         ast_expression *condition, ast_expression *body) {
-    AST_NODE_ALLOC_INIT(ast_while, EXPRESSION, WHILE, line, column);
+ast_while *ast_while_new(ast_expression *condition, ast_expression *body) {
+    AST_NODE_ALLOC_INIT(ast_while, EXPRESSION, WHILE);
 
     this->condition = condition;
     this->body      = body;
@@ -386,17 +370,14 @@ void ast_while_destroy(ast_while **this) {
     AST_NODE_FREE();
 }
 
-ast_binary_expression *ast_binary_expression_new(unsigned long int line,
-                                                 unsigned long int column,
-                                                 ast_expression *left,
+ast_binary_expression *ast_binary_expression_new(ast_expression *left,
                                                  ast_binary_operator operator,
                                                  ast_expression * right) {
-    AST_NODE_ALLOC_INIT(ast_binary_expression, EXPRESSION, BINARY_EXPRESSION,
-                        line, column);
+    AST_NODE_ALLOC_INIT(ast_binary_expression, EXPRESSION, BINARY_EXPRESSION);
 
-    this->left     = left;
-    this->operator = operator;
-    this->right    = right;
+    this->left    = left;
+    this->operator= operator;
+    this->right   = right;
 
     return this;
 }
@@ -410,12 +391,9 @@ void ast_binary_expression_destroy(ast_binary_expression **this) {
     AST_NODE_FREE();
 }
 
-ast_unary_expression *ast_unary_expression_new(unsigned long int line,
-                                               unsigned long int column,
-                                               str operator,
+ast_unary_expression *ast_unary_expression_new(str operator,
                                                ast_expression * expression) {
-    AST_NODE_ALLOC_INIT(ast_unary_expression, EXPRESSION, UNARY_EXPRESSION,
-                        line, column);
+    AST_NODE_ALLOC_INIT(ast_unary_expression, EXPRESSION, UNARY_EXPRESSION);
 
     this->operator   = operator;
     this->expression = expression;
@@ -431,12 +409,9 @@ void ast_unary_expression_destroy(ast_unary_expression **this) {
     AST_NODE_FREE();
 }
 
-ast_lazy_expression *ast_lazy_expression_new(unsigned long int line,
-                                             unsigned long int column,
-                                             ast_expression *expression,
+ast_lazy_expression *ast_lazy_expression_new(ast_expression *expression,
                                              void *context) {
-    AST_NODE_ALLOC_INIT(ast_lazy_expression, EXPRESSION, LAZY_EXPRESSION, line,
-                        column);
+    AST_NODE_ALLOC_INIT(ast_lazy_expression, EXPRESSION, LAZY_EXPRESSION);
 
     this->expression = expression;
     this->context    = context;
@@ -453,11 +428,8 @@ void ast_lazy_expression_destroy(ast_lazy_expression **this) {
     AST_NODE_FREE();
 }
 
-ast_native_expression *ast_native_expression_new(unsigned long int line,
-                                                 unsigned long int column,
-                                                 void *func) {
-    AST_NODE_ALLOC_INIT(ast_native_expression, EXPRESSION, NATIVE_EXPRESSION,
-                        line, column);
+ast_native_expression *ast_native_expression_new(void *func) {
+    AST_NODE_ALLOC_INIT(ast_native_expression, EXPRESSION, NATIVE_EXPRESSION);
 
     this->func = func;
 
@@ -472,12 +444,9 @@ void ast_native_expression_destroy(ast_native_expression **this) {
     AST_NODE_FREE();
 }
 
-ast_constructor_call *ast_constructor_call_new(unsigned long int line,
-                                               unsigned long int column,
-                                               str type,
+ast_constructor_call *ast_constructor_call_new(str type,
                                                ast_expression_list *args) {
-    AST_NODE_ALLOC_INIT(ast_constructor_call, EXPRESSION, CONSTRUCTOR_CALL,
-                        line, column);
+    AST_NODE_ALLOC_INIT(ast_constructor_call, EXPRESSION, CONSTRUCTOR_CALL);
 
     this->type = type;
     this->args = args;
@@ -493,13 +462,10 @@ void ast_constructor_call_destroy(ast_constructor_call **this) {
     AST_NODE_FREE();
 }
 
-ast_function_call *ast_function_call_new(unsigned long int line,
-                                         unsigned long int column,
-                                         ast_expression *object,
+ast_function_call *ast_function_call_new(ast_expression *object,
                                          str functionName,
                                          ast_expression_list *args) {
-    AST_NODE_ALLOC_INIT(ast_function_call, EXPRESSION, FUNCTION_CALL, line,
-                        column);
+    AST_NODE_ALLOC_INIT(ast_function_call, EXPRESSION, FUNCTION_CALL);
 
     this->object       = object;
     this->functionName = functionName;
@@ -518,10 +484,9 @@ void ast_function_call_destroy(ast_function_call **this) {
 }
 
 ast_super_function_call *
-ast_super_function_call_new(unsigned long int line, unsigned long int column,
-                            str functionName, ast_expression_list *args) {
+ast_super_function_call_new(str functionName, ast_expression_list *args) {
     AST_NODE_ALLOC_INIT(ast_super_function_call, EXPRESSION,
-                        SUPER_FUNCTION_CALL, line, column);
+                        SUPER_FUNCTION_CALL);
 
     this->functionName = functionName;
     this->args         = args;
@@ -537,9 +502,8 @@ void ast_super_function_call_destroy(ast_super_function_call **this) {
     AST_NODE_FREE();
 }
 
-ast_reference *ast_reference_new(unsigned long int line,
-                                 unsigned long int column, str identifier) {
-    AST_NODE_ALLOC_INIT(ast_reference, EXPRESSION, REFERENCE, line, column);
+ast_reference *ast_reference_new(str identifier) {
+    AST_NODE_ALLOC_INIT(ast_reference, EXPRESSION, REFERENCE);
 
     this->identifier = identifier;
 
@@ -552,10 +516,8 @@ void ast_reference_destroy(ast_reference **this) {
     AST_NODE_FREE();
 }
 
-ast_this_literal *ast_this_literal_new(unsigned long int line,
-                                       unsigned long int column) {
-    AST_NODE_ALLOC_INIT(ast_this_literal, EXPRESSION, THIS_LITERAL, line,
-                        column);
+ast_this_literal *ast_this_literal_new() {
+    AST_NODE_ALLOC_INIT(ast_this_literal, EXPRESSION, THIS_LITERAL);
 
     return this;
 }
@@ -566,13 +528,14 @@ void ast_this_literal_destroy(ast_this_literal **this) {
     AST_NODE_FREE();
 }
 
-ast_integer_literal *ast_integer_literal_new(unsigned long int line,
-                                             unsigned long int column,
-                                             str value) {
-    AST_NODE_ALLOC_INIT(ast_integer_literal, EXPRESSION, INTEGER_LITERAL, line,
-                        column);
+ast_integer_literal *ast_integer_literal_new(str value) {
+    AST_NODE_ALLOC_INIT(ast_integer_literal, EXPRESSION, INTEGER_LITERAL);
 
-    this->value = value;
+    STR_COPY(&this->value, &value);
+    if (!this->value.s) {
+        ast_integer_literal_destroy(&this);
+        return NULL;
+    }
 
     return this;
 }
@@ -580,14 +543,13 @@ ast_integer_literal *ast_integer_literal_new(unsigned long int line,
 void ast_integer_literal_destroy(ast_integer_literal **this) {
     if (!this || !(*this)) { return; }
 
+    STR_FREE(&(*this)->value);
+
     AST_NODE_FREE();
 }
 
-ast_boolean_literal *ast_boolean_literal_new(unsigned long int line,
-                                             unsigned long int column,
-                                             int value) {
-    AST_NODE_ALLOC_INIT(ast_boolean_literal, EXPRESSION, BOOLEAN_LITERAL, line,
-                        column);
+ast_boolean_literal *ast_boolean_literal_new(int value) {
+    AST_NODE_ALLOC_INIT(ast_boolean_literal, EXPRESSION, BOOLEAN_LITERAL);
 
     this->value = value;
 
@@ -600,11 +562,14 @@ void ast_boolean_literal_destroy(ast_boolean_literal **this) {
     AST_NODE_FREE();
 }
 
-ast_decimal_literal *ast_decimal_literal_new(unsigned long int line,
-                                             unsigned long int column,
-                                             str value) {
-    AST_NODE_ALLOC_INIT(ast_decimal_literal, EXPRESSION, DECIMAL_LITERAL, line,
-                        column);
+ast_decimal_literal *ast_decimal_literal_new(str value) {
+    AST_NODE_ALLOC_INIT(ast_decimal_literal, EXPRESSION, DECIMAL_LITERAL);
+
+    STR_COPY(&this->value, &value);
+    if (!this->value.s) {
+        ast_decimal_literal_destroy(&this);
+        return NULL;
+    }
 
     this->value = value;
 
@@ -614,13 +579,13 @@ ast_decimal_literal *ast_decimal_literal_new(unsigned long int line,
 void ast_decimal_literal_destroy(ast_decimal_literal **this) {
     if (!this || !(*this)) { return; }
 
+    STR_FREE(&(*this)->value);
+
     AST_NODE_FREE();
 }
 
-ast_null_literal *ast_null_literal_new(unsigned long int line,
-                                       unsigned long int column) {
-    AST_NODE_ALLOC_INIT(ast_null_literal, EXPRESSION, NULL_LITERAL, line,
-                        column);
+ast_null_literal *ast_null_literal_new() {
+    AST_NODE_ALLOC_INIT(ast_null_literal, EXPRESSION, NULL_LITERAL);
 
     return this;
 }
@@ -631,11 +596,8 @@ void ast_null_literal_destroy(ast_null_literal **this) {
     AST_NODE_FREE();
 }
 
-ast_string_literal *ast_string_literal_new(unsigned long int line,
-                                           unsigned long int column,
-                                           str value) {
-    AST_NODE_ALLOC_INIT(ast_string_literal, EXPRESSION, STRING_LITERAL, line,
-                        column);
+ast_string_literal *ast_string_literal_new(str value) {
+    AST_NODE_ALLOC_INIT(ast_string_literal, EXPRESSION, STRING_LITERAL);
 
     this->value = value;
 

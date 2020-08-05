@@ -68,4 +68,24 @@ typedef struct str {
         }                                                                      \
     } while (0)
 
+#define STR_COPY_WITH_NUL(_dstr_, _pstr_)                                      \
+    do {                                                                       \
+        if ((_pstr_) && (_dstr_)) {                                            \
+            (_dstr_)->len = (_pstr_)->len;                                     \
+            (_dstr_)->s   = calloc((_pstr_)->len + 1, sizeof(*(_pstr_)->s));   \
+            if ((_dstr_)->s) {                                                 \
+                memcpy((_dstr_)->s, (_pstr_)->s, (_dstr_)->len);               \
+            }                                                                  \
+        }                                                                      \
+    } while (0)
+
+#define STR_FREE(_pstr_)                                                       \
+    do {                                                                       \
+        if ((_pstr_)) {                                                        \
+            if ((_pstr_)->s) { free((_pstr_)->s); };                           \
+            (_pstr_)->len = 0;                                                 \
+            (_pstr_)->s   = NULL;                                              \
+        }                                                                      \
+    } while (0)
+
 #endif// BLINK_STR_H
