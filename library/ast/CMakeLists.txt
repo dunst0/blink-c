@@ -23,4 +23,4 @@ target_sources(ast
 
 target_include_directories(ast PUBLIC "include")
 
-target_link_libraries(ast PUBLIC list utils)
+target_link_libraries(ast PUBLIC list symboltable utils)

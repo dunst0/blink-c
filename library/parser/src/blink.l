@@ -65,7 +65,7 @@ not_whitespace      [^ \a\f\t\r\v\n]
 
 %%
 
-<INITIAL,FUNCTION,IMPORT,PACKAGE>{whitespace}*                                            /* eat the whitespace */
+<INITIAL,FUNCTION,IMPORT,PACKAGE>{whitespace}*                                          /* eat the whitespace */
 
 <INITIAL>"import"                                                                       BEGIN(IMPORT);
 <INITIAL>"package"                                                                      BEGIN(PACKAGE);
@@ -147,20 +147,32 @@ not_whitespace      [^ \a\f\t\r\v\n]
 ((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { yylval->value.s = yytext; yylval->value.len = yyleng; RETURN(DECIMAL_LITERAL); }
 \"(\\.|[^"\\])*\"                                                                       { yylval->value.s = yytext + 1; yylval->value.len = yyleng - 2; RETURN(STRING_LITERAL); }
 
-<FUNCTION>(operator{operator})|(({letter}|_)({letter}|{digit}|_)*)                        {
+<FUNCTION>(operator{operator})|(({letter}|_)({letter}|{digit}|_)*)                      {
                                                                                             printf("<FUNCTION_NAME: %s>\n", yytext);
                                                                                             BEGIN(INITIAL);
                                                                                             RETURN(FUNCTION_NAME);
                                                                                         }
 ({letter}|_)({letter}|{digit}|_)*                                                       {
-                                                                                            printf("<IDENTIFIER: %s>\n", yytext);
-                                                                                            RETURN(IDENTIFIER);
+                                                                                            symboltable *symtable = yyextra->extraParser->symtable;
+                                                                                            str identifier = STR_NULL_INIT;
+                                                                                            identifier.s = yytext;
+                                                                                            identifier.len = yyleng;
+
+                                                                                            if (symboltable_add_symbol(symtable, identifier, SYMBOL_TYPE_UNDEFINED,
+                                                                                                                       yylloc->first_line, yylloc->first_column,
+                                                                                                                       &yylval->symbolValue)) {
+                                                                                                printf("<IDENTIFIER: %s>\n", yytext);
+                                                                                                RETURN(IDENTIFIER);
+                                                                                            } else {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not add symbol to symboltable");
+                                                                                                RETURN(YYerror);
+                                                                                            }
                                                                                         }
 
 \n+                                                                                     RETURN_SEMICOLON_IF_NEEDED;
 
 "//".*                                                                                  /* this is a comment skip */
 
-<*>.                                                                                    { yyerror(yylloc, yyextra->extraParser, "unexpected input"); exit(1); }
+<*>.                                                                                    { yyerror(yylloc, yyextra->extraParser, "unexpected input"); }
 
 %%

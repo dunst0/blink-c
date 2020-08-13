@@ -151,7 +151,8 @@ void ast_program_destroy(ast_program **this) {
     AST_NODE_FREE();
 }
 
-ast_class *ast_class_new(str name, ast_formal_list *parameters, str superClass,
+ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
+                         symbol *superClass,
                          ast_expression_list *superClassArgs,
                          ast_property_list *properties,
                          ast_function_list *functions) {
@@ -170,6 +171,7 @@ ast_class *ast_class_new(str name, ast_formal_list *parameters, str superClass,
 void ast_class_destroy(ast_class **this) {
     if (!this || !(*this)) { return; }
 
+    symbol_destroy(&(*this)->name);
     ast_formal_list_destroy(&(*this)->parameters);
     ast_expression_list_destroy(&(*this)->superClassArgs);
     ast_property_list_destroy(&(*this)->properties);
@@ -178,7 +180,7 @@ void ast_class_destroy(ast_class **this) {
     AST_NODE_FREE();
 }
 
-ast_formal *ast_formal_new(str identifier, str type, int isLazy) {
+ast_formal *ast_formal_new(symbol *identifier, symbol *type, int isLazy) {
     AST_NODE_ALLOC_INIT(ast_formal, DEFINITION, FORMAL);
 
     this->identifier = identifier;
@@ -191,23 +193,26 @@ ast_formal *ast_formal_new(str identifier, str type, int isLazy) {
 void ast_formal_destroy(ast_formal **this) {
     if (!this || !(*this)) { return; }
 
+    symbol_destroy(&(*this)->identifier);
+
     AST_NODE_FREE();
 }
 
-ast_function *ast_function_new(str name, ast_formal_list *parameters,
-                               str returnType, ast_expression *body,
+ast_function *ast_function_new(symbol *functionName,
+                               ast_formal_list *parameters, symbol *returnType,
+                               ast_expression *body,
                                ast_function_visibility visibility,
                                int isAbstract, int isFinal, int isOverwrite) {
     AST_NODE_ALLOC_INIT(ast_function, DEFINITION, FUNCTION);
 
-    this->name        = name;
-    this->parameters  = parameters;
-    this->returnType  = returnType;
-    this->body        = body;
-    this->visibility  = visibility;
-    this->isAbstract  = isAbstract;
-    this->isFinal     = isFinal;
-    this->isOverwrite = isOverwrite;
+    this->functionName = functionName;
+    this->parameters   = parameters;
+    this->returnType   = returnType;
+    this->body         = body;
+    this->visibility   = visibility;
+    this->isAbstract   = isAbstract;
+    this->isFinal      = isFinal;
+    this->isOverwrite  = isOverwrite;
 
     return this;
 }
@@ -215,13 +220,15 @@ ast_function *ast_function_new(str name, ast_formal_list *parameters,
 void ast_function_destroy(ast_function **this) {
     if (!this || !(*this)) { return; }
 
+    symbol_destroy(&(*this)->functionName);
     ast_formal_list_destroy(&(*this)->parameters);
     ast_expression_destroy(&(*this)->body);
 
     AST_NODE_FREE();
 }
 
-ast_property *ast_property_new(str name, str type, ast_expression *value) {
+ast_property *ast_property_new(symbol *name, symbol *type,
+                               ast_expression *value) {
     AST_NODE_ALLOC_INIT(ast_property, DEFINITION, PROPERTY);
 
     this->name  = name;
@@ -234,6 +241,7 @@ ast_property *ast_property_new(str name, str type, ast_expression *value) {
 void ast_property_destroy(ast_property **this) {
     if (!this || !(*this)) { return; }
 
+    symbol_destroy(&(*this)->name);
     ast_expression_destroy(&(*this)->value);
 
     AST_NODE_FREE();
@@ -274,7 +282,7 @@ void ast_let_destroy(ast_let **this) {
     AST_NODE_FREE();
 }
 
-ast_initialization *ast_initialization_new(str identifier, str type,
+ast_initialization *ast_initialization_new(symbol *identifier, symbol *type,
                                            ast_expression *value) {
     AST_NODE_ALLOC_INIT(ast_initialization, EXPRESSION, INITIALIZATION);
 
@@ -288,12 +296,13 @@ ast_initialization *ast_initialization_new(str identifier, str type,
 void ast_initialization_destroy(ast_initialization **this) {
     if (!this || !(*this)) { return; }
 
+    symbol_destroy(&(*this)->identifier);
     ast_expression_destroy(&(*this)->value);
 
     AST_NODE_FREE();
 }
 
-ast_assignment *ast_assignment_new(str identifier,
+ast_assignment *ast_assignment_new(symbol *identifier,
                                    ast_assignment_operator operator,
                                    ast_expression * value) {
     AST_NODE_ALLOC_INIT(ast_assignment, EXPRESSION, ASSIGNMENT);
@@ -308,12 +317,13 @@ ast_assignment *ast_assignment_new(str identifier,
 void ast_assignment_destroy(ast_assignment **this) {
     if (!this || !(*this)) { return; }
 
+    symbol_destroy(&(*this)->identifier);
     ast_expression_destroy(&(*this)->value);
 
     AST_NODE_FREE();
 }
 
-ast_cast *ast_cast_new(ast_expression *object, str type) {
+ast_cast *ast_cast_new(ast_expression *object, symbol *type) {
     AST_NODE_ALLOC_INIT(ast_cast, EXPRESSION, CAST);
 
     this->object = object;
@@ -391,7 +401,7 @@ void ast_binary_expression_destroy(ast_binary_expression **this) {
     AST_NODE_FREE();
 }
 
-ast_unary_expression *ast_unary_expression_new(str operator,
+ast_unary_expression *ast_unary_expression_new(ast_unary_operator operator,
                                                ast_expression * expression) {
     AST_NODE_ALLOC_INIT(ast_unary_expression, EXPRESSION, UNARY_EXPRESSION);
 
@@ -444,11 +454,11 @@ void ast_native_expression_destroy(ast_native_expression **this) {
     AST_NODE_FREE();
 }
 
-ast_constructor_call *ast_constructor_call_new(str type,
+ast_constructor_call *ast_constructor_call_new(symbol *name,
                                                ast_expression_list *args) {
     AST_NODE_ALLOC_INIT(ast_constructor_call, EXPRESSION, CONSTRUCTOR_CALL);
 
-    this->type = type;
+    this->name = name;
     this->args = args;
 
     return this;
@@ -463,7 +473,7 @@ void ast_constructor_call_destroy(ast_constructor_call **this) {
 }
 
 ast_function_call *ast_function_call_new(ast_expression *object,
-                                         str functionName,
+                                         symbol *functionName,
                                          ast_expression_list *args) {
     AST_NODE_ALLOC_INIT(ast_function_call, EXPRESSION, FUNCTION_CALL);
 
@@ -484,7 +494,7 @@ void ast_function_call_destroy(ast_function_call **this) {
 }
 
 ast_super_function_call *
-ast_super_function_call_new(str functionName, ast_expression_list *args) {
+ast_super_function_call_new(symbol *functionName, ast_expression_list *args) {
     AST_NODE_ALLOC_INIT(ast_super_function_call, EXPRESSION,
                         SUPER_FUNCTION_CALL);
 
@@ -502,10 +512,10 @@ void ast_super_function_call_destroy(ast_super_function_call **this) {
     AST_NODE_FREE();
 }
 
-ast_reference *ast_reference_new(str identifier) {
+ast_reference *ast_reference_new(symbol *value) {
     AST_NODE_ALLOC_INIT(ast_reference, EXPRESSION, REFERENCE);
 
-    this->identifier = identifier;
+    this->value = value;
 
     return this;
 }

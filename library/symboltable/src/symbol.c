@@ -34,20 +34,22 @@ void symbol_reference_destroy(symbol_reference **this) {
     *this = NULL;
 }
 
-symbol *symbol_new(unsigned long int line, unsigned long int column,
-                   str identifier, symbol_type type) {
+symbol *symbol_new(str identifier, symbol_type type) {
     symbol *this = NULL;
 
     this = calloc(1, sizeof(*this));
     if (!this) { return NULL; }
 
-    this->line       = line;
-    this->column     = column;
-    this->identifier = identifier;//TODO: str dup
-    this->type       = type;
+    this->type   = type;
+
+    STR_COPY(&this->identifier, &identifier);
+    if (!this->identifier.s) {
+        symbol_destroy(&this);
+        return NULL;
+    }
     this->references = symbol_reference_list_new();
     if (!this->references) {
-        free(this);
+        symbol_destroy(&this);
         return NULL;
     }
 
@@ -57,6 +59,7 @@ symbol *symbol_new(unsigned long int line, unsigned long int column,
 void symbol_destroy(symbol **this) {
     if (!this || !(*this)) { return; }
 
+    STR_FREE(&(*this)->identifier);
     symbol_reference_list_destroy(&(*this)->references);
 
     free(*this);

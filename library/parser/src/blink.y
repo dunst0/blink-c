@@ -32,6 +32,7 @@
 %union{
     int operator;
     str value;
+    symbol *symbolValue;
     ast_program *program;
     ast_assignment *assignment;
     ast_binary_expression *binary_expression;
@@ -106,7 +107,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %token THIS_LITERAL
 
 %token FUNCTION_NAME
-%token IDENTIFIER
+%token <symbolValue> IDENTIFIER
 
 /* keywords */
 %token ABSTRACT_KEYWORD
@@ -175,7 +176,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <operator>           function_visibility function_overwrite function_final
 %type <let>                let
 %type <property>           property_definition
-%type <reference>          type
+%type <symbolValue>        type
 %type <unary_expression>   unary_expression
 %type <while_expression>   while
 
@@ -188,7 +189,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 /* program definitions */
 program                         : imports package
                                     {
-                                        $$ = ast_program_new($2); // TODO: use $1
+                                        $$ = ast_program_new($2); // FIXME: implement package system use $1
                                         extraParser->resultAst = ast_new($$);
                                     }
                                 ;
@@ -205,34 +206,32 @@ package                         : PACKAGE_KEYWORD classes
 
 classes                         : class_definition
                                     {
-                                        ast_class *class = $1;
                                         $$ = ast_class_list_new();
-                                        ast_class_list_unshift($$, class);
+                                        ast_class_list_unshift($$, $1);
                                     }
                                 | classes class_definition
                                     {
-                                        ast_class *class = $2;
                                         $$ = $1;
-                                        ast_class_list_unshift($$, class);
+                                        ast_class_list_unshift($$, $2);
                                     }
                                 ;
 
 /* class definitions */
 class_definition                : CLASS_KEYWORD IDENTIFIER class_formals '{' class_body '}' ';'
                                     {
-                                        str name = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        // TODO: mark identifier as definition
                                         $$ = $5;
-                                        $$->name = name;
+                                        $$->name = $2;
                                         $$->parameters = $3;
                                     }
                                 | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' ';'
                                     {
-                                        str name = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str superClass = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        // TODO: mark identifier as definition
                                         $$ = $8;
-                                        $$->name = name;
+                                        $$->name = $2;
                                         $$->parameters = $3;
-                                        $$->superClass = superClass;
+                                        $$->superClass = $5;
+                                        $$->superClassArgs = $6;
                                     }
                                 ;
 
@@ -258,51 +257,42 @@ class_actuals                   : /* empty */
 
 class_body                      : /* empty */
                                     {
-                                        str name = STR_NULL_INIT;
-                                        str superClass = STR_STATIC_INIT("Object"); // FIXME: this needs to be redone
                                         ast_property_list *properties = ast_property_list_new();
                                         ast_function_list *functions = ast_function_list_new();
-                                        $$ = ast_class_new(name, NULL, superClass, NULL, properties, functions);
+                                        $$ = ast_class_new(NULL, NULL, NULL, NULL, properties, functions);
                                     }
                                 | class_body property_definition
                                     {
-                                        ast_property *property = $2;
                                         $$ = $1;
-                                        ast_property_list_unshift($$->properties, property);
+                                        ast_property_list_unshift($$->properties, $2);
                                     }
                                 | class_body function_definition
                                     {
-                                        ast_function *function = $2;
                                         $$ = $1;
-                                        ast_function_list_unshift($$->functions, function);
+                                        ast_function_list_unshift($$->functions, $2);
                                     }
                                 ;
 
 /* properties definitions */
 property_definition             : VAR_KEYWORD IDENTIFIER type value ';'
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = $3->identifier;
-                                        $$ = ast_property_new(dummy, type, $4);
-                                        ast_reference_destroy(&$3);
+                                        // TODO: mark identifier as definition
+                                        $$ = ast_property_new($2, $3, $4);
                                     }
                                 | VAR_KEYWORD IDENTIFIER type ';'
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = $3->identifier;
-                                        $$ = ast_property_new(dummy, type, NULL);
-                                        ast_reference_destroy(&$3);
+                                        // TODO: mark identifier as definition
+                                        $$ = ast_property_new($2, $3, NULL);
                                     }
                                 | VAR_KEYWORD IDENTIFIER value ';'
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = STR_NULL_INIT;
-                                        $$ = ast_property_new(dummy, type, $3);
+                                        // TODO: mark identifier as definition
+                                        $$ = ast_property_new($2, NULL, $3);
                                     }
                                 ;
 
 /* functions definitions */
-function_definition               : ABSTRACT_KEYWORD function_visibility function_signature ';'
+function_definition             : ABSTRACT_KEYWORD function_visibility function_signature ';'
                                     {
                                         $$ = $3;
                                         $$->isAbstract = 1;
@@ -357,18 +347,15 @@ function_visibility               : /* empty */
                                     }
                                 ;
 
-function_signature                : FUNC_KEYWORD FUNCTION_NAME formals_definition
+function_signature              : FUNC_KEYWORD FUNCTION_NAME formals_definition
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = STR_STATIC_INIT("Unit"); // FIXME: this needs to be redone
-                                        $$ = ast_function_new(dummy, $3, type, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
+                                        symbol *dummy = NULL; // FIXME: fix me FUNCTION_NAME
+                                        $$ = ast_function_new(dummy, $3, NULL, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
                                     }
                                 | FUNC_KEYWORD FUNCTION_NAME formals_definition type
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = $4->identifier;
-                                        $$ = ast_function_new(dummy, $3, type, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
-                                        ast_reference_destroy(&$4);
+                                        symbol *dummy = NULL; // FIXME: fix me FUNCTION_NAME
+                                        $$ = ast_function_new(dummy, $3, $4, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
                                     }
                                 ;
 
@@ -391,17 +378,13 @@ formals                         : /* empty */
 
 formal                          : LAZY_KEYWORD IDENTIFIER type
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = $3->identifier;
-                                        $$ = ast_formal_new(dummy, type, 1);
-                                        ast_reference_destroy(&$3);
+                                        // TODO: mark identifier as definition
+                                        $$ = ast_formal_new($2, $3, 1);
                                     }
                                 | IDENTIFIER type
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = $2->identifier;
-                                        $$ = ast_formal_new(dummy, type, 0);
-                                        ast_reference_destroy(&$2);
+                                        // TODO: mark identifier as definition
+                                        $$ = ast_formal_new($1, $2, 0);
                                     }
                                 ;
 
@@ -424,13 +407,11 @@ expression                      : assignment            { $$ = (ast_expression *
 
 assignment                      : IDENTIFIER ASSIGNMENT expression
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        $$ = ast_assignment_new(dummy, $2, $3);
+                                        $$ = ast_assignment_new($1, $2, $3);
                                     }
                                 | IDENTIFIER '=' expression
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        $$ = ast_assignment_new(dummy, AST_ASSIGNMENT_OPERATOR_EQUAL, $3);
+                                        $$ = ast_assignment_new($1, AST_ASSIGNMENT_OPERATOR_EQUAL, $3);
                                     }
                                 ;
 
@@ -496,26 +477,24 @@ block                           : '{' expressions '}'
 
 cast                            : expression AS_KEYWORD IDENTIFIER
                                     {
-                                        str type = STR_STATIC_INIT("Unit"); // TODO: fix me
-                                        $$ = ast_cast_new($1,type);
+                                        $$ = ast_cast_new($1, $3);
                                     }
                                 ;
 
 constructor_call                : NEW_KEYWORD IDENTIFIER actuals_definition
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        $$ = ast_constructor_call_new(dummy, $3);
+                                        $$ = ast_constructor_call_new($2, $3);
                                     }
                                 ;
 
 dispatch                        : expression '.' FUNCTION_NAME actuals_definition
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        symbol *dummy = NULL; // FIXME: fix me FUNCTION_NAME
                                         $$ = (ast_expression *) ast_function_call_new($1, dummy, $4);
                                     }
                                 | SUPER_LITERAL '.' FUNCTION_NAME actuals_definition
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        symbol *dummy = NULL; // FIXME: fix me FUNCTION_NAME
                                         $$ = (ast_expression *) ast_super_function_call_new(dummy, $4);
                                     }
                                 ;
@@ -566,30 +545,25 @@ literal                         : INTEGER_LITERAL
                                     }
                                 | IDENTIFIER
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        $$ = (ast_expression *) ast_reference_new(dummy);
+                                        $$ = (ast_expression *) ast_reference_new($1);
                                     }
                                 ;
 
 unary_expression                : '-' expression %prec UMINUS
                                     {
-                                        str operator = STR_STATIC_INIT("-");
-                                        $$ = ast_unary_expression_new(operator, $2);
+                                        $$ = ast_unary_expression_new(AST_UNARY_OPERATOR_MINUS, $2);
                                     }
                                 | NOT_OPERATOR expression
                                     {
-                                        str operator = STR_STATIC_INIT("!");
-                                        $$ = ast_unary_expression_new(operator, $2);
+                                        $$ = ast_unary_expression_new(AST_UNARY_OPERATOR_NOT, $2);
                                     }
                                 | DOUBLE_PLUS_OPERATOR expression
                                     {
-                                        str operator = STR_STATIC_INIT("++");
-                                        $$ = ast_unary_expression_new(operator, $2);
+                                        $$ = ast_unary_expression_new(AST_UNARY_OPERATOR_DOUBLE_PLUS, $2);
                                     }
                                 | DOUBLE_MINUS_OPERATOR expression
                                     {
-                                        str operator = STR_STATIC_INIT("--");
-                                        $$ = ast_unary_expression_new(operator, $2);
+                                        $$ = ast_unary_expression_new(AST_UNARY_OPERATOR_DOUBLE_MINUS, $2);
                                     }
                                 ;
 
@@ -666,31 +640,25 @@ initialization_list             : initialization
 
 initialization                  : IDENTIFIER type value
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = $2->identifier;
-                                        $$ = ast_initialization_new(dummy, type, $3);
-                                        ast_reference_destroy(&$2);
+                                        // TODO: mark identifier as definition
+                                        $$ = ast_initialization_new($1, $2, $3);
                                     }
                                 | IDENTIFIER type
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        str type = $2->identifier;
-                                        $$ = ast_initialization_new(dummy, type, NULL);
-                                        ast_reference_destroy(&$2);
+                                        // TODO: mark identifier as definition
+                                        $$ = ast_initialization_new($1, $2, NULL);
                                     }
                                 | IDENTIFIER value
                                     {
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
+                                        // TODO: mark identifier as definition
                                         str emtpy = STR_NULL_INIT;
-                                        $$ = ast_initialization_new(dummy, emtpy, $2);
+                                        $$ = ast_initialization_new($1, NULL, $2);
                                     }
                                 ;
 
 type                            : ':' IDENTIFIER
                                     {
-                                        // FIXME: use symbol @1.first_line, @1.first_column
-                                        str dummy = STR_STATIC_INIT("dummy"); // TODO: fix me
-                                        $$ = ast_reference_new(dummy);
+                                        $$ = $2;
                                     }
                                 ;
 

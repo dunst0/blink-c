@@ -7,6 +7,7 @@
 
 #include "blink/symboltable.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 
@@ -32,7 +33,7 @@ symboltable *symboltable_new() {
     this->currentScope = 0;
     this->symbols      = symbol_hashtable_new(SYMBOLTABLE_SIZE);
     if (!this->symbols) {
-        free(this);
+        symboltable_destroy(&this);
         return NULL;
     }
 
@@ -69,7 +70,9 @@ int symboltable_exit_scope(symboltable *this) {
                 if (!temp->isStolen) {
                     this->symbols->valueDestroyCallback(&temp->value);
                 }
-                free(temp->key.s);
+
+                STR_FREE(&temp->key);
+
                 free(temp);
             }
         }
@@ -80,34 +83,65 @@ int symboltable_exit_scope(symboltable *this) {
     return this->currentScope >= 0;
 }
 
-int symboltable_add_symbol(symboltable *this, symbol *newSymbol) {
-    if (!this || !newSymbol) { return 0; }
+void symboltable_enter_declaration_mode(symboltable *this) {
+    if (!this) { return; }
 
-    symbol *foundSymbol =
-            symbol_hashtable_lookup(this->symbols, newSymbol->identifier);
-    if (foundSymbol && foundSymbol->scope == this->currentScope) { return 0; }
-
-    newSymbol->scope = this->currentScope;
-    if (!symbol_hashtable_insert(this->symbols, newSymbol->identifier,
-                                 newSymbol)) {
-        return 0;
-    }
-
-    return 1;
+    this->declarationMode = 1;
 }
 
-int symboltable_add_reference(symboltable *this, str identifier,
-                              symbol_reference *newReference) {
-    if (!this || !newReference) { return 0; }
+void symboltable_leave_declaration_mode(symboltable *this) {
+    if (!this) { return; }
+
+    this->declarationMode = 0;
+}
+
+int symboltable_add_symbol(symboltable *this, str identifier, symbol_type type,
+                           unsigned long int line, unsigned long int column,
+                           symbol **resultSymbol) {
+    if (!this) { return 0; }
 
     symbol *foundSymbol = symbol_hashtable_lookup(this->symbols, identifier);
-    if (!foundSymbol) { return 0; }
 
-    if (!symbol_reference_list_push(foundSymbol->references, newReference)) {
-        return 0;
+    symbol_reference *reference = symbol_reference_new(line, column);
+    if (!reference) { goto error; }
+
+    if (!foundSymbol || this->declarationMode) {
+        if (foundSymbol && foundSymbol->scope == this->currentScope) {
+            fprintf(stderr,
+                    "Error: Multiple declaration of variable %.*s at %lu:%lu\n",
+                    STR_FMT(&identifier), line, column);
+            goto error_destroy_reference;
+        }
+
+        foundSymbol = symbol_new(identifier, type);
+        if (!foundSymbol) { goto error_destroy_reference; }
+
+        foundSymbol->scope = this->currentScope;
+
+        if (!symbol_reference_list_push(foundSymbol->references, reference)) {
+            goto error_destroy_symbol;
+        }
+
+        if (!symbol_hashtable_insert(this->symbols, identifier, foundSymbol)) {
+            goto error_destroy_symbol;
+        }
+    } else {
+        if (!symbol_reference_list_push(foundSymbol->references, reference)) {
+            goto error_destroy_reference;
+        }
     }
 
+    if (resultSymbol) { *resultSymbol = foundSymbol; }
+
     return 1;
+
+error_destroy_symbol:
+    symbol_destroy(&foundSymbol);
+error_destroy_reference:
+    symbol_reference_destroy(&reference);
+error:
+    if (resultSymbol) { *resultSymbol = NULL; }
+    return 0;
 }
 
 int symboltable_has(symboltable *this, str identifier) {

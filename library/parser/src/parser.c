@@ -44,6 +44,12 @@ parser *parser_new(str sourceFileName, str currentDirectory,
 
     this->extraParser.sourceFileName = this->sourceFileName;
 
+    this->extraParser.symtable = symboltable_new();
+    if (!this->extraParser.symtable) {
+        parser_destroy(&this);
+        return NULL;
+    }
+
     this->extraLexer.extraParser = &this->extraParser;
     this->extraLexer.lastToken   = -1;
 
@@ -81,6 +87,7 @@ parser *parser_new(str sourceFileName, str currentDirectory,
 void parser_destroy(parser **this) {
     if (!this || !(*this)) { return; }
 
+    symboltable_destroy(&(*this)->extraParser.symtable);
     if ((*this)->extraParser.scanner) {
         yylex_destroy((*this)->extraParser.scanner);
     }

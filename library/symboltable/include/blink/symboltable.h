@@ -24,6 +24,7 @@ CREATE_HASHTABLE_TYPE(INTERFACE, symbol, symbol);
  */
 typedef struct symboltable {
     long int currentScope;
+    int declarationMode;
     symbol_hashtable *symbols;
 } symboltable;
 
@@ -64,18 +65,29 @@ extern int symboltable_exit_scope(symboltable *this);
  * @param newSymbol TODO
  * @return TODO
  */
-extern int symboltable_add_symbol(symboltable *this, symbol *newSymbol);
+extern void symboltable_enter_declaration_mode(symboltable *this);
 
 /**
  * @brief TODO
  * @param this TODO
- * @param identifier TODO
- * @param newReference TODO
+ * @param newSymbol TODO
  * @return TODO
  */
-extern int symboltable_add_reference(symboltable *this, str identifier,
-                                     symbol_reference *newReference);
+extern void symboltable_leave_declaration_mode(symboltable *this);
 
+/**
+ * @brief TODO
+ * @param this
+ * @param identifier
+ * @param type
+ * @param line
+ * @param column
+ * @param[out] resultSymbol
+ * @return
+ */
+extern int symboltable_add_symbol(symboltable *this, str identifier,
+                                  symbol_type type, unsigned long int line,
+                                  unsigned long int column, symbol **resultSymbol);
 /**
  * @brief TODO
  * @param this TODO

@@ -48,13 +48,11 @@ hashtable *hashtable_new(unsigned long int size,
     this->valueDestroyCallback = valueDestroyCallback;
     this->list                 = calloc(size, sizeof(this->list));
     if (!this->list) {
-        free(this);
+        hashtable_destroy(&this);
         return NULL;
-    } else {
-        for (unsigned long int i = 0; i < this->size; ++i) {
-            this->list[i] = NULL;
-        }
     }
+
+    for (unsigned long int i = 0; i < this->size; ++i) { this->list[i] = NULL; }
 
     return this;
 }
@@ -62,20 +60,23 @@ hashtable *hashtable_new(unsigned long int size,
 void hashtable_destroy(hashtable **this) {
     if (!this || !(*this)) { return; }
 
-    for (unsigned long int i = 0; i < (*this)->size; ++i) {
-        while ((*this)->list[i]) {
-            hashtable_node *temp = (*this)->list[i];
-            (*this)->list[i]     = (*this)->list[i]->next;
+    if ((*this)->list) {
+        for (unsigned long int i = 0; i < (*this)->size; ++i) {
+            while ((*this)->list[i]) {
+                hashtable_node *temp = (*this)->list[i];
+                (*this)->list[i]     = (*this)->list[i]->next;
 
-            if (!temp->isStolen) {
-                (*this)->valueDestroyCallback(&temp->value);
+                if (!temp->isStolen) {
+                    (*this)->valueDestroyCallback(&temp->value);
+                }
+
+                STR_FREE(&temp->key);
+
+                free(temp);
             }
-            free(temp->key.s);
-            free(temp);
         }
+        free((*this)->list);
     }
-
-    free((*this)->list);
 
     free(*this);
     *this = NULL;
@@ -102,13 +103,11 @@ int hashtable_insert_check(hashtable *this, str key, void *value,
     node = calloc(1, sizeof(*node));
     if (!node) { return 0; }
 
-    keyCopy.len = key.len;
-    keyCopy.s   = calloc(keyCopy.len, sizeof(*keyCopy.s));
+    STR_COPY(&keyCopy, &key);
     if (!keyCopy.s) {
         free(node);
         return 0;
     }
-    memcpy(keyCopy.s, key.s, key.len);
 
     node->key            = keyCopy;
     node->value          = value;

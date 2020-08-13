@@ -10,6 +10,7 @@
 
 #include <blink/list.h>
 #include <blink/str.h>
+#include <blink/symbol.h>
 
 
 // -----------------------------------------------------------------------------
@@ -68,7 +69,7 @@ typedef enum ast_expression_type {
 typedef struct ast_node ast_node;
 
 /**
- * @brief TODO
+ * @brief Callback type for executing actions on an AST node.
  */
 typedef void (*ast_node_callback)(ast_node *node, void *args);
 
@@ -196,6 +197,16 @@ typedef enum ast_binary_operator {
 typedef struct ast_binary_expression ast_binary_expression;
 
 /**
+ * @brief Unary operator types possible for a unary expression AST node.
+ */
+typedef enum ast_unary_operator {
+    AST_UNARY_OPERATOR_MINUS,
+    AST_UNARY_OPERATOR_NOT,
+    AST_UNARY_OPERATOR_DOUBLE_PLUS,
+    AST_UNARY_OPERATOR_DOUBLE_MINUS,
+} ast_unary_operator;
+
+/**
  * @brief Type representing an unary expression AST node.
  */
 typedef struct ast_unary_expression ast_unary_expression;
@@ -316,17 +327,18 @@ extern ast_program *ast_program_new(ast_class_list *classes);
 extern void ast_program_destroy(ast_program **this);
 
 /**
- * @brief Create a class node for the AST. TODO
- * @param[in] name
- * @param[in] parameters
- * @param[in] superClass
- * @param[in] superClassArgs
- * @param[in] properties
- * @param[in] functions
+ * @brief Create a class node for the AST.
+ * @param[in] name The name of the class
+ * @param[in] parameters The list of the formals for the class
+ * @param[in] superClass The name of the super class
+ * @param[in] superClassArgs The list of the actuals for the superclass
+ * @param[in] properties The list of properties for the class
+ * @param[in] functions The list of function for the class
+ * @note Will steal the pointer for the name symbol.
  * @return On success a pointer to ast_class, else NULL
  */
-extern ast_class *ast_class_new(str name, ast_formal_list *parameters,
-                                str superClass,
+extern ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
+                                symbol *superClass,
                                 ast_expression_list *superClassArgs,
                                 ast_property_list *properties,
                                 ast_function_list *functions);
@@ -338,132 +350,137 @@ extern ast_class *ast_class_new(str name, ast_formal_list *parameters,
 extern void ast_class_destroy(ast_class **this);
 
 /**
- * @brief TODO
- * @param identifier
- * @param type
- * @param isLazy
- * @return
+ * @brief Create a formal node for the AST.
+ * @param[in] identifier The name of the formal
+ * @param[in] type The Type for the formal
+ * @param[in] isLazy If this formal is a lazy one
+ * @note Will steal the pointer for the identifier symbol.
+ * @return On success a pointer to ast_formal, else NULL
  */
-extern ast_formal *ast_formal_new(str identifier, str type, int isLazy);
+extern ast_formal *ast_formal_new(symbol *identifier, symbol *type, int isLazy);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a formal node and its content.
+ * @param[in,out] this The formal node to destroy
  */
 extern void ast_formal_destroy(ast_formal **this);
 
 /**
- * @brief TODO
- * @param name
- * @param parameters
- * @param returnType
- * @param body
- * @param visibility
- * @param isAbstract
- * @param isFinal
- * @param isOverwrite
- * @return
+ * @brief Create a function node for the AST.
+ * @param[in] functionName The name for the function
+ * @param[in] parameters The list of the formals for the function
+ * @param[in] returnType The return type for the function
+ * @param[in] body The body for the function
+ * @param[in] visibility The visibility for the function
+ * @param[in] isAbstract If this function is abstract
+ * @param[in] isFinal If this function is final
+ * @param[in] isOverwrite If this function is overwrite
+ * @note Will steal the pointer for the functionName symbol.
+ * @return On success a pointer to ast_function, else NULL
  */
-extern ast_function *ast_function_new(str name, ast_formal_list *parameters,
-                                      str returnType, ast_expression *body,
+extern ast_function *ast_function_new(symbol *functionName,
+                                      ast_formal_list *parameters,
+                                      symbol *returnType, ast_expression *body,
                                       ast_function_visibility visibility,
                                       int isAbstract, int isFinal,
                                       int isOverwrite);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a function node and its content.
+ * @param[in,out] this The function node to destroy
  */
 extern void ast_function_destroy(ast_function **this);
 
 /**
- * @brief TODO
- * @param name
- * @param type
- * @param value
- * @return
+ * @brief Create a property node for the AST.
+ * @param[in] name The name of the property
+ * @param[in] type The type of the property
+ * @param[in] value The value of the property
+ * @note Will steal the pointer for the name symbol.
+ * @return On success a pointer to ast_function, else NULL
  */
-extern ast_property *ast_property_new(str name, str type,
+extern ast_property *ast_property_new(symbol *name, symbol *type,
                                       ast_expression *value);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a property node and its content.
+ * @param[in,out] this The property node to destroy
  */
 extern void ast_property_destroy(ast_property **this);
 
 /**
- * @brief TODO
- * @param expressions
- * @return
+ * @brief Create a block node for the AST.
+ * @param[in] expressions The list of the expressions for the block
+ * @return On success a pointer to ast_block, else NULL
  */
 extern ast_block *ast_block_new(ast_expression_list *expressions);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a block node and its content.
+ * @param[in,out] this The block node to destroy
  */
 extern void ast_block_destroy(ast_block **this);
 
 /**
- * @brief TODO
- * @param initializations
- * @param body
- * @return
+ * @brief Create a let node for the AST.
+ * @param[in] initializations The list of the initializations for the let
+ * @param[in] body The body for the let
+ * @return On success a pointer to ast_let, else NULL
  */
 extern ast_let *ast_let_new(ast_initialization_list *initializations,
                             ast_expression *body);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a let node and its content.
+ * @param[in,out] this The let node to destroy
  */
 extern void ast_let_destroy(ast_let **this);
 
 /**
- * @brief TODO
- * @param identifier
- * @param type
- * @param value
- * @return
+ * @brief Create an initialization node for the AST.
+ * @param[in] identifier The identifier of the initialization
+ * @param[in] type The type of the initialization
+ * @param[in] value The value of the initialization
+ * @note Will steal the pointer for the identifier symbol.
+ * @return On success a pointer to ast_initialization, else NULL
  */
-extern ast_initialization *ast_initialization_new(str identifier, str type,
-                                                  ast_expression *value);
+extern ast_initialization *
+ast_initialization_new(symbol *identifier, symbol *type, ast_expression *value);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy an initialization node and its content.
+ * @param[in,out] this The initialization node to destroy
  */
 extern void ast_initialization_destroy(ast_initialization **this);
 
 /**
- * @brief TODO
- * @param identifier
- * @param operator
- * @param value
- * @return
+ * @brief Create an assignment node for the AST.
+ * @param[in] identifier The identifier of the assignment
+ * @param[in] operator The operator of the assignment
+ * @param[in] value The value of the assignment
+ * @return On success a pointer to ast_assignment, else NULL
  */
-extern ast_assignment *ast_assignment_new(str identifier,
+extern ast_assignment *ast_assignment_new(symbol *identifier,
                                           ast_assignment_operator operator,
                                           ast_expression * value);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy an assignment node and its content.
+ * @param[in,out] this The assignment node to destroy
  */
 extern void ast_assignment_destroy(ast_assignment **this);
 
 /**
- * @brief TODO
- * @param object
- * @param type
- * @return
+ * @brief Create a cast node for the AST.
+ * @param[in] object The object of the cast
+ * @param[in] type The type of the cast
+ * @return On success a pointer to ast_cast, else NULL
  */
-extern ast_cast *ast_cast_new(ast_expression *object, str type);
+extern ast_cast *ast_cast_new(ast_expression *object, symbol *type);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a cast node and its content.
+ * @param[in,out] this The assignment node to destroy
  */
 extern void ast_cast_destroy(ast_cast **this);
 
@@ -523,7 +540,8 @@ extern void ast_binary_expression_destroy(ast_binary_expression **this);
  * @return
  */
 extern ast_unary_expression *
-        ast_unary_expression_new(str operator, ast_expression * expression);
+        ast_unary_expression_new(ast_unary_operator operator,
+                                 ast_expression * expression);
 
 /**
  * @brief TODO
@@ -561,12 +579,12 @@ extern void ast_native_expression_destroy(ast_native_expression **this);
 
 /**
  * @brief TODO
- * @param type
+ * @param name
  * @param args
  * @return
  */
 extern ast_constructor_call *
-ast_constructor_call_new(str type, ast_expression_list *args);
+ast_constructor_call_new(symbol *name, ast_expression_list *args);
 
 /**
  * @brief TODO
@@ -582,7 +600,7 @@ extern void ast_constructor_call_destroy(ast_constructor_call **this);
  * @return
  */
 extern ast_function_call *ast_function_call_new(ast_expression *object,
-                                                str functionName,
+                                                symbol *functionName,
                                                 ast_expression_list *args);
 
 /**
@@ -598,7 +616,7 @@ extern void ast_function_call_destroy(ast_function_call **this);
  * @return
  */
 extern ast_super_function_call *
-ast_super_function_call_new(str functionName, ast_expression_list *args);
+ast_super_function_call_new(symbol *functionName, ast_expression_list *args);
 
 /**
  * @brief TODO
@@ -611,7 +629,7 @@ extern void ast_super_function_call_destroy(ast_super_function_call **this);
  * @param identifier
  * @return
  */
-extern ast_reference *ast_reference_new(str identifier);
+extern ast_reference *ast_reference_new(symbol *value);
 
 /**
  * @brief TODO
@@ -719,9 +737,9 @@ struct ast_program {
 
 struct ast_class {
     AST_DEFINITION_PROPERTIES
-    str name;
+    symbol *name;
     ast_formal_list *parameters;
-    str superClass;
+    symbol *superClass;
     ast_expression_list *superClassArgs;
     ast_property_list *properties;
     ast_function_list *functions;
@@ -729,23 +747,23 @@ struct ast_class {
 
 struct ast_formal {
     AST_DEFINITION_PROPERTIES
-    str identifier;
-    str type;
+    symbol *identifier;
+    symbol *type;
     int isLazy;
 };
 
 struct ast_property {
     AST_DEFINITION_PROPERTIES
-    str name;
-    str type;
+    symbol *name;
+    symbol *type;
     ast_expression *value;
 };
 
 struct ast_function {
     AST_DEFINITION_PROPERTIES
-    str name;
+    symbol *functionName;
     ast_formal_list *parameters;
-    str returnType;
+    symbol *returnType;
     ast_expression *body;
     ast_function_visibility visibility;
     int isAbstract;
@@ -766,21 +784,21 @@ struct ast_let {
 
 struct ast_initialization {
     AST_EXPRESSION_PROPERTIES
-    str identifier;
-    str type;
+    symbol *identifier;
+    symbol *type;
     ast_expression *value;
 };
 
 struct ast_assignment {
     AST_EXPRESSION_PROPERTIES
-    str identifier;
+    symbol *identifier;
     ast_assignment_operator operator;
     ast_expression *value;
 };
 
 struct ast_cast {
     AST_EXPRESSION_PROPERTIES
-    str type;
+    symbol *type;
     ast_expression *object;
 };
 
@@ -806,7 +824,7 @@ struct ast_binary_expression {
 
 struct ast_unary_expression {
     AST_EXPRESSION_PROPERTIES
-    str operator;
+    ast_unary_operator operator;
     ast_expression *expression;
 };
 
@@ -823,26 +841,26 @@ struct ast_native_expression {
 
 struct ast_constructor_call {
     AST_EXPRESSION_PROPERTIES
-    str type;
+    symbol *name;
     ast_expression_list *args;
 };
 
 struct ast_function_call {
     AST_EXPRESSION_PROPERTIES
     ast_expression *object;
-    str functionName;
+    symbol *functionName;
     ast_expression_list *args;
 };
 
 struct ast_super_function_call {
     AST_EXPRESSION_PROPERTIES
-    str functionName;
+    symbol *functionName;
     ast_expression_list *args;
 };
 
 struct ast_reference {
     AST_EXPRESSION_PROPERTIES
-    str identifier;
+    symbol *value;
 };
 
 struct ast_this_literal {

@@ -9,6 +9,7 @@
 #define BLINK_PARSER_HELPER_H
 
 #include <blink/ast.h>
+#include <blink/symboltable.h>
 
 
 // -----------------------------------------------------------------------------
@@ -22,6 +23,7 @@ typedef struct parser_extra_parser {
     void *scanner;
     ast *resultAst;
     str sourceFileName;
+    symboltable *symtable;
 } parser_extra_parser;
 
 /**

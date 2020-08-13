@@ -37,6 +37,7 @@ static void ast_program_printer(ast_program *program, void *args) {
 
     fprintf(printer->outFile, "digraph AST {\n");
     fprintf(printer->outFile, "\tnode [shape=plain]\n");
+
     fprintf(printer->outFile,
             "\tprogram "
             "[label=<"
@@ -45,11 +46,13 @@ static void ast_program_printer(ast_program *program, void *args) {
             "</TABLE>"
             ">];\n",
             "ast_program");
+
     for (node = program->classes->head; node; node = node->next) {
         ast_class *class = (ast_class *) node->element;
         fprintf(printer->outFile, "\tprogram -> ");
         AST_EXECUTE_CALLBACKS(printer->callbacks, class, args);
     }
+
     fprintf(printer->outFile, "}\n");
 }
 
@@ -62,6 +65,12 @@ static void ast_class_printer(ast_class *class, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
     list_node *node              = NULL;
+
+    str className      = STR_NULL_INIT;
+    str superClassName = STR_NULL_INIT;
+
+    if (class->name) { className = class->name->identifier; }
+    if (class->superClass) { superClassName = class->superClass->identifier; }
 
     fprintf(printer->outFile, "class%llu;\n", nodeCount);
     fprintf(printer->outFile,
@@ -82,8 +91,9 @@ static void ast_class_printer(ast_class *class, void *args) {
             "</TR>"
             "</TABLE>"
             ">];\n",
-            nodeCount, "ast_class", STR_FMT(&class->name),
-            STR_FMT(&class->superClass));
+            nodeCount, "ast_class", STR_FMT(&className),
+            STR_FMT(&superClassName));
+
     if (class->parameters) {
         for (node = class->parameters->head; node; node = node->next) {
             ast_formal *formal = (ast_formal *) node->element;
@@ -110,6 +120,12 @@ static void ast_formal_printer(ast_formal *formal, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
 
+    str identifier = STR_NULL_INIT;
+    str type       = STR_NULL_INIT;
+
+    if (formal->identifier) { identifier = formal->identifier->identifier; }
+    if (formal->type) { type = formal->type->identifier; }
+
     fprintf(printer->outFile, "formal%llu;\n", nodeCount);
     fprintf(printer->outFile,
             "\tformal%llu "
@@ -132,8 +148,8 @@ static void ast_formal_printer(ast_formal *formal, void *args) {
             "</TR>"
             "</TABLE>"
             ">];\n",
-            nodeCount, "ast_formal", STR_FMT(&formal->identifier),
-            STR_FMT(&formal->type), (formal->isLazy ? "true" : "false"));
+            nodeCount, "ast_formal", STR_FMT(&identifier), STR_FMT(&type),
+            (formal->isLazy ? "true" : "false"));
 }
 
 /**
@@ -145,7 +161,13 @@ static void ast_function_printer(ast_function *function, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
 
+    str name       = STR_NULL_INIT;
+    str returnType = STR_NULL_INIT;
     str visibility = STR_NULL_INIT;
+
+    if (function->functionName) { name = function->functionName->identifier; }
+    if (function->returnType) { returnType = function->returnType->identifier; }
+
     switch (function->visibility) {
         case AST_FUNCTION_VISIBILITY_PUBLIC:
             STR_STATIC_SET(&visibility, "public");
@@ -192,11 +214,11 @@ static void ast_function_printer(ast_function *function, void *args) {
             "</TR>"
             "</TABLE>"
             ">];\n",
-            nodeCount, "ast_function", STR_FMT(&function->name),
-            STR_FMT(&function->returnType), STR_FMT(&visibility),
-            (function->isAbstract ? "true" : "false"),
+            nodeCount, "ast_function", STR_FMT(&name), STR_FMT(&returnType),
+            STR_FMT(&visibility), (function->isAbstract ? "true" : "false"),
             (function->isFinal ? "true" : "false"),
             (function->isOverwrite ? "true" : "false"));
+
     if (function->body) {
         fprintf(printer->outFile, "\tfunction%llu -> ", nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, function->body, args);
@@ -211,7 +233,13 @@ static void ast_function_printer(ast_function *function, void *args) {
 static void ast_assignment_printer(ast_assignment *assignment, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
-    str operator                 = STR_NULL_INIT;
+
+    str identifier = STR_NULL_INIT;
+    str operator   = STR_NULL_INIT;
+
+    if (assignment->identifier) {
+        identifier = assignment->identifier->identifier;
+    }
 
     switch (assignment->operator) {
         case AST_ASSIGNMENT_OPERATOR_EQUAL:
@@ -264,7 +292,7 @@ static void ast_assignment_printer(ast_assignment *assignment, void *args) {
             "</TR>"
             "</TABLE>"
             ">];\n",
-            nodeCount, "ast_assignment", STR_FMT(&assignment->identifier),
+            nodeCount, "ast_assignment", STR_FMT(&identifier),
             STR_FMT(&operator));
 
     if (assignment->value) {
