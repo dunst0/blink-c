@@ -161,7 +161,6 @@ not_whitespace      [^ \a\f\t\r\v\n]
                                                                                             if (symboltable_add_symbol(symtable, identifier, SYMBOL_TYPE_UNDEFINED,
                                                                                                                        yylloc->first_line, yylloc->first_column,
                                                                                                                        &yylval->symbolValue)) {
-                                                                                                printf("<IDENTIFIER: %s>\n", yytext);
                                                                                                 RETURN(IDENTIFIER);
                                                                                             } else {
                                                                                                 yyerror(yylloc, yyextra->extraParser, "could not add symbol to symboltable");

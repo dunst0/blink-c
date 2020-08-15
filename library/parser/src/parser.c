@@ -44,7 +44,8 @@ parser *parser_new(str sourceFileName, str currentDirectory,
 
     this->extraParser.sourceFileName = this->sourceFileName;
 
-    this->extraParser.symtable = symboltable_new();
+    this->extraParser.symtable =
+            symboltable_new((debug & PARSER_DEBUG_SYMBOLTABLE) != 0);
     if (!this->extraParser.symtable) {
         parser_destroy(&this);
         return NULL;

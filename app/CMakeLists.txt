@@ -21,7 +21,7 @@ target_include_directories(blink PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
 
 target_link_libraries(blink PRIVATE ast list parser symboltable hashtable)
 
-configure_file (
+configure_file(
         "include/blink/version.h.in"
         "${CMAKE_CURRENT_BINARY_DIR}/include/blink/version.h"
 )

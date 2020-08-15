@@ -49,7 +49,8 @@ int main(int argc, char **argv) {
         sourceFileName.s   = argv[1];
     }
 
-    parserDebug = PARSER_DEBUG_LEXER | PARSER_DEBUG_PARSER;
+    parserDebug =
+            PARSER_DEBUG_LEXER | PARSER_DEBUG_PARSER | PARSER_DEBUG_SYMBOLTABLE;
 
     blinkParser = parser_new(sourceFileName, currentDirectory, parserDebug);
     if (!blinkParser) {

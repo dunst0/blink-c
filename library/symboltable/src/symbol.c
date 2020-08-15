@@ -40,7 +40,7 @@ symbol *symbol_new(str identifier, symbol_type type) {
     this = calloc(1, sizeof(*this));
     if (!this) { return NULL; }
 
-    this->type   = type;
+    this->type = type;
 
     STR_COPY(&this->identifier, &identifier);
     if (!this->identifier.s) {

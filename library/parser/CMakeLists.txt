@@ -19,12 +19,12 @@ bison_target(
         blink-parser src/blink.y
         ${CMAKE_CURRENT_BINARY_DIR}/src/parser_impl.c
         DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/include/blink/parser_impl.h
-        )
+)
 flex_target(
         blink-lexer src/blink.l
         ${CMAKE_CURRENT_BINARY_DIR}/src/lexer_impl.c
         DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/include/blink/lexer_impl.h
-        )
+)
 add_flex_bison_dependency(blink-lexer blink-parser)
 
 add_library(parser OBJECT)

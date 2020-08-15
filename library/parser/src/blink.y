@@ -179,6 +179,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <symbolValue>        type
 %type <unary_expression>   unary_expression
 %type <while_expression>   while
+%type <symbolValue>        identifier_definition
 
 %start program
 
@@ -638,21 +639,28 @@ initialization_list             : initialization
                                     }
                                 ;
 
-initialization                  : IDENTIFIER type value
+initialization                  : identifier_definition type value
                                     {
-                                        // TODO: mark identifier as definition
                                         $$ = ast_initialization_new($1, $2, $3);
                                     }
-                                | IDENTIFIER type
+                                | identifier_definition type
                                     {
-                                        // TODO: mark identifier as definition
                                         $$ = ast_initialization_new($1, $2, NULL);
                                     }
-                                | IDENTIFIER value
+                                | identifier_definition value
                                     {
-                                        // TODO: mark identifier as definition
                                         str emtpy = STR_NULL_INIT;
                                         $$ = ast_initialization_new($1, NULL, $2);
+                                    }
+                                ;
+
+identifier_definition           :   {
+                                        symboltable_enter_declaration_mode(extraParser->symtable);
+                                    }
+                                  IDENTIFIER
+                                    {
+                                        symboltable_leave_declaration_mode(extraParser->symtable);
+                                        $$ = $2;
                                     }
                                 ;
 

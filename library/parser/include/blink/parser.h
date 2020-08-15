@@ -38,6 +38,7 @@ typedef struct parser {
 #define PARSER_DEBUG_NONE 0
 #define PARSER_DEBUG_LEXER 1U
 #define PARSER_DEBUG_PARSER 2U
+#define PARSER_DEBUG_SYMBOLTABLE 4U
 
 
 // -----------------------------------------------------------------------------

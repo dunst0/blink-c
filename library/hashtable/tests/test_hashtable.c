@@ -191,8 +191,7 @@ static void test_hashtable_double_insert_lookup_with_check(void **state) {
 static void test_value_hashtable(void **state) {
     (void) state; /* unused */
 
-    value_hashtable *table =
-            value_hashtable_new(1);
+    value_hashtable *table = value_hashtable_new(1);
     assert_non_null(table);
 
     value_hashtable_destroy(&table);
