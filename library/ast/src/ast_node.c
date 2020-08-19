@@ -43,6 +43,19 @@ CREATE_LIST_TYPE(IMPLEMENTATION, ast_property, property)
 CREATE_LIST_TYPE(IMPLEMENTATION, ast_function, function)
 CREATE_LIST_TYPE(IMPLEMENTATION, ast_initialization, initialization)
 
+void ast_node_destroy(ast_node **this) {
+    if (!this || !(*this)) { return; }
+
+    switch ((*this)->astNodeType) {
+        case AST_NODE_TYPE_EXPRESSION:
+            ast_expression_destroy((ast_expression **) this);
+            break;
+        case AST_NODE_TYPE_DEFINITION:
+            ast_definition_destroy((ast_definition **) this);
+            break;
+    }
+}
+
 void ast_definition_destroy(ast_definition **this) {
     if (!this || !(*this)) { return; }
 
@@ -57,7 +70,7 @@ void ast_definition_destroy(ast_definition **this) {
             ast_function_destroy((ast_function **) this);
             break;
         case AST_DEFINITION_TYPE_CLASS:
-            ast_property_destroy((ast_property **) this);
+            ast_class_destroy((ast_class **) this);
             break;
         case AST_DEFINITION_TYPE_PROGRAM:
             ast_program_destroy((ast_program **) this);

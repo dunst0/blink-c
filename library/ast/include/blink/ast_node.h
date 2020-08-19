@@ -302,6 +302,12 @@ CREATE_LIST_TYPE(INTERFACE, ast_initialization, initialization)
 // -----------------------------------------------------------------------------
 
 /**
+ * @brief Destroy a node from the AST.
+ * @param[in,out] this The node to destroy
+ */
+extern void ast_node_destroy(ast_node **this);
+
+/**
  * @brief Destroy a definition node from the AST.
  * @param[in,out] this The definition node to destroy
  */

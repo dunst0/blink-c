@@ -176,10 +176,14 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <operator>           function_visibility function_overwrite function_final
 %type <let>                let
 %type <property>           property_definition
-%type <symbolValue>        type
+%type <symbolValue>        type identifier_definition
 %type <unary_expression>   unary_expression
 %type <while_expression>   while
-%type <symbolValue>        identifier_definition
+
+%destructor { ast_node_destroy((ast_node **)&$$); } <class> <function>
+%destructor { ast_formal_list_destroy(&$$); } <formals>
+%destructor { ast_class_list_destroy(&$$); } <classes>
+%destructor { ast_initialization_list_destroy(&$$); } <initializations>
 
 %start program
 

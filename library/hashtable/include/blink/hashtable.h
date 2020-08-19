@@ -104,6 +104,18 @@ typedef struct hashtable {
                                    valueCheckCallback, arg);                   \
     }
 
+#define INTERFACE_HASHTABLE_MARK_STOLEN_CHECK(type)                            \
+    extern int type##_hashtable_mark_stolen_check(                             \
+            type##_hashtable *this, str key,                                   \
+            hashtable_value_check valueCheckCallback, void *arg)
+#define IMPLEMENTATION_HASHTABLE_MARK_STOLEN_CHECK(type)                       \
+    int type##_hashtable_mark_stolen_check(                                    \
+            type##_hashtable *this, str key,                                   \
+            hashtable_value_check valueCheckCallback, void *arg) {             \
+        return hashtable_mark_stolen_check((hashtable *) this, key,            \
+                                           valueCheckCallback, arg);           \
+    }
+
 #define INTERFACE_HASHTABLE_INSERT(type, elem)                                 \
     extern int type##_hashtable_insert(type##_hashtable *this, str key,        \
                                        type *elem)
@@ -126,6 +138,13 @@ typedef struct hashtable {
         return hashtable_has((hashtable *) this, key);                         \
     }
 
+#define INTERFACE_HASHTABLE_MARK_STOLEN(type)                                  \
+    extern int type##_hashtable_mark_stolen(type##_hashtable *this, str key)
+#define IMPLEMENTATION_HASHTABLE_MARK_STOLEN(type)                             \
+    int type##_hashtable_mark_stolen(type##_hashtable *this, str key) {        \
+        return hashtable_mark_stolen((hashtable *) this, key);                 \
+    }
+
 
 #define CREATE_HASHTABLE_TYPE(kind, type, elem)                                \
     kind##_HASHTABLE_TYPEDEF(type);                                            \
@@ -136,7 +155,9 @@ typedef struct hashtable {
     kind##_HASHTABLE_LOOKUP_CHECK(type);                                       \
     kind##_HASHTABLE_LOOKUP(type);                                             \
     kind##_HASHTABLE_HAS_CHECK(type);                                          \
-    kind##_HASHTABLE_HAS(type);
+    kind##_HASHTABLE_HAS(type);                                                \
+    kind##_HASHTABLE_MARK_STOLEN_CHECK(type);                                  \
+    kind##_HASHTABLE_MARK_STOLEN(type);
 
 
 // -----------------------------------------------------------------------------
