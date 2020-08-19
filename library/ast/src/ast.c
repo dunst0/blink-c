@@ -5,9 +5,9 @@
  * @brief File for the AST implementation
  */
 
-#include "blink/ast.h"
+#include "waitui/ast.h"
 
-#include "blink/ast_printer.h"
+#include "waitui/ast_printer.h"
 
 #include <stdlib.h>
 

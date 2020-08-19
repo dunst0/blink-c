@@ -5,10 +5,10 @@
  * @brief File for the HashTable implementation
  */
 
-#ifndef BLINK_HASHTABLE_H
-#define BLINK_HASHTABLE_H
+#ifndef WAITUI_HASHTABLE_H
+#define WAITUI_HASHTABLE_H
 
-#include <blink/str.h>
+#include <waitui/str.h>
 
 
 // -----------------------------------------------------------------------------
@@ -268,4 +268,4 @@ extern int hashtable_has(hashtable *this, str key);
  */
 extern int hashtable_mark_stolen(hashtable *this, str key);
 
-#endif//BLINK_HASHTABLE_H
+#endif //WAITUI_HASHTABLE_H

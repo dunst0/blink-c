@@ -1,8 +1,8 @@
 /**
- * @file blink.l
+ * @file waitui.l
  * @author rick
  * @date 26.03.20
- * @brief Lexer for the blink language
+ * @brief Lexer for the waitui language
  */
 
 %option noinput nounput noyywrap nodefault
@@ -11,9 +11,9 @@
 %option extra-type="parser_extra_lexer *"
 
 %{
-#include "blink/parser_impl.h"
+#include "waitui/parser_impl.h"
 
-#include "blink/parser_helper.h"
+#include "waitui/parser_helper.h"
 
 #include <stdio.h>
 

@@ -5,8 +5,8 @@
  * @brief File for the String implementation
  */
 
-#ifndef BLINK_STR_H
-#define BLINK_STR_H
+#ifndef WAITUI_STR_H
+#define WAITUI_STR_H
 
 #include <stdlib.h>
 #include <string.h>
@@ -88,4 +88,4 @@ typedef struct str {
         }                                                                      \
     } while (0)
 
-#endif// BLINK_STR_H
+#endif //WAITUI_STR_H

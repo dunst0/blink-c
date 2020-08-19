@@ -1,8 +1,8 @@
 /**
- * @file blink.y
+ * @file waitui.y
  * @author rick
  * @date 26.03.20
- * @brief Parser for the blink language
+ * @brief Parser for the waitui language
  */
 
 %define api.pure full
@@ -24,9 +24,9 @@
 }
 
 %code requires {
-#include "blink/parser_helper.h"
+#include "waitui/parser_helper.h"
 
-#include <blink/ast.h>
+#include <waitui/ast.h>
 }
 
 %union{
@@ -70,9 +70,9 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 }
 
 %code {
-#include "blink/parser_impl.h"
+#include "waitui/parser_impl.h"
 
-#include "blink/lexer_impl.h"
+#include "waitui/lexer_impl.h"
 
 #include <stdlib.h>
 

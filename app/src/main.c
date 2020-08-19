@@ -1,8 +1,8 @@
-#include "blink/version.h"
+#include "waitui/version.h"
 
-#include <blink/parser.h>
-#include <blink/str.h>
-#include <blink/symboltable.h>
+#include <waitui/parser.h>
+#include <waitui/str.h>
+#include <waitui/symboltable.h>
 
 #include <getopt.h>
 #include <stdio.h>
@@ -13,9 +13,9 @@
 //  Local defines
 // -----------------------------------------------------------------------------
 
-#define BLINK_SUCCESS 0
-#define BLINK_FAILURE 1
-#define BLINK_OTHER_ERROR 2
+#define WAITUI_SUCCESS 0
+#define WAITUI_FAILURE 1
+#define WAITUI_OTHER_ERROR 2
 
 
 // -----------------------------------------------------------------------------
@@ -38,10 +38,10 @@ static int parserDebug      = PARSER_DEBUG_NONE;
 // -----------------------------------------------------------------------------
 
 int main(int argc, char **argv) {
-    int result = BLINK_SUCCESS;
+    int result = WAITUI_SUCCESS;
 
-    parser *blinkParser = NULL;
-    ast *blinkAst       = NULL;
+    parser *waituiParser = NULL;
+    ast *waituiAst       = NULL;
     FILE *graphFile     = NULL;
 
     if (argc == 2) {
@@ -52,30 +52,30 @@ int main(int argc, char **argv) {
     parserDebug =
             PARSER_DEBUG_LEXER | PARSER_DEBUG_PARSER | PARSER_DEBUG_SYMBOLTABLE;
 
-    blinkParser = parser_new(sourceFileName, currentDirectory, parserDebug);
-    if (!blinkParser) {
-        result = BLINK_OTHER_ERROR;
+    waituiParser = parser_new(sourceFileName, currentDirectory, parserDebug);
+    if (!waituiParser) {
+        result = WAITUI_OTHER_ERROR;
         goto done;
     }
 
-    if (!parser_parse(blinkParser)) {
+    if (!parser_parse(waituiParser)) {
         fprintf(stderr, "Error: parsing failed\n");
-        result = BLINK_FAILURE;
+        result = WAITUI_FAILURE;
         goto done;
     } else {
         fprintf(stderr, "Debug: parsing worked\n");
     }
 
-    blinkAst = parser_get_ast(blinkParser);
-    if (!blinkAst) {
-        result = BLINK_OTHER_ERROR;
+    waituiAst = parser_get_ast(waituiParser);
+    if (!waituiAst) {
+        result = WAITUI_OTHER_ERROR;
         goto done;
     }
 
     graphFileName.len = sourceFileName.len + sizeof(".dot");
     graphFileName.s   = calloc(graphFileName.len, sizeof(*graphFileName.s));
     if (!graphFileName.s) {
-        result = BLINK_OTHER_ERROR;
+        result = WAITUI_OTHER_ERROR;
         goto done;
     }
     memcpy(graphFileName.s, sourceFileName.s, sourceFileName.len);
@@ -84,16 +84,16 @@ int main(int argc, char **argv) {
 
     graphFile = fopen(graphFileName.s, "w");
     if (!graphFile) {
-        result = BLINK_OTHER_ERROR;
+        result = WAITUI_OTHER_ERROR;
         goto done;
     }
-    ast_generate_graph(blinkAst, graphFile);
+    ast_generate_graph(waituiAst, graphFile);
 
 done:
     if (graphFile) { fclose(graphFile); }
     if (graphFileName.s) { free(graphFileName.s); }
-    ast_destroy(&blinkAst);
-    parser_destroy(&blinkParser);
+    ast_destroy(&waituiAst);
+    parser_destroy(&waituiParser);
 
     return result;
 }

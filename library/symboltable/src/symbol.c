@@ -5,7 +5,7 @@
  * @brief File for the Symbol implementation
  */
 
-#include "blink/symbol.h"
+#include "waitui/symbol.h"
 
 
 // -----------------------------------------------------------------------------

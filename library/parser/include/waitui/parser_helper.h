@@ -5,11 +5,11 @@
  * @brief Helping file for the Parser implementation
  */
 
-#ifndef BLINK_PARSER_HELPER_H
-#define BLINK_PARSER_HELPER_H
+#ifndef WAITUI_PARSER_HELPER_H
+#define WAITUI_PARSER_HELPER_H
 
-#include <blink/ast.h>
-#include <blink/symboltable.h>
+#include <waitui/ast.h>
+#include <waitui/symboltable.h>
 
 
 // -----------------------------------------------------------------------------
@@ -34,4 +34,4 @@ typedef struct parser_extra_lexer {
     parser_extra_parser *extraParser;
 } parser_extra_lexer;
 
-#endif//BLINK_PARSER_HELPER_H
+#endif //WAITUI_PARSER_HELPER_H

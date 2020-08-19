@@ -5,10 +5,10 @@
  * @brief File for the AST printer implementation
  */
 
-#ifndef BLINK_AST_PRINTER_H
-#define BLINK_AST_PRINTER_H
+#ifndef WAITUI_AST_PRINTER_H
+#define WAITUI_AST_PRINTER_H
 
-#include "blink/ast.h"
+#include "waitui/ast.h"
 
 
 // -----------------------------------------------------------------------------
@@ -22,4 +22,4 @@
  */
 extern void ast_printer_print_ast_graph(const ast *this, FILE *file);
 
-#endif//BLINK_AST_PRINTER_H
+#endif //WAITUI_AST_PRINTER_H

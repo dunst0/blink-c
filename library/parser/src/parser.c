@@ -5,11 +5,11 @@
  * @brief File for the Parser implementation
  */
 
-#include "blink/parser.h"
+#include "waitui/parser.h"
 
-#include "blink/parser_impl.h"
+#include "waitui/parser_impl.h"
 
-#include "blink/lexer_impl.h"
+#include "waitui/lexer_impl.h"
 
 
 // -----------------------------------------------------------------------------

@@ -5,13 +5,13 @@
  * @brief File for the Parser implementation
  */
 
-#ifndef BLINK_PARSER_H
-#define BLINK_PARSER_H
+#ifndef WAITUI_PARSER_H
+#define WAITUI_PARSER_H
 
-#include "blink/parser_helper.h"
+#include "waitui/parser_helper.h"
 
-#include <blink/ast.h>
-#include <blink/str.h>
+#include <waitui/ast.h>
+#include <waitui/str.h>
 
 
 // -----------------------------------------------------------------------------
@@ -76,4 +76,4 @@ extern int parser_parse(parser *this);
  */
 extern ast *parser_get_ast(parser *this);
 
-#endif//BLINK_PARSER_H
+#endif //WAITUI_PARSER_H

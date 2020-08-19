@@ -5,7 +5,7 @@
  * @brief File for the Version implementation
  */
 
-#ifndef BLINK_VERSION_H
-#define BLINK_VERSION_H
+#ifndef WAITUI_VERSION_H
+#define WAITUI_VERSION_H
 
-#endif//BLINK_VERSION_H
+#endif //WAITUI_VERSION_H

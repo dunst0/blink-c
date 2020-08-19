@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 include("project-meta-info.in")
 
-project(blink-ast
+project(waitui-ast
         VERSION ${project_version}
         DESCRIPTION ${project_description}
         HOMEPAGE_URL ${project_homepage}
@@ -16,9 +16,9 @@ target_sources(ast
         "src/ast_node.c"
         "src/ast_printer.c"
         PUBLIC
-        "include/blink/ast.h"
-        "include/blink/ast_node.h"
-        "include/blink/ast_printer.h"
+        "include/waitui/ast.h"
+        "include/waitui/ast_node.h"
+        "include/waitui/ast_printer.h"
         )
 
 target_include_directories(ast PUBLIC "include")

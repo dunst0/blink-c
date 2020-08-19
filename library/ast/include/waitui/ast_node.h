@@ -5,12 +5,12 @@
  * @brief File for the AST node implementation
  */
 
-#ifndef BLINK_AST_NODE_H
-#define BLINK_AST_NODE_H
+#ifndef WAITUI_AST_NODE_H
+#define WAITUI_AST_NODE_H
 
-#include <blink/list.h>
-#include <blink/str.h>
-#include <blink/symbol.h>
+#include <waitui/list.h>
+#include <waitui/str.h>
+#include <waitui/symbol.h>
 
 
 // -----------------------------------------------------------------------------
@@ -897,4 +897,4 @@ struct ast_string_literal {
     str value;
 };
 
-#endif// BLINK_AST_NODE_H
+#endif // WAITUI_AST_NODE_H

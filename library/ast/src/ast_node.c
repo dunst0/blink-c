@@ -5,7 +5,7 @@
  * @brief File for the AST node implementation
  */
 
-#include "blink/ast_node.h"
+#include "waitui/ast_node.h"
 
 #include <stdlib.h>
 
