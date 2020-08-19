@@ -1,0 +1,3 @@
+set(project_version 0.0.1)
+set(project_description "blink ast library")
+set(project_homepage "http://example.com")

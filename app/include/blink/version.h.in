@@ -1,0 +1,11 @@
+/**
+ * @file version.h
+ * @author rick
+ * @date 30.07.20
+ * @brief File for the Version implementation
+ */
+
+#ifndef BLINK_VERSION_H
+#define BLINK_VERSION_H
+
+#endif//BLINK_VERSION_H

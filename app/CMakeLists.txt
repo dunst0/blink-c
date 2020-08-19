@@ -14,6 +14,14 @@ add_executable(blink)
 target_sources(blink
         PRIVATE
         "src/main.c"
+        "${CMAKE_CURRENT_BINARY_DIR}/include/blink/version.h"
         )
 
-target_link_libraries(blink PRIVATE parser)
+target_include_directories(blink PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
+
+target_link_libraries(blink PRIVATE ast list parser symboltable hashtable)
+
+configure_file(
+        "include/blink/version.h.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/include/blink/version.h"
+)
