@@ -168,7 +168,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <expression>         dispatch expression value literal
 %type <expressions>        expressions expressions_list actuals_definition actuals class_actuals
 %type <formal>             formal
-%type <formals>            formals_definition formals class_formals
+%type <formals>            formals_definition formals class_formals formals_list
 %type <function>           function_signature function_definition
 %type <if_else_expression> if_else
 %type <initialization>     initialization
@@ -176,7 +176,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <operator>           function_visibility function_overwrite function_final
 %type <let>                let
 %type <property>           property_definition
-%type <symbolValue>        type identifier_definition
+%type <symbolValue>        type identifier_definition class_head
 %type <unary_expression>   unary_expression
 %type <while_expression>   while
 
@@ -184,6 +184,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %destructor { ast_formal_list_destroy(&$$); } <formals>
 %destructor { ast_class_list_destroy(&$$); } <classes>
 %destructor { ast_initialization_list_destroy(&$$); } <initializations>
+%destructor { symbol_destroy(&$$); } <symbolValue>
 
 %start program
 
@@ -222,21 +223,28 @@ classes                         : class_definition
                                 ;
 
 /* class definitions */
-class_definition                : CLASS_KEYWORD IDENTIFIER class_formals '{' class_body '}' ';'
+class_definition                : class_head class_formals '{' class_body '}' ';'
                                     {
-                                        // TODO: mark identifier as definition
-                                        $$ = $5;
-                                        $$->name = $2;
-                                        $$->parameters = $3;
+                                        $$ = $4;
+                                        $$->name = $1;
+                                        $$->parameters = $2;
+                                        symboltable_exit_scope(extraParser->symtable);
                                     }
-                                | CLASS_KEYWORD IDENTIFIER class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' ';'
+                                | class_head class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' ';'
                                     {
-                                        // TODO: mark identifier as definition
-                                        $$ = $8;
-                                        $$->name = $2;
-                                        $$->parameters = $3;
-                                        $$->superClass = $5;
-                                        $$->superClassArgs = $6;
+                                        $$ = $7;
+                                        $$->name = $1;
+                                        $$->parameters = $2;
+                                        $$->superClass = $4;
+                                        $$->superClassArgs = $5;
+                                        symboltable_exit_scope(extraParser->symtable);
+                                    }
+                                ;
+
+class_head                      : CLASS_KEYWORD identifier_definition
+                                    {
+                                        $$ = $2;
+                                        symboltable_enter_scope(extraParser->symtable);
                                     }
                                 ;
 
@@ -266,12 +274,12 @@ class_body                      : /* empty */
                                         ast_function_list *functions = ast_function_list_new();
                                         $$ = ast_class_new(NULL, NULL, NULL, NULL, properties, functions);
                                     }
-                                | class_body property_definition
+                                | class_body property_definition ';'
                                     {
                                         $$ = $1;
                                         ast_property_list_unshift($$->properties, $2);
                                     }
-                                | class_body function_definition
+                                | class_body function_definition ';'
                                     {
                                         $$ = $1;
                                         ast_function_list_unshift($$->functions, $2);
@@ -279,31 +287,28 @@ class_body                      : /* empty */
                                 ;
 
 /* properties definitions */
-property_definition             : VAR_KEYWORD IDENTIFIER type value ';'
+property_definition             : VAR_KEYWORD identifier_definition type value
                                     {
-                                        // TODO: mark identifier as definition
                                         $$ = ast_property_new($2, $3, $4);
                                     }
-                                | VAR_KEYWORD IDENTIFIER type ';'
+                                | VAR_KEYWORD identifier_definition type
                                     {
-                                        // TODO: mark identifier as definition
                                         $$ = ast_property_new($2, $3, NULL);
                                     }
-                                | VAR_KEYWORD IDENTIFIER value ';'
+                                | VAR_KEYWORD identifier_definition value
                                     {
-                                        // TODO: mark identifier as definition
                                         $$ = ast_property_new($2, NULL, $3);
                                     }
                                 ;
 
 /* functions definitions */
-function_definition             : ABSTRACT_KEYWORD function_visibility function_signature ';'
+function_definition             : ABSTRACT_KEYWORD function_visibility function_signature
                                     {
                                         $$ = $3;
                                         $$->isAbstract = 1;
                                         $$->visibility = $2;
                                     }
-                                | function_final function_overwrite function_visibility function_signature value ';'
+                                | function_final function_overwrite function_visibility function_signature value
                                     {
                                         $$ = $4;
                                         $$->isFinal = $1;
@@ -374,21 +379,35 @@ formals                         : /* empty */
                                     {
                                         $$ = ast_formal_list_new();
                                     }
-                                | formals formal ','
+                                | formal
+                                    {
+                                        $$ = ast_formal_list_new();
+                                        ast_formal_list_unshift($$, $1);
+                                    }
+                                | formals_list
+                                    {
+                                        $$ = $1;
+                                    }
+                                ;
+
+formals_list                    : formal ','
+                                    {
+                                        $$ = ast_formal_list_new();
+                                        ast_formal_list_unshift($$, $1);
+                                    }
+                                | formals_list formal
                                     {
                                         $$ = $1;
                                         ast_formal_list_unshift($$, $2);
                                     }
                                 ;
 
-formal                          : LAZY_KEYWORD IDENTIFIER type
+formal                          : LAZY_KEYWORD identifier_definition type
                                     {
-                                        // TODO: mark identifier as definition
                                         $$ = ast_formal_new($2, $3, 1);
                                     }
-                                | IDENTIFIER type
+                                | identifier_definition type
                                     {
-                                        // TODO: mark identifier as definition
                                         $$ = ast_formal_new($1, $2, 0);
                                     }
                                 ;
@@ -596,15 +615,13 @@ expressions                     : /* empty */
 
 expressions_list                : expression ';'
                                     {
-                                        ast_expression *expression = $1;
                                         $$ = ast_expression_list_new();
-                                        ast_expression_list_unshift($$, expression);
+                                        ast_expression_list_unshift($$, $1);
                                     }
                                 | expressions_list expression ';'
                                     {
-                                        ast_expression *expression = $2;
                                         $$ = $1;
-                                        ast_expression_list_unshift($$, expression);
+                                        ast_expression_list_unshift($$, $2);
                                     }
                                 ;
 
@@ -664,6 +681,7 @@ identifier_definition           :   {
                                   IDENTIFIER
                                     {
                                         symboltable_leave_declaration_mode(extraParser->symtable);
+                                        symboltable_mark_symbol_stolen(extraParser->symtable, $2);
                                         $$ = $2;
                                     }
                                 ;
