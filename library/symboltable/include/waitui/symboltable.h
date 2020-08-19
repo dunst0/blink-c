@@ -107,4 +107,13 @@ extern int symboltable_has(symboltable *this, str identifier);
  */
 extern symbol *symboltable_lookup(symboltable *this, str identifier);
 
-#endif //WAITUI_SYMBOLTABLE_H
+/**
+ * @brief Marks the given symbol as stolen in the SymbolTable.
+ * @param this TODO
+ * @param stolenSymbol TODO
+ * @return TODO
+ */
+extern int symboltable_mark_symbol_stolen(symboltable *this,
+                                          symbol *stolenSymbol);
+
+#endif//WAITUI_SYMBOLTABLE_H

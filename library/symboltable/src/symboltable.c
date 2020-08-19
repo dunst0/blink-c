@@ -19,6 +19,19 @@
 
 
 // -----------------------------------------------------------------------------
+//  Local functions
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief TODO
+ * @return
+ */
+static int symboltable_symbol_check(symbol *this, symbol *other) {
+    return this->scope == other->scope;
+}
+
+
+// -----------------------------------------------------------------------------
 //  Public functions
 // -----------------------------------------------------------------------------
 
@@ -55,7 +68,7 @@ int symboltable_enter_scope(symboltable *this) {
 
     this->currentScope++;
     if (this->debug) {
-        fprintf(stdout, "Entering new scope: %ld\n", this->currentScope);
+        fprintf(stderr, "Entering new scope: %ld\n", this->currentScope);
     }
 
     return 1;
@@ -65,16 +78,19 @@ int symboltable_exit_scope(symboltable *this) {
     if (!this) { return 0; }
 
     if (this->debug) {
-        fprintf(stdout, "Leaving scope: %ld\n", this->currentScope);
+        fprintf(stderr, "Leaving scope: %ld\n", this->currentScope);
     }
 
     for (unsigned long int i = 0; i < this->symbols->size; ++i) {
-        while (this->symbols->list[i]) {
-            hashtable_node *temp = this->symbols->list[i];
-            symbol *tempSymbol   = (symbol *) temp->value;
+        if (this->symbols->list[i]) {
+            hashtable_node *node = this->symbols->list[i];
 
-            if (tempSymbol->scope == this->currentScope) {
-                this->symbols->list[i] = this->symbols->list[i]->next;
+            while (node &&
+                   ((symbol *) node->value)->scope == this->currentScope) {
+                hashtable_node *temp = node;
+
+                node = temp->next;
+
                 if (!temp->isStolen) {
                     this->symbols->valueDestroyCallback(&temp->value);
                 }
@@ -83,6 +99,8 @@ int symboltable_exit_scope(symboltable *this) {
 
                 free(temp);
             }
+
+            this->symbols->list[i] = node;
         }
     }
 
@@ -94,7 +112,7 @@ int symboltable_exit_scope(symboltable *this) {
 void symboltable_enter_declaration_mode(symboltable *this) {
     if (!this) { return; }
 
-    if (this->debug) { fprintf(stdout, "Entering declaration mode\n"); }
+    if (this->debug) { fprintf(stderr, "Entering declaration mode\n"); }
 
     this->declarationMode = 1;
 }
@@ -102,7 +120,7 @@ void symboltable_enter_declaration_mode(symboltable *this) {
 void symboltable_leave_declaration_mode(symboltable *this) {
     if (!this) { return; }
 
-    if (this->debug) { fprintf(stdout, "Leaving declaration mode\n"); }
+    if (this->debug) { fprintf(stderr, "Leaving declaration mode\n"); }
 
     this->declarationMode = 0;
 }
@@ -134,17 +152,20 @@ int symboltable_add_symbol(symboltable *this, str identifier, symbol_type type,
             goto error_destroy_symbol;
         }
 
-        if (!symbol_hashtable_insert(this->symbols, identifier, foundSymbol)) {
+        if (!symbol_hashtable_insert_check(
+                    this->symbols, identifier, foundSymbol,
+                    (hashtable_value_check) symboltable_symbol_check,
+                    foundSymbol)) {
             goto error_destroy_symbol;
         }
 
         if (this->debug) {
             if (this->declarationMode) {
-                fprintf(stdout,
+                fprintf(stderr,
                         "Declaring new identifier '%.*s' in scope %ld\n",
                         STR_FMT(&identifier), this->currentScope);
             } else {
-                fprintf(stdout,
+                fprintf(stderr,
                         "Referencing new identifier '%.*s' in scope %ld\n",
                         STR_FMT(&identifier), this->currentScope);
             }
@@ -154,7 +175,7 @@ int symboltable_add_symbol(symboltable *this, str identifier, symbol_type type,
             goto error_destroy_reference;
         }
         if (this->debug) {
-            fprintf(stdout,
+            fprintf(stderr,
                     "Referencing known identifier '%.*s' in scope %ld\n",
                     STR_FMT(&identifier), this->currentScope);
         }
@@ -183,4 +204,18 @@ symbol *symboltable_lookup(symboltable *this, str identifier) {
     if (!this) { return NULL; }
 
     return symbol_hashtable_lookup(this->symbols, identifier);
+}
+
+int symboltable_mark_symbol_stolen(symboltable *this, symbol *stolenSymbol) {
+    if (!this || !stolenSymbol) { return 0; }
+
+    if (this->debug) {
+        fprintf(stderr,
+                "Mark symbol with identifier '%.*s' in scope %ld as stolen\n",
+                STR_FMT(&stolenSymbol->identifier), stolenSymbol->scope);
+    }
+
+    return symbol_hashtable_mark_stolen_check(
+            this->symbols, stolenSymbol->identifier,
+            (hashtable_value_check) symboltable_symbol_check, stolenSymbol);
 }
