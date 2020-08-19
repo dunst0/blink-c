@@ -5,11 +5,11 @@
  * @brief File for the Symbol implementation
  */
 
-#ifndef BLINK_SYMBOL_H
-#define BLINK_SYMBOL_H
+#ifndef WAITUI_SYMBOL_H
+#define WAITUI_SYMBOL_H
 
-#include <blink/list.h>
-#include <blink/str.h>
+#include <waitui/list.h>
+#include <waitui/str.h>
 
 
 // -----------------------------------------------------------------------------
@@ -80,4 +80,4 @@ extern symbol *symbol_new(str identifier, symbol_type type);
  */
 extern void symbol_destroy(symbol **this);
 
-#endif//BLINK_SYMBOL_H
+#endif //WAITUI_SYMBOL_H

@@ -5,7 +5,7 @@
  * @brief File for the HashTable implementation
  */
 
-#include "blink/hashtable.h"
+#include "waitui/hashtable.h"
 
 #include <stdlib.h>
 #include <string.h>

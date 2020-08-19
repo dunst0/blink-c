@@ -5,10 +5,10 @@
  * @brief File for the AST implementation
  */
 
-#ifndef BLINK_AST_H
-#define BLINK_AST_H
+#ifndef WAITUI_AST_H
+#define WAITUI_AST_H
 
-#include "blink/ast_node.h"
+#include "waitui/ast_node.h"
 
 #include <stdio.h>
 
@@ -85,4 +85,4 @@ extern void ast_walk(ast *this, ast_callbacks *callbacks, void *args);
  */
 extern void ast_generate_graph(const ast *this, FILE *file);
 
-#endif// BLINK_AST_H
+#endif// WAITUI_AST_H

@@ -5,7 +5,7 @@
  * @brief File for the SymbolTable implementation
  */
 
-#include "blink/symboltable.h"
+#include "waitui/symboltable.h"
 
 #include <stdio.h>
 #include <stdlib.h>

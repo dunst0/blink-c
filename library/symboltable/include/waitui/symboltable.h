@@ -5,12 +5,12 @@
  * @brief File for the SymbolTable implementation
  */
 
-#ifndef BLINK_SYMBOLTABLE_H
-#define BLINK_SYMBOLTABLE_H
+#ifndef WAITUI_SYMBOLTABLE_H
+#define WAITUI_SYMBOLTABLE_H
 
-#include "blink/symbol.h"
+#include "waitui/symbol.h"
 
-#include <blink/hashtable.h>
+#include <waitui/hashtable.h>
 
 
 // -----------------------------------------------------------------------------
@@ -107,4 +107,4 @@ extern int symboltable_has(symboltable *this, str identifier);
  */
 extern symbol *symboltable_lookup(symboltable *this, str identifier);
 
-#endif//BLINK_SYMBOLTABLE_H
+#endif //WAITUI_SYMBOLTABLE_H

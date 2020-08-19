@@ -12,7 +12,7 @@
 
 #include <cmocka.h>
 
-#include "blink/hashtable.h"
+#include "waitui/hashtable.h"
 
 typedef struct value {
     int count;

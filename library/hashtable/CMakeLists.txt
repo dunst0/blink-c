@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 include("project-meta-info.in")
 
-project(blink-hashtable
+project(waitui-hashtable
         VERSION ${project_version}
         DESCRIPTION ${project_description}
         HOMEPAGE_URL ${project_homepage}
@@ -18,7 +18,7 @@ target_sources(hashtable
         PRIVATE
         "src/hashtable.c"
         PUBLIC
-        "include/blink/hashtable.h"
+        "include/waitui/hashtable.h"
         )
 
 target_include_directories(hashtable PUBLIC "include")

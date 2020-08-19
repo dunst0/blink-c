@@ -5,8 +5,8 @@
  * @brief File for the List implementation
  */
 
-#ifndef BLINK_LIST_H
-#define BLINK_LIST_H
+#ifndef WAITUI_LIST_H
+#define WAITUI_LIST_H
 
 
 // -----------------------------------------------------------------------------
@@ -151,4 +151,4 @@ extern int list_unshift(list *this, void *element);
  */
 extern void *list_shift(list *this);
 
-#endif//BLINK_LIST_H
+#endif //WAITUI_LIST_H
