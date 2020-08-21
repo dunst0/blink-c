@@ -180,17 +180,23 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <unary_expression>   unary_expression
 %type <while_expression>   while
 
-%destructor { ast_node_destroy((ast_node **)&$$); } <class> <function>
-%destructor { ast_formal_list_destroy(&$$); } <formals>
-%destructor { ast_class_list_destroy(&$$); } <classes>
-%destructor { ast_initialization_list_destroy(&$$); } <initializations>
-%destructor { symbol_destroy(&$$); } <symbolValue>
+%destructor { ast_node_destroy((ast_node **)&$$); }     <assignment> <binary_expression> <block>
+                                                        <constructor_call> <cast> <class> <expression> <formal>
+                                                        <function> <if_else_expression> <initialization> <let>
+                                                        <property> <unary_expression> <while_expression>
+%destructor { ast_expression_list_destroy(&$$); }       <expressions>
+%destructor { ast_formal_list_destroy(&$$); }           <formals>
+%destructor { ast_class_list_destroy(&$$); }            <classes>
+%destructor { ast_initialization_list_destroy(&$$); }   <initializations>
+%destructor { symbol_destroy(&$$); }                    <symbolValue>
 
 %start program
 
+
 %%
 
-/* definitions */
+
+/* --- definitions -------------------------------------------------------------------------------------------------- */
 
 /* program definitions */
 program                         : package imports
@@ -218,31 +224,29 @@ package                         : PACKAGE_KEYWORD
 classes                         : class_definition
                                     {
                                         $$ = ast_class_list_new();
-                                        ast_class_list_unshift($$, $1);
+                                        ast_class_list_push($$, $1);
                                     }
                                 | classes class_definition
                                     {
                                         $$ = $1;
-                                        ast_class_list_unshift($$, $2);
+                                        ast_class_list_push($$, $2);
                                     }
                                 ;
 
 /* class definitions */
-class_definition                : class_head class_formals '{' class_body '}' ';'
+class_definition                : class_head class_formals '{' class_body '}' class_tail ';'
                                     {
                                         $$ = $4;
                                         $$->name = $1;
                                         $$->parameters = $2;
-                                        symboltable_exit_scope(extraParser->symtable);
                                     }
-                                | class_head class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' ';'
+                                | class_head class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' class_tail ';'
                                     {
                                         $$ = $7;
                                         $$->name = $1;
                                         $$->parameters = $2;
                                         $$->superClass = $4;
                                         $$->superClassArgs = $5;
-                                        symboltable_exit_scope(extraParser->symtable);
                                     }
                                 ;
 
@@ -250,6 +254,12 @@ class_head                      : CLASS_KEYWORD identifier_definition
                                     {
                                         $$ = $2;
                                         symboltable_enter_scope(extraParser->symtable);
+                                    }
+                                ;
+
+class_tail                      : /* empty */
+                                    {
+                                        symboltable_exit_scope(extraParser->symtable);
                                     }
                                 ;
 
@@ -282,12 +292,12 @@ class_body                      : /* empty */
                                 | class_body property_definition ';'
                                     {
                                         $$ = $1;
-                                        ast_property_list_unshift($$->properties, $2);
+                                        ast_property_list_push($$->properties, $2);
                                     }
                                 | class_body function_definition ';'
                                     {
                                         $$ = $1;
-                                        ast_function_list_unshift($$->functions, $2);
+                                        ast_function_list_push($$->functions, $2);
                                     }
                                 ;
 
@@ -323,7 +333,7 @@ function_definition             : ABSTRACT_KEYWORD function_visibility function_
                                     }
                                 ;
 
-function_final                    : /* empty */
+function_final                  : /* empty */
                                     {
                                         $$ = 0;
                                     }
@@ -333,7 +343,7 @@ function_final                    : /* empty */
                                     }
                                 ;
 
-function_overwrite                : /* empty */
+function_overwrite              : /* empty */
                                     {
                                         $$ = 0;
                                     }
@@ -344,7 +354,7 @@ function_overwrite                : /* empty */
                                 ;
 
 
-function_visibility               : /* empty */
+function_visibility             : /* empty */
                                     {
                                         $$ = AST_FUNCTION_VISIBILITY_PRIVATE;
                                     }
@@ -374,45 +384,8 @@ function_signature              : FUNC_KEYWORD FUNCTION_NAME '(' formals ')'
                                     }
                                 ;
 
-formals                         : /* empty */
-                                    {
-                                        $$ = ast_formal_list_new();
-                                    }
-                                | formal
-                                    {
-                                        $$ = ast_formal_list_new();
-                                        ast_formal_list_unshift($$, $1);
-                                    }
-                                | formals_list
-                                    {
-                                        $$ = $1;
-                                    }
-                                ;
 
-formals_list                    : formal ','
-                                    {
-                                        $$ = ast_formal_list_new();
-                                        ast_formal_list_unshift($$, $1);
-                                    }
-                                | formals_list formal
-                                    {
-                                        $$ = $1;
-                                        ast_formal_list_unshift($$, $2);
-                                    }
-                                ;
-
-formal                          : LAZY_KEYWORD identifier_definition ':' IDENTIFIER
-                                    {
-                                        $$ = ast_formal_new($2, $4, 1);
-                                    }
-                                | identifier_definition ':' IDENTIFIER
-                                    {
-                                        $$ = ast_formal_new($1, $3, 0);
-                                    }
-                                ;
-
-
-/* expressions */
+/* --- expressions -------------------------------------------------------------------------------------------------- */
 
 expression                      : assignment            { $$ = (ast_expression *) $1; }
                                 | binary_expression     { $$ = (ast_expression *) $1; }
@@ -425,7 +398,7 @@ expression                      : assignment            { $$ = (ast_expression *
                                 | literal               { $$ = (ast_expression *) $1; }
                                 | unary_expression      { $$ = (ast_expression *) $1; }
                                 | while                 { $$ = (ast_expression *) $1; }
-                                | '(' expression ')'    { $$ = $2; }
+                                | '(' expression ')'    { $$ = (ast_expression *) $2; }
                                 ;
 
 assignment                      : IDENTIFIER ASSIGNMENT expression
@@ -596,15 +569,49 @@ while                           : WHILE_KEYWORD '(' expression ')' expression
                                     }
                                 ;
 
+
+/* --- general ------------------------------------------------------------------------------------------------------ */
+
+formals                         : /* empty */
+                                    {
+                                        $$ = ast_formal_list_new();
+                                    }
+                                | formals_list
+                                    {
+                                        $$ = $1;
+                                    }
+                                ;
+
+formals_list                    : formals_list ',' formal
+                                    {
+                                        $$ = $1;
+                                        ast_formal_list_push($$, $3);
+                                    }
+                                | formal
+                                    {
+                                        $$ = ast_formal_list_new();
+                                        ast_formal_list_push($$, $1);
+                                    }
+                                ;
+
+formal                          : LAZY_KEYWORD identifier_definition ':' IDENTIFIER
+                                    {
+                                        $$ = ast_formal_new($2, $4, 1);
+                                    }
+                                | identifier_definition ':' IDENTIFIER
+                                    {
+                                        $$ = ast_formal_new($1, $3, 0);
+                                    }
+                                ;
+
 expressions                     : /* empty */
                                     {
                                         $$ = ast_expression_list_new();
                                     }
                                 | expression
                                     {
-                                        ast_expression *expression = $1;
                                         $$ = ast_expression_list_new();
-                                        ast_expression_list_unshift($$, expression);
+                                        ast_expression_list_push($$, $1);
                                     }
                                 | expressions_list
                                     {
@@ -615,17 +622,14 @@ expressions                     : /* empty */
 expressions_list                : expression ';'
                                     {
                                         $$ = ast_expression_list_new();
-                                        ast_expression_list_unshift($$, $1);
+                                        ast_expression_list_push($$, $1);
                                     }
                                 | expressions_list expression ';'
                                     {
                                         $$ = $1;
-                                        ast_expression_list_unshift($$, $2);
+                                        ast_expression_list_push($$, $2);
                                     }
                                 ;
-
-
-/* general */
 
 actuals                         : /* empty */
                                     {
@@ -640,19 +644,19 @@ actuals                         : /* empty */
 actuals_list                    : actuals_list ',' expression
                                     {
                                         $$ = $1;
-                                        ast_expression_list_unshift($$, $3);
+                                        ast_expression_list_push($$, $3);
                                     }
                                 | expression
                                     {
                                         $$ = ast_expression_list_new();
-                                        ast_expression_list_unshift($$, $1);
+                                        ast_expression_list_push($$, $1);
                                     }
                                 ;
 
 initializations                 : initialization
                                     {
                                         $$ = ast_initialization_list_new();
-                                        ast_initialization_list_unshift ($$, $1);
+                                        ast_initialization_list_push ($$, $1);
                                     }
                                 | initialization_list
                                     {
@@ -663,12 +667,12 @@ initializations                 : initialization
 initialization_list             : initialization ','
                                     {
                                         $$ = ast_initialization_list_new();
-                                        ast_initialization_list_unshift ($$, $1);
+                                        ast_initialization_list_push ($$, $1);
                                     }
                                 | initialization_list initialization
                                     {
                                         $$ = $1;
-                                        ast_initialization_list_unshift($$, $2);
+                                        ast_initialization_list_push($$, $2);
                                     }
                                 ;
 
@@ -700,6 +704,7 @@ identifier_definition           :   {
 
 
 %%
+
 
 void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg) {
     fprintf(stderr, "Error: %.*s (%d:%d): %s in this line:\n%s\n",
