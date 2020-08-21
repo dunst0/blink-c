@@ -631,27 +631,21 @@ actuals                         : /* empty */
                                     {
                                         $$ = ast_expression_list_new();
                                     }
-                                | expression
-                                    {
-                                        $$ = ast_expression_list_new();
-                                        ast_expression_list_unshift($$, $1);
-                                    }
                                 | actuals_list
                                     {
                                         $$ = $1;
                                     }
                                 ;
 
-actuals_list                    : expression ','
+actuals_list                    : actuals_list ',' expression
+                                    {
+                                        $$ = $1;
+                                        ast_expression_list_unshift($$, $3);
+                                    }
+                                | expression
                                     {
                                         $$ = ast_expression_list_new();
                                         ast_expression_list_unshift($$, $1);
-                                    }
-                                | actuals_list expression ','
-                                    {
-                                        //FIXME: found way of removing trailing ,
-                                        $$ = $1;
-                                        ast_expression_list_unshift($$, $2);
                                     }
                                 ;
 
