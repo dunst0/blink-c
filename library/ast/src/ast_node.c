@@ -178,14 +178,51 @@ ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
     this->properties     = properties;
     this->functions      = functions;
 
+    symbol_increment_refcount(name);
+    symbol_increment_refcount(superClass);
+
     return this;
+}
+
+void ast_class_set_name(ast_class *this, symbol *name) {
+    if (!this || !name) { return; }
+
+    if (this->name) { symbol_decrement_refcount(&this->name); }
+    this->name = name;
+    symbol_increment_refcount(name);
+}
+
+void ast_class_set_parameters(ast_class *this, ast_formal_list *parameters) {
+    if (!this || !parameters) { return; }
+
+    if (this->parameters) { ast_formal_list_destroy(&this->parameters); }
+    this->parameters = parameters;
+}
+
+void ast_class_set_super_class(ast_class *this, symbol *superClass) {
+    if (!this || !superClass) { return; }
+
+    if (this->superClass) { symbol_decrement_refcount(&this->superClass); }
+    this->superClass = superClass;
+    symbol_increment_refcount(superClass);
+}
+
+void ast_class_set_super_class_args(ast_class *this,
+                                    ast_expression_list *superClassArgs) {
+    if (!this || !superClassArgs) { return; }
+
+    if (this->superClassArgs) {
+        ast_expression_list_destroy(&this->superClassArgs);
+    }
+    this->superClassArgs = superClassArgs;
 }
 
 void ast_class_destroy(ast_class **this) {
     if (!this || !(*this)) { return; }
 
-    symbol_destroy(&(*this)->name);
+    symbol_decrement_refcount(&(*this)->name);
     ast_formal_list_destroy(&(*this)->parameters);
+    symbol_decrement_refcount(&(*this)->superClass);
     ast_expression_list_destroy(&(*this)->superClassArgs);
     ast_property_list_destroy(&(*this)->properties);
     ast_function_list_destroy(&(*this)->functions);
@@ -200,13 +237,17 @@ ast_formal *ast_formal_new(symbol *identifier, symbol *type, int isLazy) {
     this->type       = type;
     this->isLazy     = isLazy;
 
+    symbol_increment_refcount(identifier);
+    symbol_increment_refcount(type);
+
     return this;
 }
 
 void ast_formal_destroy(ast_formal **this) {
     if (!this || !(*this)) { return; }
 
-    symbol_destroy(&(*this)->identifier);
+    symbol_decrement_refcount(&(*this)->identifier);
+    symbol_decrement_refcount(&(*this)->type);
 
     AST_NODE_FREE();
 }
@@ -227,14 +268,18 @@ ast_function *ast_function_new(symbol *functionName,
     this->isFinal      = isFinal;
     this->isOverwrite  = isOverwrite;
 
+    symbol_increment_refcount(functionName);
+    symbol_increment_refcount(returnType);
+
     return this;
 }
 
 void ast_function_destroy(ast_function **this) {
     if (!this || !(*this)) { return; }
 
-    symbol_destroy(&(*this)->functionName);
+    symbol_decrement_refcount(&(*this)->functionName);
     ast_formal_list_destroy(&(*this)->parameters);
+    symbol_decrement_refcount(&(*this)->returnType);
     ast_expression_destroy(&(*this)->body);
 
     AST_NODE_FREE();
@@ -248,13 +293,17 @@ ast_property *ast_property_new(symbol *name, symbol *type,
     this->type  = type;
     this->value = value;
 
+    symbol_increment_refcount(name);
+    symbol_increment_refcount(type);
+
     return this;
 }
 
 void ast_property_destroy(ast_property **this) {
     if (!this || !(*this)) { return; }
 
-    symbol_destroy(&(*this)->name);
+    symbol_decrement_refcount(&(*this)->name);
+    symbol_decrement_refcount(&(*this)->type);
     ast_expression_destroy(&(*this)->value);
 
     AST_NODE_FREE();
@@ -303,13 +352,17 @@ ast_initialization *ast_initialization_new(symbol *identifier, symbol *type,
     this->type       = type;
     this->value      = value;
 
+    symbol_increment_refcount(identifier);
+    symbol_increment_refcount(type);
+
     return this;
 }
 
 void ast_initialization_destroy(ast_initialization **this) {
     if (!this || !(*this)) { return; }
 
-    symbol_destroy(&(*this)->identifier);
+    symbol_decrement_refcount(&(*this)->identifier);
+    symbol_decrement_refcount(&(*this)->type);
     ast_expression_destroy(&(*this)->value);
 
     AST_NODE_FREE();
@@ -324,13 +377,15 @@ ast_assignment *ast_assignment_new(symbol *identifier,
     this->operator   = operator;
     this->value      = value;
 
+    symbol_increment_refcount(identifier);
+
     return this;
 }
 
 void ast_assignment_destroy(ast_assignment **this) {
     if (!this || !(*this)) { return; }
 
-    symbol_destroy(&(*this)->identifier);
+    symbol_decrement_refcount(&(*this)->identifier);
     ast_expression_destroy(&(*this)->value);
 
     AST_NODE_FREE();
@@ -342,6 +397,8 @@ ast_cast *ast_cast_new(ast_expression *object, symbol *type) {
     this->object = object;
     this->type   = type;
 
+    symbol_increment_refcount(type);
+
     return this;
 }
 
@@ -349,6 +406,7 @@ void ast_cast_destroy(ast_cast **this) {
     if (!this || !(*this)) { return; }
 
     ast_expression_destroy(&(*this)->object);
+    symbol_decrement_refcount(&(*this)->type);
 
     AST_NODE_FREE();
 }
@@ -474,12 +532,15 @@ ast_constructor_call *ast_constructor_call_new(symbol *name,
     this->name = name;
     this->args = args;
 
+    symbol_increment_refcount(name);
+
     return this;
 }
 
 void ast_constructor_call_destroy(ast_constructor_call **this) {
     if (!this || !(*this)) { return; }
 
+    symbol_decrement_refcount(&(*this)->name);
     ast_expression_list_destroy(&(*this)->args);
 
     AST_NODE_FREE();
@@ -494,6 +555,8 @@ ast_function_call *ast_function_call_new(ast_expression *object,
     this->functionName = functionName;
     this->args         = args;
 
+    symbol_increment_refcount(functionName);
+
     return this;
 }
 
@@ -501,6 +564,7 @@ void ast_function_call_destroy(ast_function_call **this) {
     if (!this || !(*this)) { return; }
 
     ast_expression_destroy(&(*this)->object);
+    symbol_decrement_refcount(&(*this)->functionName);
     ast_expression_list_destroy(&(*this)->args);
 
     AST_NODE_FREE();
@@ -514,12 +578,15 @@ ast_super_function_call_new(symbol *functionName, ast_expression_list *args) {
     this->functionName = functionName;
     this->args         = args;
 
+    symbol_increment_refcount(functionName);
+
     return this;
 }
 
 void ast_super_function_call_destroy(ast_super_function_call **this) {
     if (!this || !(*this)) { return; }
 
+    symbol_decrement_refcount(&(*this)->functionName);
     ast_expression_list_destroy(&(*this)->args);
 
     AST_NODE_FREE();
@@ -529,12 +596,15 @@ ast_reference *ast_reference_new(symbol *value) {
     AST_NODE_ALLOC_INIT(ast_reference, EXPRESSION, REFERENCE);
 
     this->value = value;
+    symbol_increment_refcount(value);
 
     return this;
 }
 
 void ast_reference_destroy(ast_reference **this) {
     if (!this || !(*this)) { return; }
+
+    symbol_decrement_refcount(&(*this)->value);
 
     AST_NODE_FREE();
 }

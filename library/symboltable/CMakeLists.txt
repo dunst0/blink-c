@@ -14,9 +14,11 @@ target_sources(symboltable
         PRIVATE
         "src/symboltable.c"
         "src/symbol.c"
+        "src/symbol_reference.c"
         PUBLIC
         "include/waitui/symboltable.h"
         "include/waitui/symbol.h"
+        "include/waitui/symbol_reference.h"
         )
 
 target_include_directories(symboltable PUBLIC "include")

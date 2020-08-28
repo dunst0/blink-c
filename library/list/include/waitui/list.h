@@ -53,6 +53,14 @@ typedef struct list {
                 (list_element_destroy) type##_destroy);                        \
     }
 
+#define INTERFACE_LIST_NEW_CUSTOM(type, element_destroy)                       \
+    extern type##_list *type##_list_new()
+#define IMPLEMENTATION_LIST_NEW_CUSTOM(type, element_destroy)                  \
+    type##_list *type##_list_new() {                                           \
+        return (type##_list *) list_new(                                       \
+                (list_element_destroy)(element_destroy));                      \
+    }
+
 #define INTERFACE_LIST_DESTROY(type)                                           \
     extern void type##_list_destroy(type##_list **this)
 #define IMPLEMENTATION_LIST_DESTROY(type)                                      \
@@ -96,6 +104,15 @@ typedef struct list {
     kind##_LIST_UNSHIFT(type, elem);                                           \
     kind##_LIST_SHIFT(type);
 
+
+#define CREATE_LIST_TYPE_CUSTOM(kind, type, elem, element_destroy)             \
+    kind##_LIST_TYPEDEF(type);                                                 \
+    kind##_LIST_NEW_CUSTOM(type, element_destroy);                             \
+    kind##_LIST_DESTROY(type);                                                 \
+    kind##_LIST_PUSH(type, elem);                                              \
+    kind##_LIST_POP(type);                                                     \
+    kind##_LIST_UNSHIFT(type, elem);                                           \
+    kind##_LIST_SHIFT(type);
 
 // -----------------------------------------------------------------------------
 //  Public functions
@@ -151,4 +168,4 @@ extern int list_unshift(list *this, void *element);
  */
 extern void *list_shift(list *this);
 
-#endif //WAITUI_LIST_H
+#endif//WAITUI_LIST_H

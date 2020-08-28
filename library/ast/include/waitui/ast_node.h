@@ -350,6 +350,36 @@ extern ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
                                 ast_function_list *functions);
 
 /**
+ * @brief Set the name for the class node for the AST.
+ * @param[in,out] this The class node to set the name
+ * @param[in] name The name to set for the class node
+ */
+extern void ast_class_set_name(ast_class *this, symbol *name);
+
+/**
+ * @brief Set the parameters for the class node for the AST.
+ * @param[in,out] this The class node to set the name
+ * @param[in] parameters The parameters to set for the class node
+ */
+extern void ast_class_set_parameters(ast_class *this,
+                                     ast_formal_list *parameters);
+
+/**
+ * @brief Set the super class for the class node for the AST.
+ * @param[in,out] this The class node to set the super class
+ * @param[in] superClass The super class to set for the class node
+ */
+extern void ast_class_set_super_class(ast_class *this, symbol *superClass);
+
+/**
+ * @brief Set the super class args for the class node for the AST.
+ * @param[in,out] this The class node to set the name
+ * @param[in] superClassArgs The super class args to set for the class node
+ */
+extern void ast_class_set_super_class_args(ast_class *this,
+                                           ast_expression_list *superClassArgs);
+
+/**
  * @brief Destroy a class node and its content.
  * @param[in,out] this The class node to destroy
  */
@@ -897,4 +927,4 @@ struct ast_string_literal {
     str value;
 };
 
-#endif // WAITUI_AST_NODE_H
+#endif// WAITUI_AST_NODE_H
