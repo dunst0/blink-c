@@ -17,7 +17,8 @@
 //  Public types
 // -----------------------------------------------------------------------------
 
-CREATE_HASHTABLE_TYPE(INTERFACE, symbol, symbol);
+CREATE_HASHTABLE_TYPE_CUSTOM(INTERFACE, symbol, symbol,
+                             symbol_decrement_refcount);
 
 /**
  * @brief Type for the SymbolTable.
@@ -48,72 +49,53 @@ extern symboltable *symboltable_new(int debug);
 extern void symboltable_destroy(symboltable **this);
 
 /**
- * @brief TODO
- * @param this TODO
- * @return TODO
+ * @brief Enter new scope for the SymbolTable.
+ * @param[in] this The SymbolTable to enter a new scope
  */
-extern int symboltable_enter_scope(symboltable *this);
+extern void symboltable_enter_scope(symboltable *this);
 
 /**
- * @brief TODO
- * @param this TODO
- * @return TODO
+ * @brief Exit current scope of the SymbolTable.
+ * @param[in] this The SymbolTable to exit the current scope
  */
-extern int symboltable_exit_scope(symboltable *this);
+extern void symboltable_exit_scope(symboltable *this);
 
 /**
- * @brief TODO
- * @param this TODO
- * @param newSymbol TODO
- * @return TODO
+ * @brief Enter declaration mode for the SymbolTable.
+ * @param[in] this The SymbolTable to enter declaration mode
  */
 extern void symboltable_enter_declaration_mode(symboltable *this);
 
 /**
- * @brief TODO
- * @param this TODO
- * @param newSymbol TODO
- * @return TODO
+ * @brief Leave declaration mode for the SymbolTable.
+ * @param[in] this The SymbolTable to leave declaration mode
  */
 extern void symboltable_leave_declaration_mode(symboltable *this);
 
 /**
+ * @brief Add a Symbol to the SymbolTable.
+ * @param[in] this The SymbolTable to add the Symbol
+ * @param[in] identifier The identifier for which to add the SymbolTable
+ * @param[in,out] newSymbol The Symbol to add
+ * @retval 1 Ok
+ * @retval 0 Double declaration or Memory allocation failed
+ */
+extern int symboltable_add_symbol(symboltable *this, str identifier,
+                                  symbol **newSymbol);
+/**
  * @brief TODO
  * @param this
  * @param identifier
- * @param type
- * @param line
- * @param column
- * @param[out] resultSymbol
  * @return
- */
-extern int symboltable_add_symbol(symboltable *this, str identifier,
-                                  symbol_type type, unsigned long int line,
-                                  unsigned long int column,
-                                  symbol **resultSymbol);
-/**
- * @brief TODO
- * @param this TODO
- * @param identifier TODO
- * @return TODO
  */
 extern int symboltable_has(symboltable *this, str identifier);
 
 /**
  * @brief TODO
- * @param this TODO
- * @param identifier TODO
- * @return TODO
+ * @param this
+ * @param identifier
+ * @return
  */
 extern symbol *symboltable_lookup(symboltable *this, str identifier);
-
-/**
- * @brief Marks the given symbol as stolen in the SymbolTable.
- * @param this TODO
- * @param stolenSymbol TODO
- * @return TODO
- */
-extern int symboltable_mark_symbol_stolen(symboltable *this,
-                                          symbol *stolenSymbol);
 
 #endif//WAITUI_SYMBOLTABLE_H

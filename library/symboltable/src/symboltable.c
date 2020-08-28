@@ -23,8 +23,8 @@
 // -----------------------------------------------------------------------------
 
 /**
- * @brief TODO
- * @return
+ * @brief Check the both Symbols to have same scope.
+ * @return 1 if both Symbols have the same scope, else 0
  */
 static int symboltable_symbol_check(symbol *this, symbol *other) {
     return this->scope == other->scope;
@@ -35,7 +35,8 @@ static int symboltable_symbol_check(symbol *this, symbol *other) {
 //  Public functions
 // -----------------------------------------------------------------------------
 
-CREATE_HASHTABLE_TYPE(IMPLEMENTATION, symbol, symbol);
+CREATE_HASHTABLE_TYPE_CUSTOM(IMPLEMENTATION, symbol, symbol,
+                             symbol_decrement_refcount);
 
 symboltable *symboltable_new(int debug) {
     symboltable *this = NULL;
@@ -63,19 +64,17 @@ void symboltable_destroy(symboltable **this) {
     *this = NULL;
 }
 
-int symboltable_enter_scope(symboltable *this) {
-    if (!this) { return 0; }
+void symboltable_enter_scope(symboltable *this) {
+    if (!this) { return; }
 
     this->currentScope++;
     if (this->debug) {
         fprintf(stderr, "Entering new scope: %ld\n", this->currentScope);
     }
-
-    return 1;
 }
 
-int symboltable_exit_scope(symboltable *this) {
-    if (!this) { return 0; }
+void symboltable_exit_scope(symboltable *this) {
+    if (!this) { return; }
 
     if (this->debug) {
         fprintf(stderr, "Leaving scope: %ld\n", this->currentScope);
@@ -105,8 +104,6 @@ int symboltable_exit_scope(symboltable *this) {
     }
 
     this->currentScope--;
-
-    return this->currentScope >= 0;
 }
 
 void symboltable_enter_declaration_mode(symboltable *this) {
@@ -125,72 +122,96 @@ void symboltable_leave_declaration_mode(symboltable *this) {
     this->declarationMode = 0;
 }
 
-int symboltable_add_symbol(symboltable *this, str identifier, symbol_type type,
-                           unsigned long int line, unsigned long int column,
-                           symbol **resultSymbol) {
-    if (!this) { return 0; }
+int symboltable_add_symbol(symboltable *this, str identifier,
+                           symbol **newSymbol) {
+    if (!this || !newSymbol || !(*newSymbol)) { goto error; }
 
     symbol *foundSymbol = symbol_hashtable_lookup(this->symbols, identifier);
 
-    symbol_reference *reference = symbol_reference_new(line, column);
-    if (!reference) { goto error; }
+    if (foundSymbol) {
+        if (this->declarationMode) {
+            symbol_reference *reference = symbol_get_reference_head(*newSymbol);
+            if (!reference) { goto error; }
 
-    if (!foundSymbol || this->declarationMode) {
-        if (foundSymbol && foundSymbol->scope == this->currentScope) {
-            fprintf(stderr,
-                    "Error: Multiple declaration of variable %.*s at %lu:%lu\n",
-                    STR_FMT(&identifier), line, column);
-            goto error_destroy_reference;
+            if (foundSymbol->scope == this->currentScope) {
+                fprintf(stderr,
+                        "Error: Multiple declaration of variable %.*s at "
+                        "%llu:%llu\n",
+                        STR_FMT(&identifier), reference->line,
+                        reference->column);
+                symbol_reference_destroy(&reference);
+                goto error;
+            }
+
+            (*newSymbol)->scope = this->currentScope;
+
+            if (!symbol_hashtable_insert_check(
+                        this->symbols, identifier, *newSymbol,
+                        (hashtable_value_check) symboltable_symbol_check,
+                        *newSymbol)) {
+                goto error;
+            }
+
+            symbol_increment_refcount(*newSymbol);
+
+            if (this->debug) {
+                fprintf(stderr,
+                        "Declaring new symbol with identifier '%.*s' in scope "
+                        "%ld\n",
+                        STR_FMT(&identifier), this->currentScope);
+            }
+        } else {
+            symbol_reference *reference =
+                    symbol_reference_list_pop((*newSymbol)->references);
+            if (!reference) { goto error; }
+
+            if (!symbol_reference_list_push(foundSymbol->references,
+                                            reference)) {
+                symbol_reference_destroy(&reference);
+                goto error;
+            }
+
+            if (this->debug) {
+                fprintf(stderr,
+                        "Referencing known symbol with identifier '%.*s' in "
+                        "scope %ld\n",
+                        STR_FMT(&identifier), this->currentScope);
+            }
+
+            symbol_destroy(newSymbol);
+
+            *newSymbol = foundSymbol;
         }
-
-        foundSymbol = symbol_new(identifier, type);
-        if (!foundSymbol) { goto error_destroy_reference; }
-
-        foundSymbol->scope = this->currentScope;
-
-        if (!symbol_reference_list_push(foundSymbol->references, reference)) {
-            goto error_destroy_symbol;
-        }
+    } else {
+        (*newSymbol)->scope = this->currentScope;
 
         if (!symbol_hashtable_insert_check(
-                    this->symbols, identifier, foundSymbol,
+                    this->symbols, identifier, *newSymbol,
                     (hashtable_value_check) symboltable_symbol_check,
-                    foundSymbol)) {
-            goto error_destroy_symbol;
+                    *newSymbol)) {
+            goto error;
         }
+
+        symbol_increment_refcount(*newSymbol);
 
         if (this->debug) {
             if (this->declarationMode) {
                 fprintf(stderr,
-                        "Declaring new identifier '%.*s' in scope %ld\n",
+                        "Declaring new symbol with identifier '%.*s' in scope "
+                        "%ld\n",
                         STR_FMT(&identifier), this->currentScope);
             } else {
                 fprintf(stderr,
-                        "Referencing new identifier '%.*s' in scope %ld\n",
+                        "Referencing new symbol with identifier '%.*s' in "
+                        "scope %ld\n",
                         STR_FMT(&identifier), this->currentScope);
             }
         }
-    } else {
-        if (!symbol_reference_list_push(foundSymbol->references, reference)) {
-            goto error_destroy_reference;
-        }
-        if (this->debug) {
-            fprintf(stderr,
-                    "Referencing known identifier '%.*s' in scope %ld\n",
-                    STR_FMT(&identifier), this->currentScope);
-        }
     }
-
-    if (resultSymbol) { *resultSymbol = foundSymbol; }
 
     return 1;
 
-error_destroy_symbol:
-    symbol_destroy(&foundSymbol);
-error_destroy_reference:
-    symbol_reference_destroy(&reference);
 error:
-    if (resultSymbol) { *resultSymbol = NULL; }
     return 0;
 }
 
@@ -204,18 +225,4 @@ symbol *symboltable_lookup(symboltable *this, str identifier) {
     if (!this) { return NULL; }
 
     return symbol_hashtable_lookup(this->symbols, identifier);
-}
-
-int symboltable_mark_symbol_stolen(symboltable *this, symbol *stolenSymbol) {
-    if (!this || !stolenSymbol) { return 0; }
-
-    if (this->debug) {
-        fprintf(stderr,
-                "Mark symbol with identifier '%.*s' in scope %ld as stolen\n",
-                STR_FMT(&stolenSymbol->identifier), stolenSymbol->scope);
-    }
-
-    return symbol_hashtable_mark_stolen_check(
-            this->symbols, stolenSymbol->identifier,
-            (hashtable_value_check) symboltable_symbol_check, stolenSymbol);
 }

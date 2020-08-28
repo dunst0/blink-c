@@ -2,7 +2,6 @@
 
 #include <waitui/parser.h>
 #include <waitui/str.h>
-#include <waitui/symboltable.h>
 
 #include <getopt.h>
 #include <stdio.h>
@@ -42,15 +41,14 @@ int main(int argc, char **argv) {
 
     parser *waituiParser = NULL;
     ast *waituiAst       = NULL;
-    FILE *graphFile     = NULL;
+    FILE *graphFile      = NULL;
 
     if (argc == 2) {
         sourceFileName.len = strlen(argv[1]);
         sourceFileName.s   = argv[1];
     }
 
-    parserDebug =
-            PARSER_DEBUG_LEXER | PARSER_DEBUG_PARSER | PARSER_DEBUG_SYMBOLTABLE;
+    parserDebug = PARSER_DEBUG_SYMBOLTABLE;
 
     waituiParser = parser_new(sourceFileName, currentDirectory, parserDebug);
     if (!waituiParser) {
@@ -72,6 +70,8 @@ int main(int argc, char **argv) {
         goto done;
     }
 
+    parser_destroy(&waituiParser);
+
     graphFileName.len = sourceFileName.len + sizeof(".dot");
     graphFileName.s   = calloc(graphFileName.len, sizeof(*graphFileName.s));
     if (!graphFileName.s) {
@@ -88,6 +88,8 @@ int main(int argc, char **argv) {
         goto done;
     }
     ast_generate_graph(waituiAst, graphFile);
+
+    fprintf(stderr, "Debug: done!\n");
 
 done:
     if (graphFile) { fclose(graphFile); }

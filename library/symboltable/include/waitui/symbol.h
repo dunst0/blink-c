@@ -8,6 +8,8 @@
 #ifndef WAITUI_SYMBOL_H
 #define WAITUI_SYMBOL_H
 
+#include "symbol_reference.h"
+
 #include <waitui/list.h>
 #include <waitui/str.h>
 
@@ -17,23 +19,13 @@
 // -----------------------------------------------------------------------------
 
 /**
- * @brief Type for the SymbolReference.
- */
-typedef struct symbol_reference {
-    unsigned long long line;
-    unsigned long long column;
-} symbol_reference;
-
-CREATE_LIST_TYPE(INTERFACE, symbol_reference, reference)
-
-/**
  * @brief Symbol types possible for a Symbol.
  */
 typedef enum symbol_type {
     SYMBOL_TYPE_UNDEFINED,
     SYMBOL_TYPE_IDENTIFIER,
-    SYMBOL_TYPE_CLASS,
-    //TODO: add more types
+    SYMBOL_TYPE_CLASS_NAME,
+    SYMBOL_TYPE_FUNCTION_NAME,
 } symbol_type;
 
 /**
@@ -44,6 +36,7 @@ typedef struct symbol {
     str identifier;
     symbol_type type;
     symbol_reference_list *references;
+    long int refcount;
 } symbol;
 
 
@@ -52,27 +45,35 @@ typedef struct symbol {
 // -----------------------------------------------------------------------------
 
 /**
- * @brief Create the SymbolReference.
- * @param[in] line TODO
- * @param[in] column TODO
- * @return On success a pointer to SymbolReference, else NULL
- */
-extern symbol_reference *symbol_reference_new(unsigned long int line,
-                                              unsigned long int column);
-
-/**
- * @brief Destroy the SymbolReference and its content.
- * @param[in,out] this The SymbolReference to destroy
- */
-extern void symbol_reference_destroy(symbol_reference **this);
-
-/**
  * @brief Create the Symbol.
- * @param[in] identifier TODO
- * @param[in] type TODO
+ * @param[in] identifier Identifier of the Symbol
+ * @param[in] type Type of the Symbol
+ * @param[in] line Line of the Symbol
+ * @param[in] column Column of the Symbol
  * @return On success a pointer to Symbol, else NULL
  */
-extern symbol *symbol_new(str identifier, symbol_type type);
+extern symbol *symbol_new(str identifier, symbol_type type,
+                          unsigned long int line, unsigned long int column);
+
+/**
+ * @brief Increment the refcount of the symbol.
+ * @param this The Symbol to increment the refcount.
+ */
+extern void symbol_increment_refcount(symbol *this);
+
+/**
+ * @brief Decrement the refcount of the symbol.
+ * @param[in,out] this The Symbol to decrement the refcount.
+ * @note When refcount is less or equal zero symbol_destroy will be called.
+ */
+extern void symbol_decrement_refcount(symbol **this);
+
+/**
+ * @brief Get the head of the Symbol reference list.
+ * @param[in] this The Symbol to get the head of the reference list.
+ * @return On success a pointer to SymbolReference, else NULL
+ */
+extern symbol_reference *symbol_get_reference_head(symbol *this);
 
 /**
  * @brief Destroy the Symbol and its content.
@@ -80,4 +81,4 @@ extern symbol *symbol_new(str identifier, symbol_type type);
  */
 extern void symbol_destroy(symbol **this);
 
-#endif //WAITUI_SYMBOL_H
+#endif//WAITUI_SYMBOL_H

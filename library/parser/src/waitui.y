@@ -106,7 +106,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %token SUPER_LITERAL
 %token THIS_LITERAL
 
-%token FUNCTION_NAME
+%token <symbolValue> FUNCTION_NAME
 %token <symbolValue> IDENTIFIER
 
 /* keywords */
@@ -237,16 +237,17 @@ classes                         : class_definition
 class_definition                : class_head class_formals '{' class_body '}' class_tail ';'
                                     {
                                         $$ = $4;
-                                        $$->name = $1;
-                                        $$->parameters = $2;
+                                        ast_class_set_name($$, $1);
+                                        ast_class_set_parameters($$, $2);
+
                                     }
                                 | class_head class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' class_tail ';'
                                     {
                                         $$ = $7;
-                                        $$->name = $1;
-                                        $$->parameters = $2;
-                                        $$->superClass = $4;
-                                        $$->superClassArgs = $5;
+                                        ast_class_set_name($$, $1);
+                                        ast_class_set_parameters($$, $2);
+                                        ast_class_set_super_class($$, $4);
+                                        ast_class_set_super_class_args($$, $5);
                                     }
                                 ;
 
@@ -374,13 +375,11 @@ function_visibility             : /* empty */
 
 function_signature              : FUNC_KEYWORD FUNCTION_NAME '(' formals ')'
                                     {
-                                        symbol *dummy = NULL; // FIXME: fix me FUNCTION_NAME
-                                        $$ = ast_function_new(dummy, $4, NULL, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
+                                        $$ = ast_function_new($2, $4, NULL, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
                                     }
                                 | FUNC_KEYWORD FUNCTION_NAME '(' formals ')' ':' IDENTIFIER
                                     {
-                                        symbol *dummy = NULL; // FIXME: fix me FUNCTION_NAME
-                                        $$ = ast_function_new(dummy, $4, $7, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
+                                        $$ = ast_function_new($2, $4, $7, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
                                     }
                                 ;
 
@@ -485,13 +484,11 @@ constructor_call                : NEW_KEYWORD IDENTIFIER '(' actuals ')'
 
 dispatch                        : expression '.' FUNCTION_NAME '(' actuals ')'
                                     {
-                                        symbol *dummy = NULL; // FIXME: fix me FUNCTION_NAME
-                                        $$ = (ast_expression *) ast_function_call_new($1, dummy, $5);
+                                        $$ = (ast_expression *) ast_function_call_new($1, $3, $5);
                                     }
                                 | SUPER_LITERAL '.' FUNCTION_NAME '(' actuals ')'
                                     {
-                                        symbol *dummy = NULL; // FIXME: fix me FUNCTION_NAME
-                                        $$ = (ast_expression *) ast_super_function_call_new(dummy, $5);
+                                        $$ = (ast_expression *) ast_super_function_call_new($3, $5);
                                     }
                                 ;
 
@@ -696,8 +693,8 @@ identifier_definition           :   {
                                     }
                                   IDENTIFIER
                                     {
+                                        symboltable_add_symbol(extraParser->symtable, $2->identifier, &$2);
                                         symboltable_leave_declaration_mode(extraParser->symtable);
-                                        symboltable_mark_symbol_stolen(extraParser->symtable, $2);
                                         $$ = $2;
                                     }
                                 ;

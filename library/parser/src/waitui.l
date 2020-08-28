@@ -53,6 +53,7 @@
 
 %x IMPORT
 %x PACKAGE
+%x CLASS
 %x FUNCTION
 
 letter              [a-zA-Z]
@@ -62,10 +63,12 @@ exponent_part       [eE][-+]?{positive_number}
 operator            ([-+*\/=><!&%~$^]=?)|\+\+|--
 whitespace          [ \a\f\t\r\v]
 not_whitespace      [^ \a\f\t\r\v\n]
+function_name       (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
+identifier          ({letter}|_)({letter}|{digit}|_)*
 
 %%
 
-<INITIAL,FUNCTION,IMPORT,PACKAGE>{whitespace}*                                          /* eat the whitespace */
+<INITIAL,CLASS,FUNCTION,IMPORT,PACKAGE>{whitespace}*                                    /* eat the whitespace */
 
 <INITIAL>"import"                                                                       BEGIN(IMPORT);
 <INITIAL>"package"                                                                      BEGIN(PACKAGE);
@@ -91,7 +94,10 @@ not_whitespace      [^ \a\f\t\r\v\n]
 
 "abstract"                                                                              RETURN(ABSTRACT_KEYWORD);
 "as"                                                                                    RETURN(AS_KEYWORD);
-"class"                                                                                 RETURN(CLASS_KEYWORD);
+"class"                                                                                 {
+                                                                                            BEGIN(CLASS);
+                                                                                            RETURN(CLASS_KEYWORD);
+                                                                                        }
 "else"                                                                                  RETURN(ELSE_KEYWORD);
 "extends"                                                                               RETURN(EXTENDS_KEYWORD);
 "false"                                                                                 RETURN(FALSE_LITERAL);
@@ -129,9 +135,9 @@ not_whitespace      [^ \a\f\t\r\v\n]
 "~="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL; RETURN(ASSIGNMENT); }
 "|="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL; RETURN(ASSIGNMENT); }
 
-"&&"                                                                                    RETURN(DOUBLE_AND_OPERATOR);
-"||"                                                                                    RETURN(DOUBLE_PIPE_OPERATOR);
-"!"                                                                                     RETURN(NOT_OPERATOR);
+"&&"                                                                                    { yylval->operator = AST_BINARY_OPERATOR_DOUBLE_AND; RETURN(DOUBLE_AND_OPERATOR); }
+"||"                                                                                    { yylval->operator = AST_BINARY_OPERATOR_DOUBLE_PIPE; RETURN(DOUBLE_PIPE_OPERATOR); }
+"!"                                                                                     { yylval->operator = AST_UNARY_OPERATOR_NOT; RETURN(NOT_OPERATOR); }
 
 "=="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_EQUAL; RETURN(EQUALITY); }
 "!="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_NOT_EQUAL; RETURN(EQUALITY); }
@@ -147,23 +153,71 @@ not_whitespace      [^ \a\f\t\r\v\n]
 ((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { yylval->value.s = yytext; yylval->value.len = yyleng; RETURN(DECIMAL_LITERAL); }
 \"(\\.|[^"\\])*\"                                                                       { yylval->value.s = yytext + 1; yylval->value.len = yyleng - 2; RETURN(STRING_LITERAL); }
 
-<FUNCTION>(operator{operator})|(({letter}|_)({letter}|{digit}|_)*)                      {
-                                                                                            printf("<FUNCTION_NAME: %s>\n", yytext);
-                                                                                            BEGIN(INITIAL);
-                                                                                            RETURN(FUNCTION_NAME);
-                                                                                        }
-({letter}|_)({letter}|{digit}|_)*                                                       {
-                                                                                            symboltable *symtable = yyextra->extraParser->symtable;
-                                                                                            str identifier = STR_NULL_INIT;
-                                                                                            identifier.s = yytext;
-                                                                                            identifier.len = yyleng;
+<FUNCTION>{function_name}|{function_name}/{whitespace}*\(                               {
+                                                                                            str functionName = STR_NULL_INIT;
+                                                                                            functionName.s   = yytext;
+                                                                                            functionName.len = yyleng;
 
-                                                                                            if (symboltable_add_symbol(symtable, identifier, SYMBOL_TYPE_UNDEFINED,
-                                                                                                                       yylloc->first_line, yylloc->first_column,
-                                                                                                                       &yylval->symbolValue)) {
+                                                                                            printf("<FUNCTION_NAME: %.*s>\n", STR_FMT(&functionName));
+
+                                                                                            yylval->symbolValue = symbol_new(functionName, SYMBOL_TYPE_FUNCTION_NAME,
+                                                                                                                             yylloc->first_line, yylloc->first_column);
+                                                                                            if (yylval->symbolValue) {
+                                                                                                BEGIN(INITIAL);
+                                                                                                RETURN(FUNCTION_NAME);
+                                                                                            } else {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+                                                                                        }
+{function_name}/{whitespace}*\(                                                         {
+                                                                                            str functionName = STR_NULL_INIT;
+                                                                                            functionName.s   = yytext;
+                                                                                            functionName.len = yyleng;
+
+                                                                                            printf("<FUNCTION_NAME: %.*s>\n", STR_FMT(&functionName));
+
+                                                                                            yylval->symbolValue = symbol_new(functionName, SYMBOL_TYPE_FUNCTION_NAME,
+                                                                                                                             yylloc->first_line, yylloc->first_column);
+                                                                                            if (yylval->symbolValue) {
+                                                                                                BEGIN(INITIAL);
+                                                                                                RETURN(FUNCTION_NAME);
+                                                                                            } else {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+                                                                                        }
+<CLASS>{identifier}                                                                     {
+                                                                                            str className = STR_NULL_INIT;
+                                                                                            className.s   = yytext;
+                                                                                            className.len = yyleng;
+
+                                                                                            printf("<CLASS_NAME: %.*s>\n", STR_FMT(&className));
+
+                                                                                            yylval->symbolValue = symbol_new(className, SYMBOL_TYPE_CLASS_NAME,
+                                                                                                                             yylloc->first_line, yylloc->first_column);
+                                                                                            if (yylval->symbolValue) {
+                                                                                                BEGIN(INITIAL);
                                                                                                 RETURN(IDENTIFIER);
                                                                                             } else {
-                                                                                                yyerror(yylloc, yyextra->extraParser, "could not add symbol to symboltable");
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+                                                                                        }
+{identifier}                                                                            {
+                                                                                            str identifier = STR_NULL_INIT;
+                                                                                            identifier.s   = yytext;
+                                                                                            identifier.len = yyleng;
+
+                                                                                            printf("<IDENTIFIER: %.*s>\n", STR_FMT(&identifier));
+
+                                                                                            yylval->symbolValue = symbol_new(identifier, SYMBOL_TYPE_IDENTIFIER,
+                                                                                                                             yylloc->first_line, yylloc->first_column);
+                                                                                            if (yylval->symbolValue) {
+                                                                                                BEGIN(INITIAL);
+                                                                                                RETURN(IDENTIFIER);
+                                                                                            } else {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
                                                                                                 RETURN(YYerror);
                                                                                             }
                                                                                         }

@@ -61,6 +61,14 @@ typedef struct hashtable {
                 length, (hashtable_value_destroy) type##_destroy);             \
     }
 
+#define INTERFACE_HASHTABLE_NEW_CUSTOM(type, elem_destroy)                     \
+    extern type##_hashtable *type##_hashtable_new(unsigned long int length)
+#define IMPLEMENTATION_HASHTABLE_NEW_CUSTOM(type, elem_destroy)                \
+    type##_hashtable *type##_hashtable_new(unsigned long int length) {         \
+        return (type##_hashtable *) hashtable_new(                             \
+                length, (hashtable_value_destroy)(elem_destroy));              \
+    }
+
 #define INTERFACE_HASHTABLE_DESTROY(type)                                      \
     extern void type##_hashtable_destroy(type##_hashtable **this)
 #define IMPLEMENTATION_HASHTABLE_DESTROY(type)                                 \
@@ -149,6 +157,19 @@ typedef struct hashtable {
 #define CREATE_HASHTABLE_TYPE(kind, type, elem)                                \
     kind##_HASHTABLE_TYPEDEF(type);                                            \
     kind##_HASHTABLE_NEW(type);                                                \
+    kind##_HASHTABLE_DESTROY(type);                                            \
+    kind##_HASHTABLE_INSERT_CHECK(type, elem);                                 \
+    kind##_HASHTABLE_INSERT(type, elem);                                       \
+    kind##_HASHTABLE_LOOKUP_CHECK(type);                                       \
+    kind##_HASHTABLE_LOOKUP(type);                                             \
+    kind##_HASHTABLE_HAS_CHECK(type);                                          \
+    kind##_HASHTABLE_HAS(type);                                                \
+    kind##_HASHTABLE_MARK_STOLEN_CHECK(type);                                  \
+    kind##_HASHTABLE_MARK_STOLEN(type);
+
+#define CREATE_HASHTABLE_TYPE_CUSTOM(kind, type, elem, elem_destroy)           \
+    kind##_HASHTABLE_TYPEDEF(type);                                            \
+    kind##_HASHTABLE_NEW_CUSTOM(type, elem_destroy);                           \
     kind##_HASHTABLE_DESTROY(type);                                            \
     kind##_HASHTABLE_INSERT_CHECK(type, elem);                                 \
     kind##_HASHTABLE_INSERT(type, elem);                                       \
@@ -268,4 +289,4 @@ extern int hashtable_has(hashtable *this, str key);
  */
 extern int hashtable_mark_stolen(hashtable *this, str key);
 
-#endif //WAITUI_HASHTABLE_H
+#endif//WAITUI_HASHTABLE_H
