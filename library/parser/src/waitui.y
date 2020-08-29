@@ -106,7 +106,6 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %token SUPER_LITERAL
 %token THIS_LITERAL
 
-%token <symbolValue> FUNCTION_NAME
 %token <symbolValue> IDENTIFIER
 
 /* keywords */
@@ -188,7 +187,6 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %destructor { ast_formal_list_destroy(&$$); }           <formals>
 %destructor { ast_class_list_destroy(&$$); }            <classes>
 %destructor { ast_initialization_list_destroy(&$$); }   <initializations>
-//%destructor { symbol_decrement_refcount(&$$); }         <symbolValue>
 
 %start program
 
@@ -412,7 +410,7 @@ function_head                   : FUNC_KEYWORD function_name_definition
 function_name_definition        :   {
                                         symboltable_enter_declaration_mode(extraParser->symtable);
                                     }
-                                  FUNCTION_NAME
+                                  IDENTIFIER
                                     {
                                         if (!symboltable_add_symbol(extraParser->symtable, $2->identifier, &$2)) {
                                             symbol_decrement_refcount(&$2);
@@ -538,7 +536,7 @@ constructor_call                : NEW_KEYWORD IDENTIFIER '(' actuals ')'
                                     }
                                 ;
 
-dispatch                        : expression '.' FUNCTION_NAME '(' actuals ')'
+dispatch                        : expression '.' IDENTIFIER '(' actuals ')'
                                     {
                                         if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
                                             symbol_decrement_refcount(&$3);
@@ -546,7 +544,7 @@ dispatch                        : expression '.' FUNCTION_NAME '(' actuals ')'
                                         }
                                         $$ = (ast_expression *) ast_function_call_new($1, $3, $5);
                                     }
-                                | SUPER_LITERAL '.' FUNCTION_NAME '(' actuals ')'
+                                | SUPER_LITERAL '.' IDENTIFIER '(' actuals ')'
                                     {
                                         if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
                                             symbol_decrement_refcount(&$3);

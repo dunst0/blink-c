@@ -53,8 +53,6 @@
 
 %x IMPORT
 %x PACKAGE
-%x CLASS
-%x FUNCTION
 
 letter              [a-zA-Z]
 digit               [0-9]
@@ -63,12 +61,11 @@ exponent_part       [eE][-+]?{positive_number}
 operator            ([-+*\/=><!&%~$^]=?)|\+\+|--
 whitespace          [ \a\f\t\r\v]
 not_whitespace      [^ \a\f\t\r\v\n]
-function_name       (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
-identifier          ({letter}|_)({letter}|{digit}|_)*
+identifier          (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
 
 %%
 
-<INITIAL,CLASS,FUNCTION,IMPORT,PACKAGE>{whitespace}*                                    /* eat the whitespace */
+<INITIAL,IMPORT,PACKAGE>{whitespace}*                                                   /* eat the whitespace */
 
 <INITIAL>"import"                                                                       BEGIN(IMPORT);
 <INITIAL>"package"                                                                      BEGIN(PACKAGE);
@@ -91,18 +88,12 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
 
 "abstract"                                                                              RETURN(ABSTRACT_KEYWORD);
 "as"                                                                                    RETURN(AS_KEYWORD);
-"class"                                                                                 {
-                                                                                            BEGIN(CLASS);
-                                                                                            RETURN(CLASS_KEYWORD);
-                                                                                        }
+"class"                                                                                 RETURN(CLASS_KEYWORD);
 "else"                                                                                  RETURN(ELSE_KEYWORD);
 "extends"                                                                               RETURN(EXTENDS_KEYWORD);
 "false"                                                                                 RETURN(FALSE_LITERAL);
 "final"                                                                                 RETURN(FINAL_KEYWORD);
-"func"                                                                                  {
-                                                                                            BEGIN(FUNCTION);
-                                                                                            RETURN(FUNC_KEYWORD);
-                                                                                        }
+"func"                                                                                  RETURN(FUNC_KEYWORD);
 "if"                                                                                    RETURN(IF_KEYWORD);
 "in"                                                                                    RETURN(IN_KEYWORD);
 "lazy"                                                                                  RETURN(LAZY_KEYWORD);
@@ -150,60 +141,14 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
 ((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { yylval->value.s = yytext; yylval->value.len = yyleng; RETURN(DECIMAL_LITERAL); }
 \"(\\.|[^"\\])*\"                                                                       { yylval->value.s = yytext + 1; yylval->value.len = yyleng - 2; RETURN(STRING_LITERAL); }
 
-<FUNCTION>{function_name}|{function_name}/{whitespace}*\(                               {
-                                                                                            str functionName = STR_NULL_INIT;
-                                                                                            functionName.s   = yytext;
-                                                                                            functionName.len = yyleng;
-
-                                                                                            yylval->symbolValue = symbol_new(functionName, SYMBOL_TYPE_FUNCTION_NAME,
-                                                                                                                             yylloc->first_line, yylloc->first_column);
-                                                                                            if (yylval->symbolValue) {
-                                                                                                BEGIN(INITIAL);
-                                                                                                RETURN(FUNCTION_NAME);
-                                                                                            } else {
-                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
-                                                                                                RETURN(YYerror);
-                                                                                            }
-                                                                                        }
-{function_name}/{whitespace}*\(                                                         {
-                                                                                            str functionName = STR_NULL_INIT;
-                                                                                            functionName.s   = yytext;
-                                                                                            functionName.len = yyleng;
-
-                                                                                            yylval->symbolValue = symbol_new(functionName, SYMBOL_TYPE_FUNCTION_NAME,
-                                                                                                                             yylloc->first_line, yylloc->first_column);
-                                                                                            if (yylval->symbolValue) {
-                                                                                                BEGIN(INITIAL);
-                                                                                                RETURN(FUNCTION_NAME);
-                                                                                            } else {
-                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
-                                                                                                RETURN(YYerror);
-                                                                                            }
-                                                                                        }
-<CLASS>{identifier}                                                                     {
-                                                                                            str className = STR_NULL_INIT;
-                                                                                            className.s   = yytext;
-                                                                                            className.len = yyleng;
-
-                                                                                            yylval->symbolValue = symbol_new(className, SYMBOL_TYPE_CLASS_NAME,
-                                                                                                                             yylloc->first_line, yylloc->first_column);
-                                                                                            if (yylval->symbolValue) {
-                                                                                                BEGIN(INITIAL);
-                                                                                                RETURN(IDENTIFIER);
-                                                                                            } else {
-                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
-                                                                                                RETURN(YYerror);
-                                                                                            }
-                                                                                        }
 {identifier}                                                                            {
                                                                                             str identifier = STR_NULL_INIT;
                                                                                             identifier.s   = yytext;
                                                                                             identifier.len = yyleng;
 
-                                                                                            yylval->symbolValue = symbol_new(identifier, SYMBOL_TYPE_IDENTIFIER,
+                                                                                            yylval->symbolValue = symbol_new(identifier, SYMBOL_TYPE_UNDEFINED,
                                                                                                                              yylloc->first_line, yylloc->first_column);
                                                                                             if (yylval->symbolValue) {
-                                                                                                BEGIN(INITIAL);
                                                                                                 RETURN(IDENTIFIER);
                                                                                             } else {
                                                                                                 yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
