@@ -35,7 +35,7 @@ typedef struct parser {
 //  Public defines
 // -----------------------------------------------------------------------------
 
-#define PARSER_DEBUG_NONE 0
+#define PARSER_DEBUG_NONE 0U
 #define PARSER_DEBUG_LEXER 1U
 #define PARSER_DEBUG_PARSER 2U
 

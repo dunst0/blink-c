@@ -699,8 +699,6 @@ ast_decimal_literal *ast_decimal_literal_new(str value) {
         return NULL;
     }
 
-    this->value = value;
-
     return this;
 }
 
@@ -727,13 +725,19 @@ void ast_null_literal_destroy(ast_null_literal **this) {
 ast_string_literal *ast_string_literal_new(str value) {
     AST_NODE_ALLOC_INIT(ast_string_literal, EXPRESSION, STRING_LITERAL);
 
-    this->value = value;
+    STR_COPY(&this->value, &value);
+    if (!this->value.s) {
+        ast_string_literal_destroy(&this);
+        return NULL;
+    }
 
     return this;
 }
 
 void ast_string_literal_destroy(ast_string_literal **this) {
     if (!this || !(*this)) { return; }
+
+    STR_FREE(&(*this)->value);
 
     AST_NODE_FREE();
 }

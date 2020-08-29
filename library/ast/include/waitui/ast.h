@@ -21,15 +21,17 @@
  * @brief Execute the callbacks if set for the given node.
  */
 #define AST_EXECUTE_CALLBACKS(callbacks, node, args)                           \
-    if ((callbacks)->preNodeCallback) {                                        \
-        (callbacks)->preNodeCallback((ast_node *) (node), (args));             \
-    }                                                                          \
-    if ((callbacks)->nodeCallback) {                                           \
-        (callbacks)->nodeCallback((ast_node *) (node), (args));                \
-    }                                                                          \
-    if ((callbacks)->postNodeCallback) {                                       \
-        (callbacks)->postNodeCallback((ast_node *) (node), (args));            \
-    }
+    do {                                                                       \
+        if ((callbacks)->preNodeCallback) {                                    \
+            (callbacks)->preNodeCallback((ast_node *) (node), (args));         \
+        }                                                                      \
+        if ((callbacks)->nodeCallback) {                                       \
+            (callbacks)->nodeCallback((ast_node *) (node), (args));            \
+        }                                                                      \
+        if ((callbacks)->postNodeCallback) {                                   \
+            (callbacks)->postNodeCallback((ast_node *) (node), (args));        \
+        }                                                                      \
+    } while (0)
 
 
 // -----------------------------------------------------------------------------

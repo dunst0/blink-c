@@ -27,9 +27,9 @@ typedef struct ast_printer {
 // -----------------------------------------------------------------------------
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Program AST node.
+ * @param[in] program The Program AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_program_printer(ast_program *program, void *args) {
     ast_printer *printer = (ast_printer *) args;
@@ -69,9 +69,9 @@ static void ast_program_printer(ast_program *program, void *args) {
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Class AST node.
+ * @param[in] class The Class AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_class_printer(ast_class *class, void *args) {
     ast_printer *printer         = (ast_printer *) args;
@@ -127,6 +127,27 @@ static void ast_class_printer(ast_class *class, void *args) {
         }
     }
 
+    fprintf(printer->outFile, "\tclass%llu -> class_super_class_args%llu;\n",
+            nodeCount, nodeCount);
+    fprintf(printer->outFile,
+            "\tclass_super_class_args%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "superClassArgs");
+    if (class->superClassArgs) {
+        for (node = class->superClassArgs->head; node; node = node->next) {
+            ast_expression *superClassArg = (ast_expression *) node->element;
+            fprintf(printer->outFile, "\tclass_super_class_args%llu -> ",
+                    nodeCount);
+            AST_EXECUTE_CALLBACKS(printer->callbacks, superClassArg, args);
+        }
+    }
+
     fprintf(printer->outFile, "\tclass%llu -> class_properties%llu;\n",
             nodeCount, nodeCount);
     fprintf(printer->outFile,
@@ -169,9 +190,9 @@ static void ast_class_printer(ast_class *class, void *args) {
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Formal AST node.
+ * @param[in] formal The Formal AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_formal_printer(ast_formal *formal, void *args) {
     ast_printer *printer         = (ast_printer *) args;
@@ -210,9 +231,9 @@ static void ast_formal_printer(ast_formal *formal, void *args) {
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Property AST node.
+ * @param[in] property The Property AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_property_printer(ast_property *property, void *args) {
     ast_printer *printer         = (ast_printer *) args;
@@ -243,16 +264,22 @@ static void ast_property_printer(ast_property *property, void *args) {
             "</TABLE>"
             ">];\n",
             nodeCount, "ast_formal", STR_FMT(&name), STR_FMT(&type));
+
+    if (property->value) {
+        fprintf(printer->outFile, "\tformal%llu -> ", nodeCount);
+        AST_EXECUTE_CALLBACKS(printer->callbacks, property->value, args);
+    }
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Function AST node.
+ * @param[in] function The Function AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_function_printer(ast_function *function, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
+    list_node *node              = NULL;
 
     str name       = STR_NULL_INIT;
     str returnType = STR_NULL_INIT;
@@ -312,6 +339,28 @@ static void ast_function_printer(ast_function *function, void *args) {
             (function->isFinal ? "true" : "false"),
             (function->isOverwrite ? "true" : "false"));
 
+    fprintf(printer->outFile, "\tfunction%llu -> function_parameters%llu;\n",
+            nodeCount, nodeCount);
+    fprintf(printer->outFile,
+            "\tfunction_parameters%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "parameters");
+
+    if (function->parameters) {
+        for (node = function->parameters->head; node; node = node->next) {
+            ast_formal *formal = (ast_formal *) node->element;
+            fprintf(printer->outFile, "\tfunction_parameters%llu -> ",
+                    nodeCount);
+            AST_EXECUTE_CALLBACKS(printer->callbacks, formal, args);
+        }
+    }
+
     if (function->body) {
         fprintf(printer->outFile, "\tfunction%llu -> ", nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, function->body, args);
@@ -319,9 +368,9 @@ static void ast_function_printer(ast_function *function, void *args) {
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Assignment AST node.
+ * @param[in] assignment The Assignment AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_assignment_printer(ast_assignment *assignment, void *args) {
     ast_printer *printer         = (ast_printer *) args;
@@ -395,9 +444,9 @@ static void ast_assignment_printer(ast_assignment *assignment, void *args) {
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the String Literal AST node.
+ * @param[in] stringLiteral The String Literal AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_string_literal_printer(ast_string_literal *stringLiteral,
                                        void *args) {
@@ -422,9 +471,9 @@ static void ast_string_literal_printer(ast_string_literal *stringLiteral,
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Integer Literal AST node.
+ * @param[in] integerLiteral The Integer Literal AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_integer_literal_printer(ast_integer_literal *integerLiteral,
                                         void *args) {
@@ -449,14 +498,15 @@ static void ast_integer_literal_printer(ast_integer_literal *integerLiteral,
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Null Literal AST node.
+ * @param[in] nullLiteral The Null Literal AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_null_literal_printer(ast_null_literal *nullLiteral,
                                      void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
+    (void) nullLiteral;
 
     fprintf(printer->outFile, "null_literal%llu;\n", nodeCount);
     fprintf(printer->outFile,
@@ -476,9 +526,9 @@ static void ast_null_literal_printer(ast_null_literal *nullLiteral,
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Boolean Literal AST node.
+ * @param[in] booleanLiteral The Boolean Literal AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_boolean_literal_printer(ast_boolean_literal *booleanLiteral,
                                         void *args) {
@@ -504,14 +554,15 @@ static void ast_boolean_literal_printer(ast_boolean_literal *booleanLiteral,
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the This Literal AST node.
+ * @param[in] thisLiteral The This Literal AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_this_literal_printer(ast_this_literal *thisLiteral,
                                      void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
+    (void) thisLiteral;
 
     fprintf(printer->outFile, "this_literal%llu;\n", nodeCount);
     fprintf(printer->outFile,
@@ -531,9 +582,9 @@ static void ast_this_literal_printer(ast_this_literal *thisLiteral,
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Reference Literal AST node.
+ * @param[in] reference The Reference Literal AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_reference_printer(ast_reference *reference, void *args) {
     ast_printer *printer         = (ast_printer *) args;
@@ -561,9 +612,9 @@ static void ast_reference_printer(ast_reference *reference, void *args) {
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Cast AST node.
+ * @param[in] cast The Cast AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_cast_printer(ast_cast *cast, void *args) {
     ast_printer *printer         = (ast_printer *) args;
@@ -596,9 +647,9 @@ static void ast_cast_printer(ast_cast *cast, void *args) {
 }
 
 /**
- * @brief TODO
- * @param program TODO
- * @param args TODO
+ * @brief Print the Block AST node.
+ * @param[in] block The Block AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_block_printer(ast_block *block, void *args) {
     ast_printer *printer         = (ast_printer *) args;
@@ -640,9 +691,157 @@ static void ast_block_printer(ast_block *block, void *args) {
 }
 
 /**
- * @brief TODO
- * @param node
- * @param args
+ * @brief Print the Constructor Call AST node.
+ * @param[in] constructorCall The Constructor Call AST node to print
+ * @param[in] args The extra args for the callback call
+ */
+static void ast_constructor_call_printer(ast_constructor_call *constructorCall,
+                                         void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+    list_node *node              = NULL;
+
+    str name = STR_NULL_INIT;
+
+    if (constructorCall->name) { name = constructorCall->name->identifier; }
+
+    fprintf(printer->outFile, "constructor_call%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tconstructor_call%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">name:</TD>"
+            "<TD ALIGN=\"LEFT\"> %.*s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_constructor_call", STR_FMT(&name));
+
+    fprintf(printer->outFile,
+            "\tconstructor_call%llu -> constructor_call_args%llu;\n", nodeCount,
+            nodeCount);
+    fprintf(printer->outFile,
+            "\tconstructor_call_args%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "args");
+    if (constructorCall->args) {
+        for (node = constructorCall->args->head; node; node = node->next) {
+            ast_expression *superClassArg = (ast_expression *) node->element;
+            fprintf(printer->outFile, "\tconstructor_call_args%llu -> ",
+                    nodeCount);
+            AST_EXECUTE_CALLBACKS(printer->callbacks, superClassArg, args);
+        }
+    }
+}
+
+/**
+ * @brief Print the Let AST node.
+ * @param[in] let The Let AST node to print
+ * @param[in] args The extra args for the callback call
+ */
+static void ast_let_printer(ast_let *let, void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+    list_node *node              = NULL;
+
+    fprintf(printer->outFile, "let%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tlet%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_let");
+
+    fprintf(printer->outFile, "\tlet%llu -> let_initializations%llu;\n",
+            nodeCount, nodeCount);
+    fprintf(printer->outFile,
+            "\tlet_initializations%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "initializations");
+    if (let->initializations) {
+        for (node = let->initializations->head; node; node = node->next) {
+            ast_expression *superClassArg = (ast_expression *) node->element;
+            fprintf(printer->outFile, "\tlet_initializations%llu -> ",
+                    nodeCount);
+            AST_EXECUTE_CALLBACKS(printer->callbacks, superClassArg, args);
+        }
+    }
+
+    if (let->body) {
+        fprintf(printer->outFile, "\tlet_initializations%llu -> ", nodeCount);
+        AST_EXECUTE_CALLBACKS(printer->callbacks, let->body, args);
+    }
+}
+
+/**
+ * @brief Print the Initialization AST node.
+ * @param[in] initialization The Initialization AST node to print
+ * @param[in] args The extra args for the callback call
+ */
+static void ast_initialization_printer(ast_initialization *initialization,
+                                       void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    str identifier = STR_NULL_INIT;
+    str type       = STR_NULL_INIT;
+
+    if (initialization->identifier) {
+        identifier = initialization->identifier->identifier;
+    }
+    if (initialization->type) { type = initialization->type->identifier; }
+
+    fprintf(printer->outFile, "initialization%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tinitialization%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">identifier:</TD>"
+            "<TD ALIGN=\"LEFT\"> %.*s </TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">type:</TD>"
+            "<TD ALIGN=\"LEFT\"> %.*s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_initialization", STR_FMT(&identifier),
+            STR_FMT(&type));
+
+    if (initialization->value) {
+        fprintf(printer->outFile, "\tinitialization%llu -> ", nodeCount);
+        AST_EXECUTE_CALLBACKS(printer->callbacks, initialization->value, args);
+    }
+}
+
+/**
+ * @brief Print the AST node.
+ * @param[in] node The AST node to print
+ * @param[in] args The extra args for the callback call
  */
 static void ast_node_printer(ast_node *node, void *args) {
     switch (node->astNodeType) {
@@ -678,13 +877,18 @@ static void ast_node_printer(ast_node *node, void *args) {
                     ast_cast_printer((ast_cast *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_INITIALIZATION:
+                    ast_initialization_printer((ast_initialization *) node,
+                                               args);
                     break;
                 case AST_EXPRESSION_TYPE_LET:
+                    ast_let_printer((ast_let *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_BLOCK:
                     ast_block_printer((ast_block *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_CONSTRUCTOR_CALL:
+                    ast_constructor_call_printer((ast_constructor_call *) node,
+                                                 args);
                     break;
                 case AST_EXPRESSION_TYPE_FUNCTION_CALL:
                     break;

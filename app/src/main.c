@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     log_set_level(LOG_DEBUG);
     log_set_quiet(false);
 
-    parserDebug = PARSER_DEBUG_NONE;
+    parserDebug = PARSER_DEBUG_NONE | PARSER_DEBUG_LEXER | PARSER_DEBUG_PARSER;
 
     log_debug("waitui start execution");
 
