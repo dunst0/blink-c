@@ -176,7 +176,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <operator>           function_visibility function_overwrite function_final
 %type <let>                let
 %type <property>           property_definition
-%type <symbolValue>        identifier_definition class_head
+%type <symbolValue>        identifier_definition class_head function_name_definition function_head
 %type <unary_expression>   unary_expression
 %type <while_expression>   while
 
@@ -188,7 +188,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %destructor { ast_formal_list_destroy(&$$); }           <formals>
 %destructor { ast_class_list_destroy(&$$); }            <classes>
 %destructor { ast_initialization_list_destroy(&$$); }   <initializations>
-%destructor { symbol_destroy(&$$); }                    <symbolValue>
+//%destructor { symbol_decrement_refcount(&$$); }         <symbolValue>
 
 %start program
 
@@ -239,10 +239,13 @@ class_definition                : class_head class_formals '{' class_body '}' cl
                                         $$ = $4;
                                         ast_class_set_name($$, $1);
                                         ast_class_set_parameters($$, $2);
-
                                     }
                                 | class_head class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' class_tail ';'
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $4->identifier, &$4)) {
+                                            symbol_decrement_refcount(&$4);
+                                            YYABORT;
+                                        }
                                         $$ = $7;
                                         ast_class_set_name($$, $1);
                                         ast_class_set_parameters($$, $2);
@@ -305,10 +308,18 @@ class_body                      : /* empty */
 /* properties definitions */
 property_definition             : VAR_KEYWORD identifier_definition ':' IDENTIFIER '=' expression
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $4->identifier, &$4)) {
+                                            symbol_decrement_refcount(&$4);
+                                            YYABORT;
+                                        }
                                         $$ = ast_property_new($2, $4, $6);
                                     }
                                 | VAR_KEYWORD identifier_definition ':' IDENTIFIER
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $4->identifier, &$4)) {
+                                            symbol_decrement_refcount(&$4);
+                                            YYABORT;
+                                        }
                                         $$ = ast_property_new($2, $4, NULL);
                                     }
                                 | VAR_KEYWORD identifier_definition '=' expression
@@ -321,8 +332,10 @@ property_definition             : VAR_KEYWORD identifier_definition ':' IDENTIFI
 function_definition             : ABSTRACT_KEYWORD function_visibility function_signature
                                     {
                                         $$ = $3;
-                                        $$->isAbstract = 1;
+                                        $$->isAbstract = true;
                                         $$->visibility = $2;
+
+                                        symboltable_exit_scope(extraParser->symtable);
                                     }
                                 | function_final function_overwrite function_visibility function_signature '=' expression
                                     {
@@ -331,26 +344,28 @@ function_definition             : ABSTRACT_KEYWORD function_visibility function_
                                         $$->isOverwrite = $2;
                                         $$->visibility = $3;
                                         $$->body = $6;
+
+                                        symboltable_exit_scope(extraParser->symtable);
                                     }
                                 ;
 
 function_final                  : /* empty */
                                     {
-                                        $$ = 0;
+                                        $$ = false;
                                     }
                                 | FINAL_KEYWORD
                                     {
-                                        $$ = 1;
+                                        $$ = true;
                                     }
                                 ;
 
 function_overwrite              : /* empty */
                                     {
-                                        $$ = 0;
+                                        $$ = false;
                                     }
                                 | OVERWRITE_KEYWORD
                                     {
-                                        $$ = 1;
+                                        $$ = true;
                                     }
                                 ;
 
@@ -373,13 +388,38 @@ function_visibility             : /* empty */
                                     }
                                 ;
 
-function_signature              : FUNC_KEYWORD FUNCTION_NAME '(' formals ')'
+function_signature              : function_head '(' formals ')'
                                     {
-                                        $$ = ast_function_new($2, $4, NULL, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
+                                        $$ = ast_function_new($1, $3, NULL, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
                                     }
-                                | FUNC_KEYWORD FUNCTION_NAME '(' formals ')' ':' IDENTIFIER
+                                | function_head '(' formals ')' ':' IDENTIFIER
                                     {
-                                        $$ = ast_function_new($2, $4, $7, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
+                                        if (!symboltable_add_symbol(extraParser->symtable, $6->identifier, &$6)) {
+                                            symbol_decrement_refcount(&$6);
+                                            YYABORT;
+                                        }
+                                        $$ = ast_function_new($1, $3, $6, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
+                                    }
+                                ;
+
+function_head                   : FUNC_KEYWORD function_name_definition
+                                    {
+                                        $$ = $2;
+                                        symboltable_enter_scope(extraParser->symtable);
+                                    }
+                                ;
+
+function_name_definition        :   {
+                                        symboltable_enter_declaration_mode(extraParser->symtable);
+                                    }
+                                  FUNCTION_NAME
+                                    {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $2->identifier, &$2)) {
+                                            symbol_decrement_refcount(&$2);
+                                            YYABORT;
+                                        }
+                                        symboltable_leave_declaration_mode(extraParser->symtable);
+                                        $$ = $2;
                                     }
                                 ;
 
@@ -402,10 +442,18 @@ expression                      : assignment            { $$ = (ast_expression *
 
 assignment                      : IDENTIFIER ASSIGNMENT expression
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $1->identifier, &$1)) {
+                                            symbol_decrement_refcount(&$1);
+                                            YYABORT;
+                                        }
                                         $$ = ast_assignment_new($1, $2, $3);
                                     }
                                 | IDENTIFIER '=' expression
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $1->identifier, &$1)) {
+                                            symbol_decrement_refcount(&$1);
+                                            YYABORT;
+                                        }
                                         $$ = ast_assignment_new($1, AST_ASSIGNMENT_OPERATOR_EQUAL, $3);
                                     }
                                 ;
@@ -472,22 +520,38 @@ block                           : '{' expressions '}'
 
 cast                            : expression AS_KEYWORD IDENTIFIER
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
+                                            symbol_decrement_refcount(&$3);
+                                            YYABORT;
+                                        }
                                         $$ = ast_cast_new($1, $3);
                                     }
                                 ;
 
 constructor_call                : NEW_KEYWORD IDENTIFIER '(' actuals ')'
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $2->identifier, &$2)) {
+                                            symbol_decrement_refcount(&$2);
+                                            YYABORT;
+                                        }
                                         $$ = ast_constructor_call_new($2, $4);
                                     }
                                 ;
 
 dispatch                        : expression '.' FUNCTION_NAME '(' actuals ')'
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
+                                            symbol_decrement_refcount(&$3);
+                                            YYABORT;
+                                        }
                                         $$ = (ast_expression *) ast_function_call_new($1, $3, $5);
                                     }
                                 | SUPER_LITERAL '.' FUNCTION_NAME '(' actuals ')'
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
+                                            symbol_decrement_refcount(&$3);
+                                            YYABORT;
+                                        }
                                         $$ = (ast_expression *) ast_super_function_call_new($3, $5);
                                     }
                                 ;
@@ -530,14 +594,18 @@ literal                         : INTEGER_LITERAL
                                     }
                                 | TRUE_LITERAL
                                     {
-                                        $$ = (ast_expression *) ast_boolean_literal_new(1);
+                                        $$ = (ast_expression *) ast_boolean_literal_new(true);
                                     }
                                 | FALSE_LITERAL
                                     {
-                                        $$ = (ast_expression *) ast_boolean_literal_new(0);
+                                        $$ = (ast_expression *) ast_boolean_literal_new(false);
                                     }
                                 | IDENTIFIER
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $1->identifier, &$1)) {
+                                            symbol_decrement_refcount(&$1);
+                                            YYABORT;
+                                        }
                                         $$ = (ast_expression *) ast_reference_new($1);
                                     }
                                 ;
@@ -593,11 +661,19 @@ formals_list                    : formals_list ',' formal
 
 formal                          : LAZY_KEYWORD identifier_definition ':' IDENTIFIER
                                     {
-                                        $$ = ast_formal_new($2, $4, 1);
+                                        if (!symboltable_add_symbol(extraParser->symtable, $4->identifier, &$4)) {
+                                            symbol_decrement_refcount(&$4);
+                                            YYABORT;
+                                        }
+                                        $$ = ast_formal_new($2, $4, true);
                                     }
                                 | identifier_definition ':' IDENTIFIER
                                     {
-                                        $$ = ast_formal_new($1, $3, 0);
+                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
+                                            symbol_decrement_refcount(&$3);
+                                            YYABORT;
+                                        }
+                                        $$ = ast_formal_new($1, $3, false);
                                     }
                                 ;
 
@@ -675,10 +751,18 @@ initialization_list             : initialization ','
 
 initialization                  : identifier_definition ':' IDENTIFIER '=' expression
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
+                                            symbol_decrement_refcount(&$3);
+                                            YYABORT;
+                                        }
                                         $$ = ast_initialization_new($1, $3, $5);
                                     }
                                 | identifier_definition ':' IDENTIFIER
                                     {
+                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
+                                            symbol_decrement_refcount(&$3);
+                                            YYABORT;
+                                        }
                                         $$ = ast_initialization_new($1, $3, NULL);
                                     }
                                 | identifier_definition '=' expression
@@ -693,7 +777,10 @@ identifier_definition           :   {
                                     }
                                   IDENTIFIER
                                     {
-                                        symboltable_add_symbol(extraParser->symtable, $2->identifier, &$2);
+                                        if (!symboltable_add_symbol(extraParser->symtable, $2->identifier, &$2)) {
+                                            symbol_decrement_refcount(&$2);
+                                            YYABORT;
+                                        }
                                         symboltable_leave_declaration_mode(extraParser->symtable);
                                         $$ = $2;
                                     }
@@ -704,7 +791,7 @@ identifier_definition           :   {
 
 
 void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg) {
-    fprintf(stderr, "Error: %.*s (%d:%d): %s in this line:\n%s\n",
+    fprintf(stderr, "ERROR: %.*s (%d:%d): %s in this line:\n%s\n",
             STR_FMT(&locp->filename), locp->first_line, locp->first_column + 1, msg, "");
     /*fprintf(stderr, "%*s\n", yylloc.first_column + 1, "^");*/
 }

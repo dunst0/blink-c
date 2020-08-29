@@ -47,9 +47,21 @@ static void ast_program_printer(ast_program *program, void *args) {
             ">];\n",
             "ast_program");
 
+    fprintf(printer->outFile, "\tprogram -> program_classes;\n");
+    fprintf(printer->outFile,
+            "\tprogram_classes "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            "classes");
+
     for (node = program->classes->head; node; node = node->next) {
         ast_class *class = (ast_class *) node->element;
-        fprintf(printer->outFile, "\tprogram -> ");
+        fprintf(printer->outFile, "\tprogram_classes -> ");
         AST_EXECUTE_CALLBACKS(printer->callbacks, class, args);
     }
 
@@ -94,18 +106,63 @@ static void ast_class_printer(ast_class *class, void *args) {
             nodeCount, "ast_class", STR_FMT(&className),
             STR_FMT(&superClassName));
 
+    fprintf(printer->outFile, "\tclass%llu -> class_parameters%llu;\n",
+            nodeCount, nodeCount);
+    fprintf(printer->outFile,
+            "\tclass_parameters%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "parameters");
+
     if (class->parameters) {
         for (node = class->parameters->head; node; node = node->next) {
             ast_formal *formal = (ast_formal *) node->element;
-            fprintf(printer->outFile, "\tclass%llu -> ", nodeCount);
+            fprintf(printer->outFile, "\tclass_parameters%llu -> ", nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks, formal, args);
         }
     }
 
+    fprintf(printer->outFile, "\tclass%llu -> class_properties%llu;\n",
+            nodeCount, nodeCount);
+    fprintf(printer->outFile,
+            "\tclass_properties%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "properties");
+    if (class->properties) {
+        for (node = class->properties->head; node; node = node->next) {
+            ast_property *property = (ast_property *) node->element;
+            fprintf(printer->outFile, "\tclass_properties%llu -> ", nodeCount);
+            AST_EXECUTE_CALLBACKS(printer->callbacks, property, args);
+        }
+    }
+
+    fprintf(printer->outFile, "\tclass%llu -> class_functions%llu;\n",
+            nodeCount, nodeCount);
+    fprintf(printer->outFile,
+            "\tclass_functions%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "functions");
     if (class->functions) {
         for (node = class->functions->head; node; node = node->next) {
             ast_function *function = (ast_function *) node->element;
-            fprintf(printer->outFile, "\tclass%llu -> ", nodeCount);
+            fprintf(printer->outFile, "\tclass_functions%llu -> ", nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks, function, args);
         }
     }
@@ -150,6 +207,42 @@ static void ast_formal_printer(ast_formal *formal, void *args) {
             ">];\n",
             nodeCount, "ast_formal", STR_FMT(&identifier), STR_FMT(&type),
             (formal->isLazy ? "true" : "false"));
+}
+
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
+static void ast_property_printer(ast_property *property, void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    str name = STR_NULL_INIT;
+    str type = STR_NULL_INIT;
+
+    if (property->name) { name = property->name->identifier; }
+    if (property->type) { type = property->type->identifier; }
+
+    fprintf(printer->outFile, "formal%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tformal%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">name:</TD>"
+            "<TD ALIGN=\"LEFT\"> %.*s </TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">type:</TD>"
+            "<TD ALIGN=\"LEFT\"> %.*s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_formal", STR_FMT(&name), STR_FMT(&type));
 }
 
 /**
@@ -410,6 +503,147 @@ static void ast_boolean_literal_printer(ast_boolean_literal *booleanLiteral,
             booleanLiteral->value ? "true" : "false");
 }
 
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
+static void ast_this_literal_printer(ast_this_literal *thisLiteral,
+                                     void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    fprintf(printer->outFile, "this_literal%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tthis_literal%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">value:</TD>"
+            "<TD ALIGN=\"LEFT\"> this </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_this_literal");
+}
+
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
+static void ast_reference_printer(ast_reference *reference, void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    str identifier = STR_NULL_INIT;
+
+    if (reference->value) { identifier = reference->value->identifier; }
+
+    fprintf(printer->outFile, "reference%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\treference%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">value:</TD>"
+            "<TD ALIGN=\"LEFT\"> %.*s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_reference", STR_FMT(&identifier));
+}
+
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
+static void ast_cast_printer(ast_cast *cast, void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+
+    str type = STR_NULL_INIT;
+
+    if (cast->type) { type = cast->type->identifier; }
+
+    fprintf(printer->outFile, "cast%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tcast%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "<TR>"
+            "<TD ALIGN=\"LEFT\">type:</TD>"
+            "<TD ALIGN=\"LEFT\"> %.*s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_cast", STR_FMT(&type));
+
+    if (cast->object) {
+        fprintf(printer->outFile, "\tcast%llu -> ", nodeCount);
+        AST_EXECUTE_CALLBACKS(printer->callbacks, cast->object, args);
+    }
+}
+
+/**
+ * @brief TODO
+ * @param program TODO
+ * @param args TODO
+ */
+static void ast_block_printer(ast_block *block, void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+    list_node *node              = NULL;
+
+    fprintf(printer->outFile, "block%llu;\n", nodeCount);
+    fprintf(printer->outFile,
+            "\tblock%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"><B> %s </B></TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "ast_block");
+
+    fprintf(printer->outFile, "\tblock%llu -> block_expressions%llu;\n",
+            nodeCount, nodeCount);
+    fprintf(printer->outFile,
+            "\tblock_expressions%llu "
+            "[label=<"
+            "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
+            "<TR>"
+            "<TD COLSPAN=\"2\"> %s </TD>"
+            "</TR>"
+            "</TABLE>"
+            ">];\n",
+            nodeCount, "expressions");
+
+    if (block->expressions) {
+        for (node = block->expressions->head; node; node = node->next) {
+            ast_formal *formal = (ast_formal *) node->element;
+            fprintf(printer->outFile, "\tblock_expressions%llu -> ", nodeCount);
+            AST_EXECUTE_CALLBACKS(printer->callbacks, formal, args);
+        }
+    }
+}
+
+/**
+ * @brief TODO
+ * @param node
+ * @param args
+ */
 static void ast_node_printer(ast_node *node, void *args) {
     switch (node->astNodeType) {
         case AST_NODE_TYPE_EXPRESSION:
@@ -432,19 +666,23 @@ static void ast_node_printer(ast_node *node, void *args) {
                                                args);
                     break;
                 case AST_EXPRESSION_TYPE_THIS_LITERAL:
+                    ast_this_literal_printer((ast_this_literal *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_ASSIGNMENT:
                     ast_assignment_printer((ast_assignment *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_REFERENCE:
+                    ast_reference_printer((ast_reference *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_CAST:
+                    ast_cast_printer((ast_cast *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_INITIALIZATION:
                     break;
                 case AST_EXPRESSION_TYPE_LET:
                     break;
                 case AST_EXPRESSION_TYPE_BLOCK:
+                    ast_block_printer((ast_block *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_CONSTRUCTOR_CALL:
                     break;
@@ -472,6 +710,7 @@ static void ast_node_printer(ast_node *node, void *args) {
                     ast_formal_printer((ast_formal *) node, args);
                     break;
                 case AST_DEFINITION_TYPE_PROPERTY:
+                    ast_property_printer((ast_property *) node, args);
                     break;
                 case AST_DEFINITION_TYPE_FUNCTION:
                     ast_function_printer((ast_function *) node, args);

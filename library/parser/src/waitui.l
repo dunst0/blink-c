@@ -74,13 +74,10 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
 <INITIAL>"package"                                                                      BEGIN(PACKAGE);
 
 <IMPORT>{not_whitespace}+                                                               {
-                                                                                            printf("<IMPORT_KEYWORD: %s>\n", yytext);
-
                                                                                             BEGIN(INITIAL);
                                                                                             RETURN(IMPORT_KEYWORD);
                                                                                         }
 <PACKAGE>{not_whitespace}+                                                              {
-                                                                                            printf("<PACKAGE_KEYWORD: %s>\n", yytext);
                                                                                             BEGIN(INITIAL);
                                                                                             RETURN(PACKAGE_KEYWORD);
                                                                                         }
@@ -158,8 +155,6 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
                                                                                             functionName.s   = yytext;
                                                                                             functionName.len = yyleng;
 
-                                                                                            printf("<FUNCTION_NAME: %.*s>\n", STR_FMT(&functionName));
-
                                                                                             yylval->symbolValue = symbol_new(functionName, SYMBOL_TYPE_FUNCTION_NAME,
                                                                                                                              yylloc->first_line, yylloc->first_column);
                                                                                             if (yylval->symbolValue) {
@@ -174,8 +169,6 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
                                                                                             str functionName = STR_NULL_INIT;
                                                                                             functionName.s   = yytext;
                                                                                             functionName.len = yyleng;
-
-                                                                                            printf("<FUNCTION_NAME: %.*s>\n", STR_FMT(&functionName));
 
                                                                                             yylval->symbolValue = symbol_new(functionName, SYMBOL_TYPE_FUNCTION_NAME,
                                                                                                                              yylloc->first_line, yylloc->first_column);
@@ -192,8 +185,6 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
                                                                                             className.s   = yytext;
                                                                                             className.len = yyleng;
 
-                                                                                            printf("<CLASS_NAME: %.*s>\n", STR_FMT(&className));
-
                                                                                             yylval->symbolValue = symbol_new(className, SYMBOL_TYPE_CLASS_NAME,
                                                                                                                              yylloc->first_line, yylloc->first_column);
                                                                                             if (yylval->symbolValue) {
@@ -208,8 +199,6 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
                                                                                             str identifier = STR_NULL_INIT;
                                                                                             identifier.s   = yytext;
                                                                                             identifier.len = yyleng;
-
-                                                                                            printf("<IDENTIFIER: %.*s>\n", STR_FMT(&identifier));
 
                                                                                             yylval->symbolValue = symbol_new(identifier, SYMBOL_TYPE_IDENTIFIER,
                                                                                                                              yylloc->first_line, yylloc->first_column);

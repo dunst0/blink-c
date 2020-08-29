@@ -23,4 +23,4 @@ target_sources(symboltable
 
 target_include_directories(symboltable PUBLIC "include")
 
-target_link_libraries(symboltable PUBLIC hashtable list utils)
+target_link_libraries(symboltable PUBLIC hashtable list utils log)

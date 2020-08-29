@@ -11,6 +11,8 @@
 
 #include "waitui/lexer_impl.h"
 
+#include <waitui/log.h>
+
 
 // -----------------------------------------------------------------------------
 //  Local variables
@@ -30,6 +32,8 @@ parser *parser_new(str sourceFileName, str currentDirectory,
                    unsigned int debug) {
     parser *this = NULL;
 
+    log_trace("creating new parser");
+
     this = calloc(1, sizeof(*this));
     if (!this) { return NULL; }
 
@@ -38,15 +42,17 @@ parser *parser_new(str sourceFileName, str currentDirectory,
     STR_COPY_WITH_NUL(&this->sourceFileName, &sourceFileName);
     STR_COPY_WITH_NUL(&this->currentDirectory, &currentDirectory);
     if (!this->sourceFileName.s || !this->currentDirectory.s) {
+        log_fatal("could not allocate memory for sourceFileName or "
+                  "currentDirectory");
         parser_destroy(&this);
         return NULL;
     }
 
     this->extraParser.sourceFileName = this->sourceFileName;
 
-    this->extraParser.symtable =
-            symboltable_new((debug & PARSER_DEBUG_SYMBOLTABLE) != 0);
+    this->extraParser.symtable = symboltable_new();
     if (!this->extraParser.symtable) {
+        log_fatal("could not create symboltable");
         parser_destroy(&this);
         return NULL;
     }
@@ -55,6 +61,7 @@ parser *parser_new(str sourceFileName, str currentDirectory,
     this->extraLexer.lastToken   = -1;
 
     if (yylex_init_extra(&this->extraLexer, &this->extraParser.scanner) != 0) {
+        log_fatal("could not initialize the lexer with extra data");
         parser_destroy(&this);
         return NULL;
     }
@@ -70,8 +77,7 @@ parser *parser_new(str sourceFileName, str currentDirectory,
         sourceFile       = this->sourceFile;
 
         if (!sourceFile) {
-            fprintf(stderr, "Error: could not open filename: '%s'\n",
-                    this->sourceFileName.s);
+            log_error("could not open filename: '%s'", this->sourceFileName.s);
             parser_destroy(&this);
             return NULL;
         }
@@ -82,10 +88,14 @@ parser *parser_new(str sourceFileName, str currentDirectory,
         yyset_debug(1, this->extraParser.scanner);
     }
 
+    log_trace("new parser successful created");
+
     return this;
 }
 
 void parser_destroy(parser **this) {
+    log_trace("destroying parser");
+
     if (!this || !(*this)) { return; }
 
     symboltable_destroy(&(*this)->extraParser.symtable);
@@ -98,6 +108,8 @@ void parser_destroy(parser **this) {
 
     free(*this);
     *this = NULL;
+
+    log_trace("parser successful destroyed");
 }
 
 int parser_parse(parser *this) {
@@ -111,6 +123,8 @@ int parser_parse(parser *this) {
 }
 
 ast *parser_get_ast(parser *this) {
+    log_trace("getting ast from parser");
+
     if (!this) { return 0; }
 
     return this->extraParser.resultAst;

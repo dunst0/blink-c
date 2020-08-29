@@ -1,5 +1,6 @@
 #include "waitui/version.h"
 
+#include <waitui/log.h>
 #include <waitui/parser.h>
 #include <waitui/str.h>
 
@@ -48,7 +49,12 @@ int main(int argc, char **argv) {
         sourceFileName.s   = argv[1];
     }
 
-    parserDebug = PARSER_DEBUG_SYMBOLTABLE;
+    log_set_level(LOG_DEBUG);
+    log_set_quiet(false);
+
+    parserDebug = PARSER_DEBUG_NONE;
+
+    log_debug("waitui start execution");
 
     waituiParser = parser_new(sourceFileName, currentDirectory, parserDebug);
     if (!waituiParser) {
@@ -56,13 +62,13 @@ int main(int argc, char **argv) {
         goto done;
     }
 
+    log_trace("start parsing input");
     if (!parser_parse(waituiParser)) {
-        fprintf(stderr, "Error: parsing failed\n");
+        log_fatal("parsing input failed");
         result = WAITUI_FAILURE;
         goto done;
-    } else {
-        fprintf(stderr, "Debug: parsing worked\n");
     }
+    log_debug("input was parsed successful");
 
     waituiAst = parser_get_ast(waituiParser);
     if (!waituiAst) {
@@ -89,7 +95,7 @@ int main(int argc, char **argv) {
     }
     ast_generate_graph(waituiAst, graphFile);
 
-    fprintf(stderr, "Debug: done!\n");
+    log_debug("waitui execution done");
 
 done:
     if (graphFile) { fclose(graphFile); }

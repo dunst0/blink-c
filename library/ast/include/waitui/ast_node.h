@@ -12,6 +12,8 @@
 #include <waitui/str.h>
 #include <waitui/symbol.h>
 
+#include <stdbool.h>
+
 
 // -----------------------------------------------------------------------------
 //  Public types
@@ -393,7 +395,8 @@ extern void ast_class_destroy(ast_class **this);
  * @note Will steal the pointer for the identifier symbol.
  * @return On success a pointer to ast_formal, else NULL
  */
-extern ast_formal *ast_formal_new(symbol *identifier, symbol *type, int isLazy);
+extern ast_formal *ast_formal_new(symbol *identifier, symbol *type,
+                                  bool isLazy);
 
 /**
  * @brief Destroy a formal node and its content.
@@ -418,8 +421,8 @@ extern ast_function *ast_function_new(symbol *functionName,
                                       ast_formal_list *parameters,
                                       symbol *returnType, ast_expression *body,
                                       ast_function_visibility visibility,
-                                      int isAbstract, int isFinal,
-                                      int isOverwrite);
+                                      bool isAbstract, bool isFinal,
+                                      bool isOverwrite);
 
 /**
  * @brief Destroy a function node and its content.
@@ -703,7 +706,7 @@ extern void ast_integer_literal_destroy(ast_integer_literal **this);
  * @param value
  * @return
  */
-extern ast_boolean_literal *ast_boolean_literal_new(int value);
+extern ast_boolean_literal *ast_boolean_literal_new(bool value);
 
 /**
  * @brief TODO
@@ -785,7 +788,7 @@ struct ast_formal {
     AST_DEFINITION_PROPERTIES
     symbol *identifier;
     symbol *type;
-    int isLazy;
+    bool isLazy;
 };
 
 struct ast_property {
@@ -802,9 +805,9 @@ struct ast_function {
     symbol *returnType;
     ast_expression *body;
     ast_function_visibility visibility;
-    int isAbstract;
-    int isFinal;
-    int isOverwrite;
+    bool isAbstract;
+    bool isFinal;
+    bool isOverwrite;
 };
 
 struct ast_block {
@@ -910,7 +913,7 @@ struct ast_integer_literal {
 
 struct ast_boolean_literal {
     AST_EXPRESSION_PROPERTIES
-    int value;
+    bool value;
 };
 
 struct ast_decimal_literal {

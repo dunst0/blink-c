@@ -19,7 +19,7 @@ target_sources(waitui
 
 target_include_directories(waitui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
 
-target_link_libraries(waitui PRIVATE ast list parser symboltable hashtable)
+target_link_libraries(waitui PRIVATE ast list log parser symboltable hashtable)
 
 configure_file(
         "include/waitui/version.h.in"

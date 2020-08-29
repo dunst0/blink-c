@@ -7,6 +7,8 @@
 
 #include "waitui/ast_node.h"
 
+#include <waitui/log.h>
+
 #include <stdlib.h>
 
 
@@ -149,19 +151,27 @@ void ast_expression_destroy(ast_expression **this) {
 }
 
 ast_program *ast_program_new(ast_class_list *classes) {
+    log_trace("creating new ast_program");
+
     AST_NODE_ALLOC_INIT(ast_program, DEFINITION, PROGRAM);
 
     this->classes = classes;
+
+    log_trace("new ast_program successful created");
 
     return this;
 }
 
 void ast_program_destroy(ast_program **this) {
+    log_trace("destroying ast_program");
+
     if (!this || !(*this)) { return; }
 
     ast_class_list_destroy(&(*this)->classes);
 
     AST_NODE_FREE();
+
+    log_trace("ast_program successful destroyed");
 }
 
 ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
@@ -169,6 +179,8 @@ ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
                          ast_expression_list *superClassArgs,
                          ast_property_list *properties,
                          ast_function_list *functions) {
+    log_trace("creating new ast_class");
+
     AST_NODE_ALLOC_INIT(ast_class, DEFINITION, CLASS);
 
     this->name           = name;
@@ -181,43 +193,63 @@ ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
     symbol_increment_refcount(name);
     symbol_increment_refcount(superClass);
 
+    log_trace("new ast_class successful created");
+
     return this;
 }
 
 void ast_class_set_name(ast_class *this, symbol *name) {
+    log_trace("ast_class setting name");
+
     if (!this || !name) { return; }
 
     if (this->name) { symbol_decrement_refcount(&this->name); }
     this->name = name;
     symbol_increment_refcount(name);
+
+    log_trace("ast_class set name");
 }
 
 void ast_class_set_parameters(ast_class *this, ast_formal_list *parameters) {
+    log_trace("ast_class setting parameters");
+
     if (!this || !parameters) { return; }
 
     if (this->parameters) { ast_formal_list_destroy(&this->parameters); }
     this->parameters = parameters;
+
+    log_trace("ast_class set parameters");
 }
 
 void ast_class_set_super_class(ast_class *this, symbol *superClass) {
+    log_trace("ast_class setting superClass");
+
     if (!this || !superClass) { return; }
 
     if (this->superClass) { symbol_decrement_refcount(&this->superClass); }
     this->superClass = superClass;
     symbol_increment_refcount(superClass);
+
+    log_trace("ast_class set superClass");
 }
 
 void ast_class_set_super_class_args(ast_class *this,
                                     ast_expression_list *superClassArgs) {
+    log_trace("ast_class setting superClassArgs");
+
     if (!this || !superClassArgs) { return; }
 
     if (this->superClassArgs) {
         ast_expression_list_destroy(&this->superClassArgs);
     }
     this->superClassArgs = superClassArgs;
+
+    log_trace("ast_class set superClassArgs");
 }
 
 void ast_class_destroy(ast_class **this) {
+    log_trace("destroying ast_class");
+
     if (!this || !(*this)) { return; }
 
     symbol_decrement_refcount(&(*this)->name);
@@ -228,9 +260,11 @@ void ast_class_destroy(ast_class **this) {
     ast_function_list_destroy(&(*this)->functions);
 
     AST_NODE_FREE();
+
+    log_trace("ast_class successful destroyed");
 }
 
-ast_formal *ast_formal_new(symbol *identifier, symbol *type, int isLazy) {
+ast_formal *ast_formal_new(symbol *identifier, symbol *type, bool isLazy) {
     AST_NODE_ALLOC_INIT(ast_formal, DEFINITION, FORMAL);
 
     this->identifier = identifier;
@@ -256,7 +290,8 @@ ast_function *ast_function_new(symbol *functionName,
                                ast_formal_list *parameters, symbol *returnType,
                                ast_expression *body,
                                ast_function_visibility visibility,
-                               int isAbstract, int isFinal, int isOverwrite) {
+                               bool isAbstract, bool isFinal,
+                               bool isOverwrite) {
     AST_NODE_ALLOC_INIT(ast_function, DEFINITION, FUNCTION);
 
     this->functionName = functionName;
@@ -641,7 +676,7 @@ void ast_integer_literal_destroy(ast_integer_literal **this) {
     AST_NODE_FREE();
 }
 
-ast_boolean_literal *ast_boolean_literal_new(int value) {
+ast_boolean_literal *ast_boolean_literal_new(bool value) {
     AST_NODE_ALLOC_INIT(ast_boolean_literal, EXPRESSION, BOOLEAN_LITERAL);
 
     this->value = value;

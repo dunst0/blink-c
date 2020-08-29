@@ -42,4 +42,4 @@ target_sources(parser
 
 target_include_directories(parser PUBLIC include PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include)
 
-target_link_libraries(parser PUBLIC ast utils)
+target_link_libraries(parser PUBLIC ast utils log)
