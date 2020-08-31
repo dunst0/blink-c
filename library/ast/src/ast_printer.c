@@ -17,11 +17,12 @@
 #define TABLE_BEGIN "<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\">"
 #define TABLE_END "</TABLE>"
 #define TITLE_ROW "<TR><TD COLSPAN=\"2\"><B>%.*s</B></TD></TR>"
-#define SUBTITLE_ROW "<TR><TD COLSPAN=\"2\">%.*s</TD></TR>"
 #define KEY_STR_VALUE                                                          \
     "<TR><TD ALIGN=\"LEFT\">%s:</TD><TD ALIGN=\"LEFT\">%.*s</TD></TR>"
 #define KEY_STRING_VALUE                                                       \
     "<TR><TD ALIGN=\"LEFT\">%s:</TD><TD ALIGN=\"LEFT\">%s</TD></TR>"
+#define KEY_PORT                                                               \
+    "<TR><TD ALIGN=\"LEFT\" COLSPAN=\"2\" PORT=\"%s%llu\">%s</TD></TR>"
 
 
 // -----------------------------------------------------------------------------
@@ -43,19 +44,148 @@ typedef struct ast_printer {
 // -----------------------------------------------------------------------------
 
 /**
- * @brief TODO
- * @param printer
- * @param node
- * @param nodeCount
- * @param format
- * @param ...
+ * @brief Convert the boolean value to a const string.
+ * @param[in] value The boolean value
+ * @return The const string
  */
-static void ast_printer_print_node(ast_printer *printer, char *node,
-                                   unsigned long long nodeCount, char *format,
-                                   ...) {
+static inline const char *ast_printer_bool_string(bool value) {
+    return value ? "true" : "false";
+}
+
+/**
+ * @brief Convert the assignment operator value to a const string.
+ * @param[in] operator The assignment operator value
+ * @return The const string
+ */
+static inline const char *
+ast_printer_assignment_operator(ast_assignment_operator operator) {
+    switch (operator) {
+        case AST_ASSIGNMENT_OPERATOR_EQUAL:
+            return "=";
+        case AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL:
+            return "+=";
+        case AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL:
+            return "-=";
+        case AST_ASSIGNMENT_OPERATOR_TIMES_EQUAL:
+            return "*=";
+        case AST_ASSIGNMENT_OPERATOR_DIV_EQUAL:
+            return "/=";
+        case AST_ASSIGNMENT_OPERATOR_MODULO_EQUAL:
+            return "%=";
+        case AST_ASSIGNMENT_OPERATOR_AND_EQUAL:
+            return "&=";
+        case AST_ASSIGNMENT_OPERATOR_CARET_EQUAL:
+            return "^=";
+        case AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL:
+            return "~=";
+        case AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL:
+            return "|=";
+        default:
+            return "";
+    }
+}
+
+/**
+ * @brief Convert the unary operator value to a const string.
+ * @param[in] operator The unary operator value
+ * @return The const string
+ */
+static inline const char *
+ast_printer_unary_operator_string(ast_unary_operator operator) {
+    switch (operator) {
+        case AST_UNARY_OPERATOR_MINUS:
+            return "-";
+        case AST_UNARY_OPERATOR_NOT:
+            return "!";
+        case AST_UNARY_OPERATOR_DOUBLE_PLUS:
+            return "++";
+        case AST_UNARY_OPERATOR_DOUBLE_MINUS:
+            return "--";
+        default:
+            return "";
+    }
+}
+
+/**
+ * @brief Convert the binary operator value to a const string.
+ * @param[in] operator The binary operator value
+ * @return The const string
+ */
+static inline const char *
+ast_printer_binary_operator_string(ast_binary_operator operator) {
+    switch (operator) {
+        case AST_BINARY_OPERATOR_PLUS:
+            return "+";
+        case AST_BINARY_OPERATOR_MINUS:
+            return "-";
+        case AST_BINARY_OPERATOR_TIMES:
+            return "*";
+        case AST_BINARY_OPERATOR_DIV:
+            return "/";
+        case AST_BINARY_OPERATOR_MODULO:
+            return "%";
+        case AST_BINARY_OPERATOR_AND:
+            return "&";
+        case AST_BINARY_OPERATOR_CARET:
+            return "^";
+        case AST_BINARY_OPERATOR_TILDE:
+            return "~";
+        case AST_BINARY_OPERATOR_PIPE:
+            return "|";
+        case AST_BINARY_OPERATOR_LESS:
+            return "<";
+        case AST_BINARY_OPERATOR_LESS_EQUAL:
+            return "<=";
+        case AST_BINARY_OPERATOR_GREATER:
+            return ">";
+        case AST_BINARY_OPERATOR_GREATER_EQUAL:
+            return ">=";
+        case AST_BINARY_OPERATOR_EQUAL:
+            return "==";
+        case AST_BINARY_OPERATOR_NOT_EQUAL:
+            return "!=";
+        case AST_BINARY_OPERATOR_DOUBLE_AND:
+            return "&&";
+        case AST_BINARY_OPERATOR_DOUBLE_PIPE:
+            return "||";
+        default:
+            return "";
+    }
+}
+
+/**
+ * @brief Convert the function visibility value to a const string.
+ * @param[in] visibility The function visibility value
+ * @return The const string
+ */
+static inline const char *
+ast_printer_function_visibility_string(ast_function_visibility visibility) {
+    switch (visibility) {
+        case AST_FUNCTION_VISIBILITY_PUBLIC:
+            return "public";
+        case AST_FUNCTION_VISIBILITY_PROTECTED:
+            return "protected";
+        case AST_FUNCTION_VISIBILITY_PRIVATE:
+            return "private";
+        default:
+            return "";
+    }
+}
+
+/**
+ * @brief Print a graph node.
+ * @param[in] printer The printer to print to
+ * @param[in] node The node str to use
+ * @param[in] nodeCount The node count to use
+ * @param[in] format The format to use
+ * @param[in] ... The arguments to fill in the format
+ */
+static inline void ast_printer_print_node(ast_printer *printer, str *node,
+                                          unsigned long long nodeCount,
+                                          char *format, ...) {
     va_list args;
 
-    fprintf(printer->outFile, "\t%s%llu [label=<", node, nodeCount);
+    fprintf(printer->outFile, "\t%.*s%llu [label=<", STR_FMT(node), nodeCount);
 
     va_start(args, format);
     vfprintf(printer->outFile, format, args);
@@ -65,25 +195,28 @@ static void ast_printer_print_node(ast_printer *printer, char *node,
 }
 
 /**
- * @brief TODO
- * @param printer
- * @param node
- * @param nodeCount
+ * @brief Print a graph node start edge.
+ * @param[in] printer The printer to print to
+ * @param[in] node The node str to use
+ * @param[in] port The port to use
+ * @param[in] nodeCount The node count to use
  */
-static void ast_printer_print_link_left(ast_printer *printer, char *node,
-                                        unsigned long long nodeCount) {
-    fprintf(printer->outFile, "\t%s%llu -> ", node, nodeCount);
+static inline void ast_printer_print_link_left(ast_printer *printer, str *node,
+                                               char *port,
+                                               unsigned long long nodeCount) {
+    fprintf(printer->outFile, "\t%.*s%llu:%s%llu -> ", STR_FMT(node), nodeCount,
+            port, nodeCount);
 }
 
 /**
- * @brief TODO
- * @param printer
- * @param node
- * @param nodeCount
+ * @brief Print a graph node end edge.
+ * @param[in] printer The printer to print to
+ * @param[in] node The node str to use
+ * @param[in] nodeCount The node count to use
  */
-static void ast_printer_print_link_right(ast_printer *printer, char *node,
-                                         unsigned long long nodeCount) {
-    fprintf(printer->outFile, "%s%llu;\n", node, nodeCount);
+static inline void ast_printer_print_link_right(ast_printer *printer, str *node,
+                                                unsigned long long nodeCount) {
+    fprintf(printer->outFile, "%.*s%llu;\n", STR_FMT(node), nodeCount);
 }
 
 /**
@@ -96,18 +229,15 @@ static void ast_program_printer(ast_program *programNode, void *args) {
     unsigned long long nodeCount = printer->nodeCount;
     list_node *node              = NULL;
 
-    str title    = STR_STATIC_INIT("ast_program");
-    str subtitle = STR_STATIC_INIT("classes");
+    str title = STR_STATIC_INIT("ast_program");
 
-    ast_printer_print_node(printer, "program", nodeCount,
-                           TABLE_BEGIN TITLE_ROW TABLE_END, STR_FMT(&title));
-    ast_printer_print_link_left(printer, "program", nodeCount);
-    ast_printer_print_link_right(printer, "program_classes", nodeCount);
-    ast_printer_print_node(printer, "program_classes", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitle));
+    ast_printer_print_node(printer, &title, nodeCount,
+                           TABLE_BEGIN TITLE_ROW KEY_PORT TABLE_END,
+                           STR_FMT(&title), "program_classes", nodeCount,
+                           "classes");
     for (node = programNode->classes->head; node; node = node->next) {
-        ast_printer_print_link_left(printer, "program_classes", nodeCount);
+        ast_printer_print_link_left(printer, &title, "program_classes",
+                                    nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, (ast_class *) node->element,
                               args);
     }
@@ -123,11 +253,7 @@ static void ast_class_printer(ast_class *classNode, void *args) {
     unsigned long long nodeCount = printer->nodeCount++;
     list_node *node              = NULL;
 
-    str title                  = STR_STATIC_INIT("ast_class");
-    str subtitleParameters     = STR_STATIC_INIT("parameters");
-    str subtitleSuperClassArgs = STR_STATIC_INIT("superClassArgs");
-    str subtitleProperties     = STR_STATIC_INIT("properties");
-    str subtitleFunctions      = STR_STATIC_INIT("functions");
+    str title = STR_STATIC_INIT("ast_class");
 
     str className      = STR_NULL_INIT;
     str superClassName = STR_NULL_INIT;
@@ -137,61 +263,48 @@ static void ast_class_printer(ast_class *classNode, void *args) {
         superClassName = classNode->superClass->identifier;
     }
 
-    ast_printer_print_link_right(printer, "class", nodeCount);
+    ast_printer_print_link_right(printer, &title, nodeCount);
     ast_printer_print_node(
-            printer, "class", nodeCount,
-            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_STR_VALUE TABLE_END,
-            STR_FMT(&title), "name", STR_FMT(&className), "super",
-            STR_FMT(&superClassName));
+            printer, &title, nodeCount,
+            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_PORT KEY_STR_VALUE KEY_PORT
+                    KEY_PORT KEY_PORT TABLE_END,
+            STR_FMT(&title), "name", STR_FMT(&className), "class_parameters",
+            nodeCount, "parameters", "super", STR_FMT(&superClassName),
+            "class_super_class_args", nodeCount, "superClassArgs",
+            "class_properties", nodeCount, "properties", "class_functions",
+            nodeCount, "functions");
 
-    ast_printer_print_link_left(printer, "class", nodeCount);
-    ast_printer_print_link_right(printer, "class_parameters", nodeCount);
-    ast_printer_print_node(printer, "class_parameters", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleParameters));
     if (classNode->parameters) {
         for (node = classNode->parameters->head; node; node = node->next) {
-            ast_printer_print_link_left(printer, "class_parameters", nodeCount);
+            ast_printer_print_link_left(printer, &title, "class_parameters",
+                                        nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks,
                                   (ast_formal *) node->element, args);
         }
     }
 
-    ast_printer_print_link_left(printer, "class", nodeCount);
-    ast_printer_print_link_right(printer, "class_super_class_args", nodeCount);
-    ast_printer_print_node(printer, "class_super_class_args", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleSuperClassArgs));
     if (classNode->superClassArgs) {
         for (node = classNode->superClassArgs->head; node; node = node->next) {
-            ast_printer_print_link_left(printer, "class_super_class_args",
-                                        nodeCount);
+            ast_printer_print_link_left(printer, &title,
+                                        "class_super_class_args", nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks,
                                   (ast_expression *) node->element, args);
         }
     }
 
-    ast_printer_print_link_left(printer, "class", nodeCount);
-    ast_printer_print_link_right(printer, "class_properties", nodeCount);
-    ast_printer_print_node(printer, "class_properties", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleProperties));
     if (classNode->properties) {
         for (node = classNode->properties->head; node; node = node->next) {
-            ast_printer_print_link_left(printer, "class_properties", nodeCount);
+            ast_printer_print_link_left(printer, &title, "class_properties",
+                                        nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks,
                                   (ast_property *) node->element, args);
         }
     }
 
-    ast_printer_print_link_left(printer, "class", nodeCount);
-    ast_printer_print_link_right(printer, "class_functions", nodeCount);
-    ast_printer_print_node(printer, "class_functions", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleFunctions));
     if (classNode->functions) {
         for (node = classNode->functions->head; node; node = node->next) {
-            ast_printer_print_link_left(printer, "class_functions", nodeCount);
+            ast_printer_print_link_left(printer, &title, "class_functions",
+                                        nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks,
                                   (ast_function *) node->element, args);
         }
@@ -217,13 +330,13 @@ static void ast_formal_printer(ast_formal *formalNode, void *args) {
     }
     if (formalNode->type) { type = formalNode->type->identifier; }
 
-    ast_printer_print_link_right(printer, "formal", nodeCount);
-    ast_printer_print_node(printer, "formal", nodeCount,
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
                            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_STR_VALUE
                                    KEY_STRING_VALUE TABLE_END,
                            STR_FMT(&title), "identifier", STR_FMT(&identifier),
                            "type", STR_FMT(&type), "isLazy",
-                           (formalNode->isLazy ? "true" : "false"));
+                           ast_printer_bool_string(formalNode->isLazy));
 }
 
 /**
@@ -243,13 +356,16 @@ static void ast_property_printer(ast_property *propertyNode, void *args) {
     if (propertyNode->name) { name = propertyNode->name->identifier; }
     if (propertyNode->type) { type = propertyNode->type->identifier; }
 
-    ast_printer_print_link_right(printer, "property", nodeCount);
-    ast_printer_print_node(
-            printer, "property", nodeCount,
-            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_STR_VALUE TABLE_END,
-            STR_FMT(&title), "name", STR_FMT(&name), "type", STR_FMT(&type));
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
+                           TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_STR_VALUE
+                                   KEY_PORT TABLE_END,
+                           STR_FMT(&title), "name", STR_FMT(&name), "type",
+                           STR_FMT(&type), "property_value", nodeCount,
+                           "value");
     if (propertyNode->value) {
-        ast_printer_print_link_left(printer, "property", nodeCount);
+        ast_printer_print_link_left(printer, &title, "property_value",
+                                    nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, propertyNode->value, args);
     }
 }
@@ -264,13 +380,10 @@ static void ast_function_printer(ast_function *functionNode, void *args) {
     unsigned long long nodeCount = printer->nodeCount++;
     list_node *node              = NULL;
 
-    str title              = STR_STATIC_INIT("ast_function");
-    str subtitleParameters = STR_STATIC_INIT("parameters");
-    str subtitleBody       = STR_STATIC_INIT("body");
+    str title = STR_STATIC_INIT("ast_function");
 
     str name       = STR_NULL_INIT;
     str returnType = STR_NULL_INIT;
-    str visibility = STR_NULL_INIT;
 
     if (functionNode->functionName) {
         name = functionNode->functionName->identifier;
@@ -279,51 +392,33 @@ static void ast_function_printer(ast_function *functionNode, void *args) {
         returnType = functionNode->returnType->identifier;
     }
 
-    switch (functionNode->visibility) {
-        case AST_FUNCTION_VISIBILITY_PUBLIC:
-            STR_STATIC_SET(&visibility, "public");
-            break;
-        case AST_FUNCTION_VISIBILITY_PROTECTED:
-            STR_STATIC_SET(&visibility, "protected");
-            break;
-        case AST_FUNCTION_VISIBILITY_PRIVATE:
-            STR_STATIC_SET(&visibility, "private");
-            break;
-    }
-
-    ast_printer_print_link_right(printer, "function", nodeCount);
+    ast_printer_print_link_right(printer, &title, nodeCount);
     ast_printer_print_node(
-            printer, "function", nodeCount,
-            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_STR_VALUE KEY_STR_VALUE
+            printer, &title, nodeCount,
+            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_PORT KEY_STR_VALUE
                     KEY_STRING_VALUE KEY_STRING_VALUE KEY_STRING_VALUE
-                            TABLE_END,
-            STR_FMT(&title), "name", STR_FMT(&name), "returnType",
-            STR_FMT(&returnType), "visibility", STR_FMT(&visibility),
-            "isAbstract", (functionNode->isAbstract ? "true" : "false"),
-            "isFinal", (functionNode->isFinal ? "true" : "false"),
-            "isOverwrite", (functionNode->isOverwrite ? "true" : "false"));
+                            KEY_STRING_VALUE KEY_PORT TABLE_END,
+            STR_FMT(&title), "name", STR_FMT(&name), "function_parameters",
+            nodeCount, "parameters", "returnType", STR_FMT(&returnType),
+            "visibility",
+            ast_printer_function_visibility_string(functionNode->visibility),
+            "isAbstract", ast_printer_bool_string(functionNode->isAbstract),
+            "isFinal", ast_printer_bool_string(functionNode->isFinal),
+            "isOverwrite", ast_printer_bool_string(functionNode->isOverwrite),
+            "function_body", nodeCount, "body");
 
-    ast_printer_print_link_left(printer, "function", nodeCount);
-    ast_printer_print_link_right(printer, "function_parameters", nodeCount);
-    ast_printer_print_node(printer, "function_parameters", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleParameters));
     if (functionNode->parameters) {
         for (node = functionNode->parameters->head; node; node = node->next) {
-            ast_printer_print_link_right(printer, "function_parameters",
-                                         nodeCount);
+            ast_printer_print_link_left(printer, &title, "function_parameters",
+                                        nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks,
                                   (ast_formal *) node->element, args);
         }
     }
 
-    ast_printer_print_link_left(printer, "function", nodeCount);
-    ast_printer_print_link_right(printer, "function_body", nodeCount);
-    ast_printer_print_node(printer, "function_body", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleBody));
     if (functionNode->body) {
-        ast_printer_print_link_left(printer, "function_body", nodeCount);
+        ast_printer_print_link_left(printer, &title, "function_body",
+                                    nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, functionNode->body, args);
     }
 }
@@ -340,53 +435,22 @@ static void ast_assignment_printer(ast_assignment *assignmentNode, void *args) {
     str title = STR_STATIC_INIT("ast_assignment");
 
     str identifier = STR_NULL_INIT;
-    str operator   = STR_NULL_INIT;
 
     if (assignmentNode->identifier) {
         identifier = assignmentNode->identifier->identifier;
     }
 
-    switch (assignmentNode->operator) {
-        case AST_ASSIGNMENT_OPERATOR_EQUAL:
-            STR_STATIC_SET(&operator, "=");
-            break;
-        case AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL:
-            STR_STATIC_SET(&operator, "+=");
-            break;
-        case AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL:
-            STR_STATIC_SET(&operator, "-=");
-            break;
-        case AST_ASSIGNMENT_OPERATOR_TIMES_EQUAL:
-            STR_STATIC_SET(&operator, "*=");
-            break;
-        case AST_ASSIGNMENT_OPERATOR_DIV_EQUAL:
-            STR_STATIC_SET(&operator, "/=");
-            break;
-        case AST_ASSIGNMENT_OPERATOR_MODULO_EQUAL:
-            STR_STATIC_SET(&operator, "%=");
-            break;
-        case AST_ASSIGNMENT_OPERATOR_AND_EQUAL:
-            STR_STATIC_SET(&operator, "&=");
-            break;
-        case AST_ASSIGNMENT_OPERATOR_CARET_EQUAL:
-            STR_STATIC_SET(&operator, "^=");
-            break;
-        case AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL:
-            STR_STATIC_SET(&operator, "~=");
-            break;
-        case AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL:
-            STR_STATIC_SET(&operator, "|=");
-            break;
-    }
-
-    ast_printer_print_link_right(printer, "assignment", nodeCount);
+    ast_printer_print_link_right(printer, &title, nodeCount);
     ast_printer_print_node(
-            printer, "assignment", nodeCount,
-            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_STR_VALUE TABLE_END,
+            printer, &title, nodeCount,
+            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_STRING_VALUE KEY_PORT
+                    TABLE_END,
             STR_FMT(&title), "identifier", STR_FMT(&identifier), "operator",
-            STR_FMT(&operator));
+            ast_printer_assignment_operator(assignmentNode->operator),
+            "assignment_value", nodeCount, "value");
     if (assignmentNode->value) {
-        ast_printer_print_link_left(printer, "assignment", nodeCount);
+        ast_printer_print_link_left(printer, &title, "assignment_value",
+                                    nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, assignmentNode->value, args);
     }
 }
@@ -403,8 +467,8 @@ static void ast_string_literal_printer(ast_string_literal *stringLiteralNode,
 
     str title = STR_STATIC_INIT("ast_string_literal");
 
-    ast_printer_print_link_right(printer, "string_literal", nodeCount);
-    ast_printer_print_node(printer, "string_literal", nodeCount,
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
                            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE TABLE_END,
                            STR_FMT(&title), "value",
                            STR_FMT(&stringLiteralNode->value));
@@ -422,8 +486,8 @@ static void ast_integer_literal_printer(ast_integer_literal *integerLiteralNode,
 
     str title = STR_STATIC_INIT("ast_integer_literal");
 
-    ast_printer_print_link_right(printer, "integer_literal", nodeCount);
-    ast_printer_print_node(printer, "integer_literal", nodeCount,
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
                            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE TABLE_END,
                            STR_FMT(&title), "value",
                            STR_FMT(&integerLiteralNode->value));
@@ -442,8 +506,8 @@ static void ast_null_literal_printer(ast_null_literal *nullLiteralNode,
 
     str title = STR_STATIC_INIT("ast_null_literal");
 
-    ast_printer_print_link_right(printer, "null_literal", nodeCount);
-    ast_printer_print_node(printer, "null_literal", nodeCount,
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
                            TABLE_BEGIN TITLE_ROW TABLE_END, STR_FMT(&title));
 }
 
@@ -459,11 +523,11 @@ static void ast_boolean_literal_printer(ast_boolean_literal *booleanLiteralNode,
 
     str title = STR_STATIC_INIT("ast_boolean_literal");
 
-    ast_printer_print_link_right(printer, "boolean_literal", nodeCount);
-    ast_printer_print_node(printer, "boolean_literal", nodeCount,
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
                            TABLE_BEGIN TITLE_ROW KEY_STRING_VALUE TABLE_END,
                            STR_FMT(&title), "value",
-                           (booleanLiteralNode->value ? "true" : "false"));
+                           ast_printer_bool_string(booleanLiteralNode->value));
 }
 
 /**
@@ -479,8 +543,8 @@ static void ast_this_literal_printer(ast_this_literal *thisLiteralNode,
 
     str title = STR_STATIC_INIT("ast_this_literal");
 
-    ast_printer_print_link_right(printer, "this_literal", nodeCount);
-    ast_printer_print_node(printer, "this_literal", nodeCount,
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
                            TABLE_BEGIN TITLE_ROW TABLE_END, STR_FMT(&title));
 }
 
@@ -499,8 +563,8 @@ static void ast_reference_printer(ast_reference *referenceNode, void *args) {
 
     if (referenceNode->value) { identifier = referenceNode->value->identifier; }
 
-    ast_printer_print_link_right(printer, "reference", nodeCount);
-    ast_printer_print_node(printer, "reference", nodeCount,
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
                            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE TABLE_END,
                            STR_FMT(&title), "value", STR_FMT(&identifier));
 }
@@ -520,12 +584,14 @@ static void ast_cast_printer(ast_cast *castNode, void *args) {
 
     if (castNode->type) { type = castNode->type->identifier; }
 
-    ast_printer_print_link_right(printer, "cast", nodeCount);
-    ast_printer_print_node(printer, "cast", nodeCount,
-                           TABLE_BEGIN TITLE_ROW KEY_STR_VALUE TABLE_END,
-                           STR_FMT(&title), "type", STR_FMT(&type));
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(
+            printer, &title, nodeCount,
+            TABLE_BEGIN TITLE_ROW KEY_PORT KEY_STR_VALUE TABLE_END,
+            STR_FMT(&title), "cast_object", nodeCount, "object", "type",
+            STR_FMT(&type));
     if (castNode->object) {
-        ast_printer_print_link_left(printer, "cast", nodeCount);
+        ast_printer_print_link_left(printer, &title, "cast_object", nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, castNode->object, args);
     }
 }
@@ -540,21 +606,16 @@ static void ast_block_printer(ast_block *blockNode, void *args) {
     unsigned long long nodeCount = printer->nodeCount++;
     list_node *node              = NULL;
 
-    str title              = STR_STATIC_INIT("ast_block");
-    str subtitleParameters = STR_STATIC_INIT("expressions");
+    str title = STR_STATIC_INIT("ast_block");
 
-    ast_printer_print_link_right(printer, "block", nodeCount);
-    ast_printer_print_node(printer, "block", nodeCount,
-                           TABLE_BEGIN TITLE_ROW TABLE_END, STR_FMT(&title));
-
-    ast_printer_print_link_left(printer, "block", nodeCount);
-    ast_printer_print_link_right(printer, "block_expressions", nodeCount);
-    ast_printer_print_node(printer, "block_expressions", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleParameters));
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
+                           TABLE_BEGIN TITLE_ROW KEY_PORT TABLE_END,
+                           STR_FMT(&title), "block_expressions", nodeCount,
+                           "expressions");
     if (blockNode->expressions) {
         for (node = blockNode->expressions->head; node; node = node->next) {
-            ast_printer_print_link_left(printer, "block_expressions",
+            ast_printer_print_link_left(printer, &title, "block_expressions",
                                         nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks,
                                   (ast_formal *) node->element, args);
@@ -574,8 +635,7 @@ ast_constructor_call_printer(ast_constructor_call *constructorCallNode,
     unsigned long long nodeCount = printer->nodeCount++;
     list_node *node              = NULL;
 
-    str title        = STR_STATIC_INIT("ast_constructor_call");
-    str subtitleArgs = STR_STATIC_INIT("args");
+    str title = STR_STATIC_INIT("ast_constructor_call");
 
     str name = STR_NULL_INIT;
 
@@ -583,20 +643,17 @@ ast_constructor_call_printer(ast_constructor_call *constructorCallNode,
         name = constructorCallNode->name->identifier;
     }
 
-    ast_printer_print_link_right(printer, "constructor_call", nodeCount);
-    ast_printer_print_node(printer, "constructor_call", nodeCount,
-                           TABLE_BEGIN TITLE_ROW KEY_STR_VALUE TABLE_END,
-                           STR_FMT(&title), "name", STR_FMT(&name));
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(
+            printer, &title, nodeCount,
+            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_PORT TABLE_END,
+            STR_FMT(&title), "name", STR_FMT(&name), "constructor_call_args",
+            nodeCount, "args");
 
-    ast_printer_print_link_left(printer, "constructor_call", nodeCount);
-    ast_printer_print_link_right(printer, "constructor_call_args", nodeCount);
-    ast_printer_print_node(printer, "constructor_call_args", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleArgs));
     if (constructorCallNode->args) {
         for (node = constructorCallNode->args->head; node; node = node->next) {
-            ast_printer_print_link_left(printer, "constructor_call_args",
-                                        nodeCount);
+            ast_printer_print_link_left(printer, &title,
+                                        "constructor_call_args", nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks,
                                   (ast_expression *) node->element, args);
         }
@@ -613,35 +670,25 @@ static void ast_let_printer(ast_let *letNode, void *args) {
     unsigned long long nodeCount = printer->nodeCount++;
     list_node *node              = NULL;
 
-    str title                   = STR_STATIC_INIT("ast_let");
-    str subtitleInitializations = STR_STATIC_INIT("initializations");
-    str subtitleBody            = STR_STATIC_INIT("body");
+    str title = STR_STATIC_INIT("ast_let");
 
-    ast_printer_print_link_right(printer, "let", nodeCount);
-    ast_printer_print_node(printer, "let", nodeCount,
-                           TABLE_BEGIN TITLE_ROW TABLE_END, STR_FMT(&title));
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
+                           TABLE_BEGIN TITLE_ROW KEY_PORT KEY_PORT TABLE_END,
+                           STR_FMT(&title), "let_initializations", nodeCount,
+                           "initializations", "let_body", nodeCount, "body");
 
-    ast_printer_print_link_left(printer, "let", nodeCount);
-    ast_printer_print_link_right(printer, "let_initializations", nodeCount);
-    ast_printer_print_node(printer, "let_initializations", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleInitializations));
     if (letNode->initializations) {
         for (node = letNode->initializations->head; node; node = node->next) {
-            ast_printer_print_link_left(printer, "let_initializations",
+            ast_printer_print_link_left(printer, &title, "let_initializations",
                                         nodeCount);
             AST_EXECUTE_CALLBACKS(printer->callbacks,
                                   (ast_expression *) node->element, args);
         }
     }
 
-    ast_printer_print_link_left(printer, "let", nodeCount);
-    ast_printer_print_link_right(printer, "let_body", nodeCount);
-    ast_printer_print_node(printer, "let_body", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleBody));
     if (letNode->body) {
-        ast_printer_print_link_left(printer, "let_body", nodeCount);
+        ast_printer_print_link_left(printer, &title, "let_body", nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, letNode->body, args);
     }
 }
@@ -668,15 +715,16 @@ static void ast_initialization_printer(ast_initialization *initializationNode,
         type = initializationNode->type->identifier;
     }
 
-    ast_printer_print_link_right(printer, "initialization", nodeCount);
-    ast_printer_print_node(
-            printer, "initialization", nodeCount,
-            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_STR_VALUE TABLE_END,
-            STR_FMT(&title), "identifier", STR_FMT(&identifier), "type",
-            STR_FMT(&type));
-
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
+                           TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_STR_VALUE
+                                   KEY_PORT TABLE_END,
+                           STR_FMT(&title), "identifier", STR_FMT(&identifier),
+                           "type", STR_FMT(&type), "initialization_value",
+                           nodeCount, "value");
     if (initializationNode->value) {
-        ast_printer_print_link_left(printer, "initialization", nodeCount);
+        ast_printer_print_link_left(printer, &title, "initialization_value",
+                                    nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, initializationNode->value,
                               args);
     }
@@ -693,90 +741,26 @@ ast_binary_expression_printer(ast_binary_expression *binaryExpressionNode,
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
 
-    str title         = STR_STATIC_INIT("ast_binary_expression");
-    str subtitleLeft  = STR_STATIC_INIT("left");
-    str subtitleRight = STR_STATIC_INIT("right");
+    str title = STR_STATIC_INIT("ast_binary_expression");
 
-    str operator= STR_NULL_INIT;
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(
+            printer, &title, nodeCount,
+            TABLE_BEGIN TITLE_ROW KEY_PORT KEY_STRING_VALUE KEY_PORT TABLE_END,
+            STR_FMT(&title), "binary_expression_left", nodeCount, "left",
+            "operator",
+            ast_printer_binary_operator_string(binaryExpressionNode->operator),
+            "binary_expression_right", nodeCount, "right");
 
-    switch (binaryExpressionNode->operator) {
-        case AST_BINARY_OPERATOR_PLUS:
-            STR_STATIC_SET(&operator, "+");
-            break;
-        case AST_BINARY_OPERATOR_MINUS:
-            STR_STATIC_SET(&operator, "-");
-            break;
-        case AST_BINARY_OPERATOR_TIMES:
-            STR_STATIC_SET(&operator, "*");
-            break;
-        case AST_BINARY_OPERATOR_DIV:
-            STR_STATIC_SET(&operator, "/");
-            break;
-        case AST_BINARY_OPERATOR_MODULO:
-            STR_STATIC_SET(&operator, "%");
-            break;
-        case AST_BINARY_OPERATOR_AND:
-            STR_STATIC_SET(&operator, "&");
-            break;
-        case AST_BINARY_OPERATOR_CARET:
-            STR_STATIC_SET(&operator, "^");
-            break;
-        case AST_BINARY_OPERATOR_TILDE:
-            STR_STATIC_SET(&operator, "~");
-            break;
-        case AST_BINARY_OPERATOR_PIPE:
-            STR_STATIC_SET(&operator, "|");
-            break;
-        case AST_BINARY_OPERATOR_LESS:
-            STR_STATIC_SET(&operator, "<");
-            break;
-        case AST_BINARY_OPERATOR_LESS_EQUAL:
-            STR_STATIC_SET(&operator, "<=");
-            break;
-        case AST_BINARY_OPERATOR_GREATER:
-            STR_STATIC_SET(&operator, ">");
-            break;
-        case AST_BINARY_OPERATOR_GREATER_EQUAL:
-            STR_STATIC_SET(&operator, ">=");
-            break;
-        case AST_BINARY_OPERATOR_EQUAL:
-            STR_STATIC_SET(&operator, "==");
-            break;
-        case AST_BINARY_OPERATOR_NOT_EQUAL:
-            STR_STATIC_SET(&operator, "!=");
-            break;
-        case AST_BINARY_OPERATOR_DOUBLE_AND:
-            STR_STATIC_SET(&operator, "&&");
-            break;
-        case AST_BINARY_OPERATOR_DOUBLE_PIPE:
-            STR_STATIC_SET(&operator, "||");
-            break;
-    }
-
-    ast_printer_print_link_right(printer, "binary_expression", nodeCount);
-    ast_printer_print_node(printer, "binary_expression", nodeCount,
-                           TABLE_BEGIN TITLE_ROW KEY_STR_VALUE TABLE_END,
-                           STR_FMT(&title), "operator", STR_FMT(&operator));
-
-    ast_printer_print_link_left(printer, "binary_expression", nodeCount);
-    ast_printer_print_link_right(printer, "binary_expression_left", nodeCount);
-    ast_printer_print_node(printer, "binary_expression_left", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleLeft));
     if (binaryExpressionNode->left) {
-        ast_printer_print_link_left(printer, "binary_expression_left",
+        ast_printer_print_link_left(printer, &title, "binary_expression_left",
                                     nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, binaryExpressionNode->left,
                               args);
     }
 
-    ast_printer_print_link_left(printer, "binary_expression", nodeCount);
-    ast_printer_print_link_right(printer, "binary_expression_right", nodeCount);
-    ast_printer_print_node(printer, "binary_expression_right", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleRight));
     if (binaryExpressionNode->right) {
-        ast_printer_print_link_left(printer, "binary_expression_right",
+        ast_printer_print_link_left(printer, &title, "binary_expression_right",
                                     nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, binaryExpressionNode->right,
                               args);
@@ -794,40 +778,19 @@ ast_unary_expression_printer(ast_unary_expression *unaryExpressionNode,
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
 
-    str title              = STR_STATIC_INIT("ast_unary_expression");
-    str subtitleExpression = STR_STATIC_INIT("unary_expression_expression");
+    str title = STR_STATIC_INIT("ast_unary_expression");
 
-    str operator= STR_NULL_INIT;
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(
+            printer, &title, nodeCount,
+            TABLE_BEGIN TITLE_ROW KEY_STRING_VALUE KEY_PORT TABLE_END,
+            STR_FMT(&title), "operator",
+            ast_printer_unary_operator_string(unaryExpressionNode->operator),
+            "unary_expression_expression", nodeCount, "expression");
 
-    switch (unaryExpressionNode->operator) {
-        case AST_UNARY_OPERATOR_MINUS:
-            STR_STATIC_SET(&operator, "-");
-            break;
-        case AST_UNARY_OPERATOR_NOT:
-            STR_STATIC_SET(&operator, "!");
-            break;
-        case AST_UNARY_OPERATOR_DOUBLE_PLUS:
-            STR_STATIC_SET(&operator, "++");
-            break;
-        case AST_UNARY_OPERATOR_DOUBLE_MINUS:
-            STR_STATIC_SET(&operator, "--");
-            break;
-    }
-
-    ast_printer_print_link_right(printer, "unary_expression", nodeCount);
-    ast_printer_print_node(printer, "unary_expression", nodeCount,
-                           TABLE_BEGIN TITLE_ROW KEY_STR_VALUE TABLE_END,
-                           STR_FMT(&title), "operator", STR_FMT(&operator));
-
-    ast_printer_print_link_left(printer, "unary_expression", nodeCount);
-    ast_printer_print_link_right(printer, "unary_expression_expression",
-                                 nodeCount);
-    ast_printer_print_node(printer, "unary_expression_expression", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleExpression));
     if (unaryExpressionNode->expression) {
-        ast_printer_print_link_left(printer, "unary_expression_expression",
-                                    nodeCount);
+        ast_printer_print_link_left(printer, &title,
+                                    "unary_expression_expression", nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks,
                               unaryExpressionNode->expression, args);
     }
@@ -842,46 +805,40 @@ static void ast_if_else_printer(ast_if_else *ifElseNode, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
 
-    str title              = STR_STATIC_INIT("ast_if_else");
-    str subtitleCondition  = STR_STATIC_INIT("condition");
-    str subtitleThenBranch = STR_STATIC_INIT("thenBranch");
-    str subtitleElseBranch = STR_STATIC_INIT("elseBranch");
+    str title = STR_STATIC_INIT("ast_if_else");
 
-    ast_printer_print_link_right(printer, "if_else", nodeCount);
-    ast_printer_print_node(printer, "if_else", nodeCount,
-                           TABLE_BEGIN TITLE_ROW TABLE_END, STR_FMT(&title));
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    if (!ifElseNode->elseBranch) {
+        ast_printer_print_node(
+                printer, &title, nodeCount,
+                TABLE_BEGIN TITLE_ROW KEY_PORT KEY_PORT TABLE_END,
+                STR_FMT(&title), "if_else_condition", nodeCount, "condition",
+                "if_else_then_branch", nodeCount, "thenBranch");
+    } else {
+        ast_printer_print_node(
+                printer, &title, nodeCount,
+                TABLE_BEGIN TITLE_ROW KEY_PORT KEY_PORT KEY_PORT TABLE_END,
+                STR_FMT(&title), "if_else_condition", nodeCount, "condition",
+                "if_else_then_branch", nodeCount, "thenBranch",
+                "if_else_else_branch", nodeCount, "elseBranch");
+    }
 
-    ast_printer_print_link_left(printer, "if_else", nodeCount);
-    ast_printer_print_link_right(printer, "if_else_condition", nodeCount);
-    ast_printer_print_node(printer, "if_else_condition", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleCondition));
     if (ifElseNode->condition) {
-        ast_printer_print_link_left(printer, "if_else_condition", nodeCount);
+        ast_printer_print_link_left(printer, &title, "if_else_condition",
+                                    nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, ifElseNode->condition, args);
     }
 
-    ast_printer_print_link_left(printer, "if_else", nodeCount);
-    ast_printer_print_link_right(printer, "if_else_then", nodeCount);
-    ast_printer_print_node(printer, "if_else_then", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleThenBranch));
     if (ifElseNode->thenBranch) {
-        ast_printer_print_link_left(printer, "if_else_then", nodeCount);
+        ast_printer_print_link_left(printer, &title, "if_else_then_branch",
+                                    nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, ifElseNode->thenBranch, args);
     }
 
     if (ifElseNode->elseBranch) {
-        ast_printer_print_link_left(printer, "if_else", nodeCount);
-        ast_printer_print_link_right(printer, "if_else_else", nodeCount);
-        ast_printer_print_node(printer, "if_else_else", nodeCount,
-                               TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                               STR_FMT(&subtitleElseBranch));
-        if (ifElseNode->thenBranch) {
-            ast_printer_print_link_left(printer, "if_else_else", nodeCount);
-            AST_EXECUTE_CALLBACKS(printer->callbacks, ifElseNode->elseBranch,
-                                  args);
-        }
+        ast_printer_print_link_left(printer, &title, "if_else_else_branch",
+                                    nodeCount);
+        AST_EXECUTE_CALLBACKS(printer->callbacks, ifElseNode->elseBranch, args);
     }
 }
 
@@ -894,32 +851,67 @@ static void ast_while_printer(ast_while *whileNode, void *args) {
     ast_printer *printer         = (ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
 
-    str title             = STR_STATIC_INIT("ast_while");
-    str subtitleCondition = STR_STATIC_INIT("condition");
-    str subtitleBody      = STR_STATIC_INIT("body");
+    str title = STR_STATIC_INIT("ast_while");
 
-    ast_printer_print_link_right(printer, "while", nodeCount);
-    ast_printer_print_node(printer, "while", nodeCount,
-                           TABLE_BEGIN TITLE_ROW TABLE_END, STR_FMT(&title));
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(printer, &title, nodeCount,
+                           TABLE_BEGIN TITLE_ROW KEY_PORT KEY_PORT TABLE_END,
+                           STR_FMT(&title), "while_condition", nodeCount,
+                           "condition", "while_body", nodeCount, "body");
 
-    ast_printer_print_link_left(printer, "while", nodeCount);
-    ast_printer_print_link_right(printer, "while_condition", nodeCount);
-    ast_printer_print_node(printer, "while_condition", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleCondition));
     if (whileNode->condition) {
-        ast_printer_print_link_left(printer, "while_condition", nodeCount);
+        ast_printer_print_link_left(printer, &title, "while_condition",
+                                    nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, whileNode->condition, args);
     }
 
-    ast_printer_print_link_left(printer, "while", nodeCount);
-    ast_printer_print_link_right(printer, "while_body", nodeCount);
-    ast_printer_print_node(printer, "while_body", nodeCount,
-                           TABLE_BEGIN SUBTITLE_ROW TABLE_END,
-                           STR_FMT(&subtitleBody));
     if (whileNode->body) {
-        ast_printer_print_link_left(printer, "while_body", nodeCount);
+        ast_printer_print_link_left(printer, &title, "while_body", nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, whileNode->body, args);
+    }
+}
+
+/**
+ * @brief Print the Function Call AST node.
+ * @param[in] functionCallNode The Function Call AST node to print
+ * @param[in] args The extra args for the callback call
+ */
+static void ast_function_call_printer(ast_function_call *functionCallNode,
+                                      void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount++;
+    list_node *node              = NULL;
+
+    str title = STR_STATIC_INIT("ast_function_call");
+
+    str functionName = STR_NULL_INIT;
+
+    if (functionCallNode->functionName) {
+        functionName = functionCallNode->functionName->identifier;
+    }
+
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(
+            printer, &title, nodeCount,
+            TABLE_BEGIN TITLE_ROW KEY_PORT KEY_STR_VALUE KEY_PORT TABLE_END,
+            STR_FMT(&title), "function_call_object", nodeCount, "object",
+            "functionName", STR_FMT(&functionName), "function_call_args",
+            nodeCount, "args");
+
+    if (functionCallNode->object) {
+        ast_printer_print_link_left(printer, &title, "function_call_object",
+                                    nodeCount);
+        AST_EXECUTE_CALLBACKS(printer->callbacks, functionCallNode->object,
+                              args);
+    }
+
+    if (functionCallNode->args) {
+        for (node = functionCallNode->args->head; node; node = node->next) {
+            ast_printer_print_link_left(printer, &title, "function_call_args",
+                                        nodeCount);
+            AST_EXECUTE_CALLBACKS(printer->callbacks,
+                                  (ast_expression *) node->element, args);
+        }
     }
 }
 
@@ -976,6 +968,7 @@ static void ast_node_printer(ast_node *node, void *args) {
                                                  args);
                     break;
                 case AST_EXPRESSION_TYPE_FUNCTION_CALL:
+                    ast_function_call_printer((ast_function_call *) node, args);
                     break;
                 case AST_EXPRESSION_TYPE_SUPER_FUNCTION_CALL:
                     break;
