@@ -86,14 +86,14 @@ static const char *log_level_string(int level) {
 /**
  * @brief TODO
  */
-static void log_lock(void) {
+static inline void log_lock(void) {
     if (L.lockFn) { L.lockFn(true, L.user_data); }
 }
 
 /**
  * @brief TODO
  */
-static void log_unlock(void) {
+static inline void log_unlock(void) {
     if (L.lockFn) { L.lockFn(false, L.user_data); }
 }
 
@@ -141,7 +141,7 @@ static void log_file_callback(log_event *event) {
  * @param event
  * @param user_data
  */
-static void log_init_event(log_event *event, void *user_data) {
+static inline void log_init_event(log_event *event, void *user_data) {
     if (!event->time) {
         time_t t    = time(NULL);
         event->time = localtime(&t);
