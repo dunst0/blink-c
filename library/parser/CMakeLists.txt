@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 
 include("project-meta-info.in")
 
@@ -40,6 +40,6 @@ target_sources(parser
         include/waitui/parser.h
         )
 
-target_include_directories(parser PUBLIC include PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include)
+target_include_directories(parser PUBLIC include PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/include/waitui)
 
 target_link_libraries(parser PUBLIC ast utils log)
