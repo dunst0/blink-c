@@ -38,6 +38,8 @@
 //  Public functions
 // -----------------------------------------------------------------------------
 
+CREATE_LIST_TYPE(IMPLEMENTATION, ast_namespace, namespace)
+CREATE_LIST_TYPE(IMPLEMENTATION, ast_import, import)
 CREATE_LIST_TYPE(IMPLEMENTATION, ast_class, class)
 CREATE_LIST_TYPE(IMPLEMENTATION, ast_expression, expression)
 CREATE_LIST_TYPE(IMPLEMENTATION, ast_formal, formal)
@@ -76,6 +78,12 @@ void ast_definition_destroy(ast_definition **this) {
             break;
         case AST_DEFINITION_TYPE_PROGRAM:
             ast_program_destroy((ast_program **) this);
+            break;
+        case AST_DEFINITION_TYPE_IMPORT:
+            ast_import_destroy((ast_import **) this);
+            break;
+        case AST_DEFINITION_TYPE_NAMESPACE:
+            ast_namespace_destroy((ast_namespace **) this);
             break;
     }
 }
@@ -150,12 +158,12 @@ void ast_expression_destroy(ast_expression **this) {
     }
 }
 
-ast_program *ast_program_new(ast_class_list *classes) {
+ast_program *ast_program_new(ast_namespace_list *namespaces) {
     log_trace("creating new ast_program");
 
     AST_NODE_ALLOC_INIT(ast_program, DEFINITION, PROGRAM);
 
-    this->classes = classes;
+    this->namespaces = namespaces;
 
     log_trace("new ast_program successful created");
 
@@ -167,11 +175,59 @@ void ast_program_destroy(ast_program **this) {
 
     if (!this || !(*this)) { return; }
 
-    ast_class_list_destroy(&(*this)->classes);
+    ast_namespace_list_destroy(&(*this)->namespaces);
 
     AST_NODE_FREE();
 
     log_trace("ast_program successful destroyed");
+}
+
+ast_namespace *ast_namespace_new(symbol *name, ast_import_list *imports,
+                                 ast_class_list *classes) {
+    log_trace("creating new ast_namespace");
+
+    AST_NODE_ALLOC_INIT(ast_namespace, DEFINITION, NAMESPACE);
+
+    this->name    = name;
+    this->imports = imports;
+    this->classes = classes;
+
+    log_trace("new ast_namespace successful created");
+
+    return this;
+}
+
+void ast_namespace_destroy(ast_namespace **this) {
+    log_trace("destroying ast_namespace");
+
+    if (!this || !(*this)) { return; }
+
+    ast_import_list_destroy(&(*this)->imports);
+    ast_class_list_destroy(&(*this)->classes);
+
+    AST_NODE_FREE();
+
+    log_trace("ast_namespace successful destroyed");
+}
+
+ast_import *ast_import_new(void) {
+    log_trace("creating new ast_import");
+
+    AST_NODE_ALLOC_INIT(ast_import, DEFINITION, IMPORT);
+
+    log_trace("new ast_import successful created");
+
+    return this;
+}
+
+void ast_import_destroy(ast_import **this) {
+    log_trace("destroying ast_import");
+
+    if (!this || !(*this)) { return; }
+
+    AST_NODE_FREE();
+
+    log_trace("ast_import successful destroyed");
 }
 
 ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
@@ -307,6 +363,39 @@ ast_function *ast_function_new(symbol *functionName,
     symbol_increment_refcount(returnType);
 
     return this;
+}
+
+void ast_function_set_body(ast_function *this, ast_expression *body) {
+    if (!this) { return; }
+
+    if (this->body) { ast_expression_destroy(&this->body); }
+
+    this->body = body;
+}
+
+void ast_function_set_visibility(ast_function *this,
+                                 ast_function_visibility visibility) {
+    if (!this) { return; }
+
+    this->visibility = visibility;
+}
+
+void ast_function_set_abstract(ast_function *this, bool isAbstract) {
+    if (!this) { return; }
+
+    this->isAbstract = isAbstract;
+}
+
+void ast_function_set_final(ast_function *this, bool isFinal) {
+    if (!this) { return; }
+
+    this->isFinal = isFinal;
+}
+
+void ast_function_set_overwrite(ast_function *this, bool isOverwrite) {
+    if (!this) { return; }
+
+    this->isOverwrite = isOverwrite;
 }
 
 void ast_function_destroy(ast_function **this) {
@@ -539,7 +628,6 @@ void ast_lazy_expression_destroy(ast_lazy_expression **this) {
     if (!this || !(*this)) { return; }
 
     ast_expression_destroy(&(*this)->expression);
-    // TODO: context??
 
     AST_NODE_FREE();
 }
@@ -554,8 +642,6 @@ ast_native_expression *ast_native_expression_new(void *func) {
 
 void ast_native_expression_destroy(ast_native_expression **this) {
     if (!this || !(*this)) { return; }
-
-    // TODO: func??
 
     AST_NODE_FREE();
 }
@@ -644,7 +730,7 @@ void ast_reference_destroy(ast_reference **this) {
     AST_NODE_FREE();
 }
 
-ast_this_literal *ast_this_literal_new() {
+ast_this_literal *ast_this_literal_new(void) {
     AST_NODE_ALLOC_INIT(ast_this_literal, EXPRESSION, THIS_LITERAL);
 
     return this;
@@ -710,7 +796,7 @@ void ast_decimal_literal_destroy(ast_decimal_literal **this) {
     AST_NODE_FREE();
 }
 
-ast_null_literal *ast_null_literal_new() {
+ast_null_literal *ast_null_literal_new(void) {
     AST_NODE_ALLOC_INIT(ast_null_literal, EXPRESSION, NULL_LITERAL);
 
     return this;

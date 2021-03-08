@@ -35,6 +35,8 @@ typedef enum ast_definition_type {
     AST_DEFINITION_TYPE_PROPERTY,
     AST_DEFINITION_TYPE_FUNCTION,
     AST_DEFINITION_TYPE_CLASS,
+    AST_DEFINITION_TYPE_IMPORT,
+    AST_DEFINITION_TYPE_NAMESPACE,
     AST_DEFINITION_TYPE_PROGRAM,
 } ast_definition_type;
 
@@ -89,6 +91,16 @@ typedef struct ast_expression ast_expression;
  * @brief Type representing a program AST node.
  */
 typedef struct ast_program ast_program;
+
+/**
+ * @brief Type representing a namespace AST node.
+ */
+typedef struct ast_namespace ast_namespace;
+
+/**
+ * @brief Type representing a import AST node.
+ */
+typedef struct ast_import ast_import;
 
 /**
  * @brief Type representing a class AST node.
@@ -213,7 +225,14 @@ typedef enum ast_unary_operator {
  */
 typedef struct ast_unary_expression ast_unary_expression;
 
+/**
+ * @brief Type representing a lazy expression.
+ */
 typedef struct ast_lazy_expression ast_lazy_expression;
+
+/**
+ * @brief Type representing a native expression.
+ */
 typedef struct ast_native_expression ast_native_expression;
 
 /**
@@ -266,6 +285,8 @@ typedef struct ast_null_literal ast_null_literal;
  */
 typedef struct ast_string_literal ast_string_literal;
 
+CREATE_LIST_TYPE(INTERFACE, ast_namespace, namespace)
+CREATE_LIST_TYPE(INTERFACE, ast_import, import)
 CREATE_LIST_TYPE(INTERFACE, ast_class, class)
 CREATE_LIST_TYPE(INTERFACE, ast_expression, expression)
 CREATE_LIST_TYPE(INTERFACE, ast_formal, formal)
@@ -323,16 +344,44 @@ extern void ast_expression_destroy(ast_expression **this);
 
 /**
  * @brief Create a program node for the AST.
- * @param[in] classes The list of classes for the program
+ * @param[in] namespaces The list of namespaces for the program
  * @return On success a pointer to ast_program, else NULL
  */
-extern ast_program *ast_program_new(ast_class_list *classes);
+extern ast_program *ast_program_new(ast_namespace_list *namespaces);
 
 /**
  * @brief Destroy a program node and its content.
  * @param[in,out] this The program node to destroy
  */
 extern void ast_program_destroy(ast_program **this);
+
+/**
+ * @brief Create a namespace node for the AST.
+ * @param[in] name The namespace name
+ * @param[in] imports The list of imports for the namespace
+ * @param[in] classes The list of classes for the namespace
+ * @return On success a pointer to ast_namespace, else NULL
+ */
+extern ast_namespace *ast_namespace_new(symbol *name, ast_import_list *imports,
+                                        ast_class_list *classes);
+
+/**
+ * @brief Destroy a namespace node and its content.
+ * @param[in,out] this The namespace node to destroy
+ */
+extern void ast_namespace_destroy(ast_namespace **this);
+
+/**
+ * @brief Create a import node for the AST.
+ * @return On success a pointer to ast_import, else NULL
+ */
+extern ast_import *ast_import_new(void);
+
+/**
+ * @brief Destroy a import node and its content.
+ * @param[in,out] this The import node to destroy
+ */
+extern void ast_import_destroy(ast_import **this);
 
 /**
  * @brief Create a class node for the AST.
@@ -342,7 +391,6 @@ extern void ast_program_destroy(ast_program **this);
  * @param[in] superClassArgs The list of the actuals for the superclass
  * @param[in] properties The list of properties for the class
  * @param[in] functions The list of function for the class
- * @note Will steal the pointer for the name symbol.
  * @return On success a pointer to ast_class, else NULL
  */
 extern ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
@@ -414,7 +462,6 @@ extern void ast_formal_destroy(ast_formal **this);
  * @param[in] isAbstract If this function is abstract
  * @param[in] isFinal If this function is final
  * @param[in] isOverwrite If this function is overwrite
- * @note Will steal the pointer for the functionName symbol.
  * @return On success a pointer to ast_function, else NULL
  */
 extern ast_function *ast_function_new(symbol *functionName,
@@ -423,6 +470,42 @@ extern ast_function *ast_function_new(symbol *functionName,
                                       ast_function_visibility visibility,
                                       bool isAbstract, bool isFinal,
                                       bool isOverwrite);
+
+/**
+ * @brief Set the body for the function node for the AST.
+ * @param[in,out] this The function node to set the body
+ * @param[in] body The body for the function
+ */
+extern void ast_function_set_body(ast_function *this, ast_expression *body);
+
+/**
+ * @brief Set the visibility for the function node for the AST.
+ * @param[in,out] this The function node to set the visibility
+ * @param[in] visibility The visibility for the function
+ */
+extern void ast_function_set_visibility(ast_function *this,
+                                        ast_function_visibility visibility);
+
+/**
+ * @brief Set the abstract for the function node for the AST.
+ * @param[in,out] this The function node to set the abstract
+ * @param isAbstract
+ */
+extern void ast_function_set_abstract(ast_function *this, bool isAbstract);
+
+/**
+ * @brief Set the final for the function node for the AST.
+ * @param[in,out] this The function node to set the final
+ * @param isFinal
+ */
+extern void ast_function_set_final(ast_function *this, bool isFinal);
+
+/**
+ * @brief Set the overwrite for the function node for the AST.
+ * @param[in,out] this The function node to set the overwrite
+ * @param isOverwrite
+ */
+extern void ast_function_set_overwrite(ast_function *this, bool isOverwrite);
 
 /**
  * @brief Destroy a function node and its content.
@@ -435,7 +518,6 @@ extern void ast_function_destroy(ast_function **this);
  * @param[in] name The name of the property
  * @param[in] type The type of the property
  * @param[in] value The value of the property
- * @note Will steal the pointer for the name symbol.
  * @return On success a pointer to ast_function, else NULL
  */
 extern ast_property *ast_property_new(symbol *name, symbol *type,
@@ -480,7 +562,6 @@ extern void ast_let_destroy(ast_let **this);
  * @param[in] identifier The identifier of the initialization
  * @param[in] type The type of the initialization
  * @param[in] value The value of the initialization
- * @note Will steal the pointer for the identifier symbol.
  * @return On success a pointer to ast_initialization, else NULL
  */
 extern ast_initialization *
@@ -519,39 +600,39 @@ extern ast_cast *ast_cast_new(ast_expression *object, symbol *type);
 
 /**
  * @brief Destroy a cast node and its content.
- * @param[in,out] this The assignment node to destroy
+ * @param[in,out] this The cast node to destroy
  */
 extern void ast_cast_destroy(ast_cast **this);
 
 /**
- * @brief TODO
- * @param condition
- * @param thenBranch
- * @param elseBranch
- * @return
+ * @brief Create a if_else node for the AST.
+ * @param[in] condition The condition for the if_else node
+ * @param thenBranch The thenBranch for the if_else node
+ * @param elseBranch The elseBranch for the if_else node or NULL
+ * @return On success a pointer to ast_if_else, else NULL
  */
 extern ast_if_else *ast_if_else_new(ast_expression *condition,
                                     ast_expression *thenBranch,
                                     ast_expression *elseBranch);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a if_else node and its content.
+ * @param[in,out] this The if_else node to destroy
  */
 extern void ast_if_else_destroy(ast_if_else **this);
 
 /**
- * @brief TODO
- * @param condition
- * @param body
- * @return
+ * @brief Create a while node for the AST.
+ * @param[in] condition The condition for the while node
+ * @param[in] body The body for the while node
+ * @return On success a pointer to ast_while, else NULL
  */
 extern ast_while *ast_while_new(ast_expression *condition,
                                 ast_expression *body);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a while node and its content.
+ * @param[in,out] this The while node to destroy
  */
 extern void ast_while_destroy(ast_while **this);
 
@@ -664,91 +745,91 @@ ast_super_function_call_new(symbol *functionName, ast_expression_list *args);
 extern void ast_super_function_call_destroy(ast_super_function_call **this);
 
 /**
- * @brief TODO
- * @param identifier
- * @return
+ * @brief Create a reference node for the AST.
+ * @param[in] identifier The identifier to use for the reference node
+ * @return On success a pointer to ast_reference, else NULL
  */
 extern ast_reference *ast_reference_new(symbol *value);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a reference node and its content.
+ * @param[in,out] this The reference node to destroy
  */
 extern void ast_reference_destroy(ast_reference **this);
 
 /**
- * @brief TODO
- * @return
+ * @brief Create a this literal node for the AST.
+ * @return On success a pointer to ast_this_literal, else NULL
  */
-extern ast_this_literal *ast_this_literal_new();
+extern ast_this_literal *ast_this_literal_new(void);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a this literal node and its content.
+ * @param[in,out] this The this literal node to destroy
  */
 extern void ast_this_literal_destroy(ast_this_literal **this);
 
 /**
- * @brief TODO
- * @param value
- * @return
+ * @brief Create a integer literal node for the AST.
+ * @param[in] value The value for the integer literal node
+ * @return On success a pointer to ast_integer_literal, else NULL
  */
 extern ast_integer_literal *ast_integer_literal_new(str value);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a integer literal node and its content.
+ * @param[in,out] this The integer literal node to destroy
  */
 extern void ast_integer_literal_destroy(ast_integer_literal **this);
 
 /**
- * @brief TODO
- * @param value
- * @return
+ * @brief Create a boolean literal node for the AST.
+ * @param[in] value The value for the boolean literal node
+ * @return On success a pointer to ast_boolean_literal, else NULL
  */
 extern ast_boolean_literal *ast_boolean_literal_new(bool value);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a boolean literal node and its content.
+ * @param[in,out] this The boolean literal node to destroy
  */
 extern void ast_boolean_literal_destroy(ast_boolean_literal **this);
 
 /**
- * @brief TODO
- * @param value
- * @return
+ * @brief Create a decimal literal node for the AST.
+ * @param[in] value The value for the decimal literal node
+ * @return On success a pointer to ast_decimal_literal, else NULL
  */
 extern ast_decimal_literal *ast_decimal_literal_new(str value);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a decimal literal node and its content.
+ * @param[in,out] this The decimal literal node to destroy
  */
 extern void ast_decimal_literal_destroy(ast_decimal_literal **this);
 
 /**
- * @brief TODO
- * @return
+ * @brief Create a null literal node for the AST.
+ * @return On success a pointer to ast_null_literal, else NULL
  */
-extern ast_null_literal *ast_null_literal_new();
+extern ast_null_literal *ast_null_literal_new(void);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a null literal node and its content.
+ * @param[in,out] this The null literal node to destroy
  */
 extern void ast_null_literal_destroy(ast_null_literal **this);
 
 /**
- * @brief TODO
- * @param value
- * @return
+ * @brief Create a string literal node for the AST.
+ * @param[in] value The value for the string literal node
+ * @return On success a pointer to ast_string_literal, else NULL
  */
 extern ast_string_literal *ast_string_literal_new(str value);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Destroy a string literal node and its content.
+ * @param[in,out] this The string literal node to destroy
  */
 extern void ast_string_literal_destroy(ast_string_literal **this);
 
@@ -771,7 +852,18 @@ struct ast_expression {
 
 struct ast_program {
     AST_DEFINITION_PROPERTIES
+    ast_namespace_list *namespaces;
+};
+
+struct ast_namespace {
+    AST_DEFINITION_PROPERTIES
+    symbol *name;
+    ast_import_list *imports;
     ast_class_list *classes;
+};
+
+struct ast_import {
+    AST_DEFINITION_PROPERTIES
 };
 
 struct ast_class {

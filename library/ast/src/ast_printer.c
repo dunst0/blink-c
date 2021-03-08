@@ -233,10 +233,40 @@ static void ast_program_printer(ast_program *programNode, void *args) {
 
     ast_printer_print_node(printer, &title, nodeCount,
                            TABLE_BEGIN TITLE_ROW KEY_PORT TABLE_END,
-                           STR_FMT(&title), "program_classes", nodeCount,
-                           "classes");
-    for (node = programNode->classes->head; node; node = node->next) {
-        ast_printer_print_link_left(printer, &title, "program_classes",
+                           STR_FMT(&title), "program_namespaces", nodeCount,
+                           "namespaces");
+    for (node = programNode->namespaces->head; node; node = node->next) {
+        ast_printer_print_link_left(printer, &title, "program_namespaces",
+                                    nodeCount);
+        AST_EXECUTE_CALLBACKS(printer->callbacks,
+                              (ast_namespace *) node->element, args);
+    }
+}
+
+/**
+ * @brief Print the Namespace AST node.
+ * @param[in] namespaceNode The Namespace AST node to print
+ * @param[in] args The extra args for the callback call
+ */
+static void ast_namespace_printer(ast_namespace *namespaceNode, void *args) {
+    ast_printer *printer         = (ast_printer *) args;
+    unsigned long long nodeCount = printer->nodeCount;
+    list_node *node              = NULL;
+
+    str title = STR_STATIC_INIT("ast_namespace");
+
+    str name = STR_NULL_INIT;
+
+    if (namespaceNode->name) { name = namespaceNode->name->identifier; }
+
+    ast_printer_print_link_right(printer, &title, nodeCount);
+    ast_printer_print_node(
+            printer, &title, nodeCount,
+            TABLE_BEGIN TITLE_ROW KEY_STR_VALUE KEY_PORT TABLE_END,
+            STR_FMT(&title), "name", STR_FMT(&name), "namespaces_classes",
+            nodeCount, "classes");
+    for (node = namespaceNode->classes->head; node; node = node->next) {
+        ast_printer_print_link_left(printer, &title, "namespaces_classes",
                                     nodeCount);
         AST_EXECUTE_CALLBACKS(printer->callbacks, (ast_class *) node->element,
                               args);
@@ -1008,6 +1038,11 @@ static void ast_node_printer(ast_node *node, void *args) {
                     break;
                 case AST_DEFINITION_TYPE_PROGRAM:
                     ast_program_printer((ast_program *) node, args);
+                    break;
+                case AST_DEFINITION_TYPE_IMPORT:
+                    break;
+                case AST_DEFINITION_TYPE_NAMESPACE:
+                    ast_namespace_printer((ast_namespace *) node, args);
                     break;
             }
             break;
