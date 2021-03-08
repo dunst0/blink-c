@@ -17,6 +17,9 @@
 
 #include <stdio.h>
 
+static int parser_push_yy_state(parser_extra_lexer *lexerExtra, char *import, int importLength);
+static int parser_pop_yy_state(parser_extra_lexer *lexerExtra);
+
 #define YY_USER_ACTION                                                         \
     yylloc->filename     = yylloc->filename;                                   \
     yylloc->first_line   = yylloc->last_line;                                  \
@@ -36,6 +39,7 @@
 
 #define RETURN_SEMICOLON_IF_NEEDED                                             \
     switch (yyextra->lastToken) {                                              \
+        case IMPORT_KEYWORD:                                                   \
         case INTEGER_LITERAL:                                                  \
         case DECIMAL_LITERAL:                                                  \
         case STRING_LITERAL:                                                   \
@@ -52,7 +56,7 @@
 %}
 
 %x IMPORT
-%x PACKAGE
+%x NAMESPACE
 
 letter              [a-zA-Z]
 digit               [0-9]
@@ -61,28 +65,42 @@ exponent_part       [eE][-+]?{positive_number}
 operator            ([-+*\/=><!&%~$^]=?)|\+\+|--
 whitespace          [ \a\f\t\r\v]
 not_whitespace      [^ \a\f\t\r\v\n]
+namespace_name      (({letter}|_)({letter}|{digit}|_|\.)*({letter}|{digit}|_))
 identifier          (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
 
 %%
 
-<INITIAL,IMPORT,PACKAGE>{whitespace}*                                                   /* eat the whitespace */
+<INITIAL,IMPORT,NAMESPACE>{whitespace}*                                                 /* eat the whitespace */
 
+<INITIAL>"namespace"                                                                    {
+                                                                                            BEGIN(NAMESPACE);
+                                                                                            RETURN(NAMESPACE_KEYWORD);
+                                                                                        }
 <INITIAL>"import"                                                                       BEGIN(IMPORT);
-<INITIAL>"package"                                                                      BEGIN(PACKAGE);
 
 <IMPORT>{not_whitespace}+                                                               {
+                                                                                            if (!parser_push_yy_state(yyextra, yytext, yyleng)) {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not push lexer state to stack");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+
                                                                                             BEGIN(INITIAL);
                                                                                             RETURN(IMPORT_KEYWORD);
                                                                                         }
-<PACKAGE>{not_whitespace}+                                                              {
+<NAMESPACE>{namespace_name}                                                             {
                                                                                             BEGIN(INITIAL);
-                                                                                            RETURN(PACKAGE_KEYWORD);
+                                                                                            RETURN(NAMESPACE_NAME);
                                                                                         }
 
 <<EOF>>                                                                                 {
-                                                                                            /*if (!lexer_pop_yy_state()) {*/
+                                                                                            if (!parser_pop_yy_state(yyextra)) {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not pop lexer state from stack");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+
+                                                                                            if (--(yyextra->import_stack_ptr) < 0) {
                                                                                                 yyterminate();
-                                                                                            /*}*/
+                                                                                            }
                                                                                         }
 
 
@@ -163,3 +181,11 @@ identifier          (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
 <*>.                                                                                    { yyerror(yylloc, yyextra->extraParser, "unexpected input"); }
 
 %%
+
+static int parser_push_yy_state(parser_extra_lexer *lexerExtra, char *import, int importLength) {
+    return 1;
+}
+
+static int parser_pop_yy_state(parser_extra_lexer *lexerExtra) {
+    return 1;
+}

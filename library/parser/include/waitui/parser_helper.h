@@ -13,8 +13,30 @@
 
 
 // -----------------------------------------------------------------------------
+//  Public defines
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief TODO
+ */
+#define MAX_IMPORT_DEPTH 1024
+
+
+// -----------------------------------------------------------------------------
 //  Public types
 // -----------------------------------------------------------------------------
+
+/**
+ * @brief TODO
+ */
+typedef struct parser_yy_state {
+    void *state;
+    str filename;
+    int first_line;
+    int last_line;
+    int first_column;
+    int last_column;
+} parser_yy_state;
 
 /**
  * @brief Type for extra parser data.
@@ -31,7 +53,9 @@ typedef struct parser_extra_parser {
  */
 typedef struct parser_extra_lexer {
     int lastToken;
+    parser_yy_state import_stack[MAX_IMPORT_DEPTH];
+    int import_stack_ptr;
     parser_extra_parser *extraParser;
 } parser_extra_lexer;
 
-#endif //WAITUI_PARSER_HELPER_H
+#endif//WAITUI_PARSER_HELPER_H

@@ -49,6 +49,9 @@
     ast_if_else *if_else_expression;
     ast_initialization *initialization;
     ast_initialization_list *initializations;
+    ast_import *import;
+    ast_import_list *imports;
+    ast_namespace *namespace;
     ast_let *let;
     ast_property *property;
     ast_reference *reference;
@@ -107,6 +110,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %token THIS_LITERAL
 
 %token <symbolValue> IDENTIFIER
+%token <symbolValue> NAMESPACE_NAME
 
 /* keywords */
 %token ABSTRACT_KEYWORD
@@ -121,9 +125,9 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %token IMPORT_KEYWORD
 %token LAZY_KEYWORD
 %token LET_KEYWORD
+%token NAMESPACE_KEYWORD
 %token NEW_KEYWORD
 %token OVERWRITE_KEYWORD
-%token PACKAGE_KEYWORD
 %token PUBLIC_KEYWORD
 %token PRIVATE_KEYWORD
 %token PROTECTED_KEYWORD
@@ -163,19 +167,22 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <constructor_call>   constructor_call
 %type <cast>               cast
 %type <class>              class_body class_definition
-%type <classes>            classes package
+%type <classes>            classes
 %type <expression>         dispatch expression literal
-%type <expressions>        expressions expressions_list actuals class_actuals actuals_list
+%type <expressions>        expressions expression_list actuals class_actuals actual_list
 %type <formal>             formal
-%type <formals>            formals class_formals formals_list
+%type <formals>            formals class_formals formal_list
 %type <function>           function_signature function_definition
 %type <if_else_expression> if_else
 %type <initialization>     initialization
 %type <initializations>    initialization_list initializations
+%type <import>             import
+%type <imports>            import_list imports
+%type <namespace>          namespace
 %type <operator>           function_visibility function_overwrite function_final
 %type <let>                let
 %type <property>           property_definition
-%type <symbolValue>        identifier_definition class_head function_name_definition function_head
+%type <symbolValue>        class_head function_head property_head
 %type <unary_expression>   unary_expression
 %type <while_expression>   while
 
@@ -197,25 +204,50 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 /* --- definitions -------------------------------------------------------------------------------------------------- */
 
 /* program definitions */
-program                         : package imports
+program                         : namespace
                                     {
-                                        $$ = ast_program_new($1); // FIXME: implement package system use $2
+                                        ast_namespace_list *namespaces = ast_namespace_list_new();
+                                        ast_namespace_list_push(namespaces, $1);
+                                        $$ = ast_program_new(namespaces);
                                         extraParser->resultAst = ast_new($$);
                                     }
                                 ;
 
-imports                         : /* empty */
-                                | imports IMPORT_KEYWORD package
+namespace                       : NAMESPACE_KEYWORD NAMESPACE_NAME imports classes
+                                    {
+                                        $$ = ast_namespace_new($2, $3, $4);
+                                    }
                                 ;
 
-package                         : PACKAGE_KEYWORD
+imports                         : /* empty */
                                     {
-                                        symboltable_enter_scope(extraParser->symtable);
+                                        $$ = ast_import_list_new();
                                     }
-                                  classes
+                                | import_list
                                     {
-                                        $$ = $3;
-                                        symboltable_exit_scope(extraParser->symtable);
+                                        $$ = $1;
+                                    }
+                                ;
+
+import_list                     : import
+                                    {
+                                        $$ = ast_import_list_new();
+                                        ast_import_list_push($$, $1);
+                                    }
+                                | import_list import
+                                    {
+                                        $$ = $1;
+                                        ast_import_list_push($$, $2);
+                                    }
+                                ;
+
+import                          : IMPORT_KEYWORD ';'
+                                    {
+                                        $$ = ast_import_new();
+                                    }
+                                | IMPORT_KEYWORD AS_KEYWORD IDENTIFIER ';'
+                                    {
+                                        $$ = ast_import_new();
                                     }
                                 ;
 
@@ -232,19 +264,17 @@ classes                         : class_definition
                                 ;
 
 /* class definitions */
-class_definition                : class_head class_formals '{' class_body '}' class_tail ';'
+class_definition                : class_head class_formals '{' class_body '}' ';'
                                     {
                                         $$ = $4;
+
                                         ast_class_set_name($$, $1);
                                         ast_class_set_parameters($$, $2);
                                     }
-                                | class_head class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' class_tail ';'
+                                | class_head class_formals EXTENDS_KEYWORD IDENTIFIER class_actuals '{' class_body '}' ';'
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $4->identifier, &$4)) {
-                                            symbol_decrement_refcount(&$4);
-                                            YYABORT;
-                                        }
                                         $$ = $7;
+
                                         ast_class_set_name($$, $1);
                                         ast_class_set_parameters($$, $2);
                                         ast_class_set_super_class($$, $4);
@@ -252,16 +282,9 @@ class_definition                : class_head class_formals '{' class_body '}' cl
                                     }
                                 ;
 
-class_head                      : CLASS_KEYWORD identifier_definition
+class_head                      : CLASS_KEYWORD IDENTIFIER
                                     {
                                         $$ = $2;
-                                        symboltable_enter_scope(extraParser->symtable);
-                                    }
-                                ;
-
-class_tail                      : /* empty */
-                                    {
-                                        symboltable_exit_scope(extraParser->symtable);
                                     }
                                 ;
 
@@ -304,25 +327,23 @@ class_body                      : /* empty */
                                 ;
 
 /* properties definitions */
-property_definition             : VAR_KEYWORD identifier_definition ':' IDENTIFIER '=' expression
+property_definition             : property_head ':' IDENTIFIER '=' expression
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $4->identifier, &$4)) {
-                                            symbol_decrement_refcount(&$4);
-                                            YYABORT;
-                                        }
-                                        $$ = ast_property_new($2, $4, $6);
+                                        $$ = ast_property_new($1, $3, $5);
                                     }
-                                | VAR_KEYWORD identifier_definition ':' IDENTIFIER
+                                | property_head ':' IDENTIFIER
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $4->identifier, &$4)) {
-                                            symbol_decrement_refcount(&$4);
-                                            YYABORT;
-                                        }
-                                        $$ = ast_property_new($2, $4, NULL);
+                                        $$ = ast_property_new($1, $3, NULL);
                                     }
-                                | VAR_KEYWORD identifier_definition '=' expression
+                                | property_head '=' expression
                                     {
-                                        $$ = ast_property_new($2, NULL, $4);
+                                        $$ = ast_property_new($1, NULL, $3);
+                                    }
+                                ;
+
+property_head                   : VAR_KEYWORD IDENTIFIER
+                                    {
+                                        $$ = $2;
                                     }
                                 ;
 
@@ -330,20 +351,20 @@ property_definition             : VAR_KEYWORD identifier_definition ':' IDENTIFI
 function_definition             : ABSTRACT_KEYWORD function_visibility function_signature
                                     {
                                         $$ = $3;
-                                        $$->isAbstract = true;
-                                        $$->visibility = $2;
 
-                                        symboltable_exit_scope(extraParser->symtable);
+                                        ast_function_set_abstract($$, true);
+                                        ast_function_set_visibility($$, $2);
                                     }
                                 | function_final function_overwrite function_visibility function_signature '=' expression
                                     {
                                         $$ = $4;
-                                        $$->isFinal = $1;
-                                        $$->isOverwrite = $2;
-                                        $$->visibility = $3;
-                                        $$->body = $6;
 
-                                        symboltable_exit_scope(extraParser->symtable);
+                                        ast_function_set_abstract($$, false);
+                                        ast_function_set_final($$, $1);
+                                        ast_function_set_overwrite($$, $2);
+                                        ast_function_set_visibility($$, $3);
+
+                                        ast_function_set_body($$, $6);
                                     }
                                 ;
 
@@ -392,31 +413,12 @@ function_signature              : function_head '(' formals ')'
                                     }
                                 | function_head '(' formals ')' ':' IDENTIFIER
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $6->identifier, &$6)) {
-                                            symbol_decrement_refcount(&$6);
-                                            YYABORT;
-                                        }
                                         $$ = ast_function_new($1, $3, $6, NULL, AST_FUNCTION_VISIBILITY_PRIVATE, 0, 0, 0);
                                     }
                                 ;
 
-function_head                   : FUNC_KEYWORD function_name_definition
+function_head                   : FUNC_KEYWORD IDENTIFIER
                                     {
-                                        $$ = $2;
-                                        symboltable_enter_scope(extraParser->symtable);
-                                    }
-                                ;
-
-function_name_definition        :   {
-                                        symboltable_enter_declaration_mode(extraParser->symtable);
-                                    }
-                                  IDENTIFIER
-                                    {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $2->identifier, &$2)) {
-                                            symbol_decrement_refcount(&$2);
-                                            YYABORT;
-                                        }
-                                        symboltable_leave_declaration_mode(extraParser->symtable);
                                         $$ = $2;
                                     }
                                 ;
@@ -440,18 +442,10 @@ expression                      : assignment            { $$ = (ast_expression *
 
 assignment                      : IDENTIFIER ASSIGNMENT expression
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $1->identifier, &$1)) {
-                                            symbol_decrement_refcount(&$1);
-                                            YYABORT;
-                                        }
                                         $$ = ast_assignment_new($1, $2, $3);
                                     }
                                 | IDENTIFIER '=' expression
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $1->identifier, &$1)) {
-                                            symbol_decrement_refcount(&$1);
-                                            YYABORT;
-                                        }
                                         $$ = ast_assignment_new($1, AST_ASSIGNMENT_OPERATOR_EQUAL, $3);
                                     }
                                 ;
@@ -518,38 +512,22 @@ block                           : '{' expressions '}'
 
 cast                            : expression AS_KEYWORD IDENTIFIER
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
-                                            symbol_decrement_refcount(&$3);
-                                            YYABORT;
-                                        }
                                         $$ = ast_cast_new($1, $3);
                                     }
                                 ;
 
 constructor_call                : NEW_KEYWORD IDENTIFIER '(' actuals ')'
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $2->identifier, &$2)) {
-                                            symbol_decrement_refcount(&$2);
-                                            YYABORT;
-                                        }
                                         $$ = ast_constructor_call_new($2, $4);
                                     }
                                 ;
 
 dispatch                        : expression '.' IDENTIFIER '(' actuals ')'
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
-                                            symbol_decrement_refcount(&$3);
-                                            YYABORT;
-                                        }
                                         $$ = (ast_expression *) ast_function_call_new($1, $3, $5);
                                     }
                                 | SUPER_LITERAL '.' IDENTIFIER '(' actuals ')'
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
-                                            symbol_decrement_refcount(&$3);
-                                            YYABORT;
-                                        }
                                         $$ = (ast_expression *) ast_super_function_call_new($3, $5);
                                     }
                                 ;
@@ -600,10 +578,6 @@ literal                         : INTEGER_LITERAL
                                     }
                                 | IDENTIFIER
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $1->identifier, &$1)) {
-                                            symbol_decrement_refcount(&$1);
-                                            YYABORT;
-                                        }
                                         $$ = (ast_expression *) ast_reference_new($1);
                                     }
                                 ;
@@ -639,38 +613,30 @@ formals                         : /* empty */
                                     {
                                         $$ = ast_formal_list_new();
                                     }
-                                | formals_list
+                                | formal_list
                                     {
                                         $$ = $1;
                                     }
                                 ;
 
-formals_list                    : formals_list ',' formal
-                                    {
-                                        $$ = $1;
-                                        ast_formal_list_push($$, $3);
-                                    }
-                                | formal
+formal_list                     : formal
                                     {
                                         $$ = ast_formal_list_new();
                                         ast_formal_list_push($$, $1);
                                     }
+                                | formal_list ',' formal
+                                    {
+                                        $$ = $1;
+                                        ast_formal_list_push($$, $3);
+                                    }
                                 ;
 
-formal                          : LAZY_KEYWORD identifier_definition ':' IDENTIFIER
+formal                          : LAZY_KEYWORD IDENTIFIER ':' IDENTIFIER
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $4->identifier, &$4)) {
-                                            symbol_decrement_refcount(&$4);
-                                            YYABORT;
-                                        }
                                         $$ = ast_formal_new($2, $4, true);
                                     }
-                                | identifier_definition ':' IDENTIFIER
+                                | IDENTIFIER ':' IDENTIFIER
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
-                                            symbol_decrement_refcount(&$3);
-                                            YYABORT;
-                                        }
                                         $$ = ast_formal_new($1, $3, false);
                                     }
                                 ;
@@ -684,18 +650,18 @@ expressions                     : /* empty */
                                         $$ = ast_expression_list_new();
                                         ast_expression_list_push($$, $1);
                                     }
-                                | expressions_list
+                                | expression_list
                                     {
                                         $$ = $1;
                                     }
                                 ;
 
-expressions_list                : expression ';'
+expression_list                 : expression ';'
                                     {
                                         $$ = ast_expression_list_new();
                                         ast_expression_list_push($$, $1);
                                     }
-                                | expressions_list expression ';'
+                                | expression_list expression ';'
                                     {
                                         $$ = $1;
                                         ast_expression_list_push($$, $2);
@@ -706,21 +672,21 @@ actuals                         : /* empty */
                                     {
                                         $$ = ast_expression_list_new();
                                     }
-                                | actuals_list
+                                | actual_list
                                     {
                                         $$ = $1;
                                     }
                                 ;
 
-actuals_list                    : actuals_list ',' expression
-                                    {
-                                        $$ = $1;
-                                        ast_expression_list_push($$, $3);
-                                    }
-                                | expression
+actual_list                     : expression
                                     {
                                         $$ = ast_expression_list_new();
                                         ast_expression_list_push($$, $1);
+                                    }
+                                | actual_list ',' expression
+                                    {
+                                        $$ = $1;
+                                        ast_expression_list_push($$, $3);
                                     }
                                 ;
 
@@ -747,40 +713,17 @@ initialization_list             : initialization ','
                                     }
                                 ;
 
-initialization                  : identifier_definition ':' IDENTIFIER '=' expression
+initialization                  : IDENTIFIER ':' IDENTIFIER '=' expression
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
-                                            symbol_decrement_refcount(&$3);
-                                            YYABORT;
-                                        }
                                         $$ = ast_initialization_new($1, $3, $5);
                                     }
-                                | identifier_definition ':' IDENTIFIER
+                                | IDENTIFIER ':' IDENTIFIER
                                     {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $3->identifier, &$3)) {
-                                            symbol_decrement_refcount(&$3);
-                                            YYABORT;
-                                        }
                                         $$ = ast_initialization_new($1, $3, NULL);
                                     }
-                                | identifier_definition '=' expression
+                                | IDENTIFIER '=' expression
                                     {
-                                        str emtpy = STR_NULL_INIT;
                                         $$ = ast_initialization_new($1, NULL, $3);
-                                    }
-                                ;
-
-identifier_definition           :   {
-                                        symboltable_enter_declaration_mode(extraParser->symtable);
-                                    }
-                                  IDENTIFIER
-                                    {
-                                        if (!symboltable_add_symbol(extraParser->symtable, $2->identifier, &$2)) {
-                                            symbol_decrement_refcount(&$2);
-                                            YYABORT;
-                                        }
-                                        symboltable_leave_declaration_mode(extraParser->symtable);
-                                        $$ = $2;
                                     }
                                 ;
 

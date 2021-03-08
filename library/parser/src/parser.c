@@ -7,9 +7,10 @@
 
 #include "waitui/parser.h"
 
+// clang-format off
 #include "waitui/parser_impl.h"
-
 #include "waitui/lexer_impl.h"
+// clang-format on
 
 #include <waitui/log.h>
 
@@ -40,15 +41,19 @@ parser *parser_new(str sourceFileName, str currentDirectory,
     this->debug = debug;
 
     STR_COPY_WITH_NUL(&this->sourceFileName, &sourceFileName);
-    STR_COPY_WITH_NUL(&this->currentDirectory, &currentDirectory);
-    if (!this->sourceFileName.s || !this->currentDirectory.s) {
-        log_fatal("could not allocate memory for sourceFileName or "
-                  "currentDirectory");
+    if (!this->sourceFileName.s) {
+        log_fatal("could not allocate memory for sourceFileName");
         parser_destroy(&this);
         return NULL;
     }
-
     this->extraParser.sourceFileName = this->sourceFileName;
+
+    STR_COPY_WITH_NUL(&this->currentDirectory, &currentDirectory);
+    if (!this->currentDirectory.s) {
+        log_fatal("could not allocate memory for currentDirectory");
+        parser_destroy(&this);
+        return NULL;
+    }
 
     this->extraParser.symtable = symboltable_new();
     if (!this->extraParser.symtable) {
