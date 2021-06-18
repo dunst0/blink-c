@@ -24,7 +24,7 @@
 typedef struct parser {
     FILE *sourceFile;
     str sourceFileName;
-    str currentDirectory;
+    str workingDirectory;
     unsigned int debug;
     parser_extra_parser extraParser;
     parser_extra_lexer extraLexer;
@@ -47,11 +47,11 @@ typedef struct parser {
 /**
  * @brief Create a Parser.
  * @param[in] sourceFileName The source file to begin the parsing with
- * @param[in] currentDirectory The current directory to search other files in
+ * @param[in] workingDirectory The working directory to search other files in
  * @param[in] debug The debug level of the parser
  * @return A pointer to Parser or NULL if memory allocation failed
  */
-extern parser *parser_new(str sourceFileName, str currentDirectory,
+extern parser *parser_new(str sourceFileName, str workingDirectory,
                           unsigned int debug);
 
 /**

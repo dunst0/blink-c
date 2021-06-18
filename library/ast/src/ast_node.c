@@ -192,6 +192,8 @@ ast_namespace *ast_namespace_new(symbol *name, ast_import_list *imports,
     this->imports = imports;
     this->classes = classes;
 
+    symbol_increment_refcount(name);
+
     log_trace("new ast_namespace successful created");
 
     return this;
@@ -202,6 +204,7 @@ void ast_namespace_destroy(ast_namespace **this) {
 
     if (!this || !(*this)) { return; }
 
+    symbol_decrement_refcount(&(*this)->name);
     ast_import_list_destroy(&(*this)->imports);
     ast_class_list_destroy(&(*this)->classes);
 

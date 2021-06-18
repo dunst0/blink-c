@@ -32,6 +32,8 @@ add_library(parser OBJECT)
 target_sources(parser
         PRIVATE
         src/parser.c
+        src/parser_helper.c
+        include/waitui/parser_helper.h
         ${FLEX_waitui-lexer_OUTPUTS}
         ${FLEX_waitui-lexer_OUTPUT_HEADER}
         ${BISON_waitui-parser_OUTPUT_SOURCE}

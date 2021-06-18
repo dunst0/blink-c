@@ -111,6 +111,7 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 
 %token <symbolValue> IDENTIFIER
 %token <symbolValue> NAMESPACE_NAME
+%token <symbolValue> IMPORT_NAME
 
 /* keywords */
 %token ABSTRACT_KEYWORD
@@ -241,11 +242,11 @@ import_list                     : import
                                     }
                                 ;
 
-import                          : IMPORT_KEYWORD ';'
+import                          : IMPORT_KEYWORD IMPORT_NAME ';'
                                     {
                                         $$ = ast_import_new();
                                     }
-                                | IMPORT_KEYWORD AS_KEYWORD IDENTIFIER ';'
+                                | IMPORT_KEYWORD IMPORT_NAME AS_KEYWORD IDENTIFIER ';'
                                     {
                                         $$ = ast_import_new();
                                     }

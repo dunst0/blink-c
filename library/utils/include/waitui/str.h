@@ -36,8 +36,8 @@ typedef struct str {
     { (_str_), sizeof((_str_)) - 1 }
 
 #define STR_FMT(_pstr_)                                                        \
-    ((_pstr_ != (str *) 0) ? (int) (_pstr_)->len : 0),                         \
-            ((_pstr_ != (str *) 0) ? (_pstr_)->s : "")
+    (((_pstr_) != (str *) 0) ? (int) (_pstr_)->len : 0),                       \
+            (((_pstr_) != (str *) 0) ? (_pstr_)->s : "")
 
 #define STR_STATIC_SET(_pstr_, _str_)                                          \
     do {                                                                       \
@@ -88,4 +88,4 @@ typedef struct str {
         }                                                                      \
     } while (0)
 
-#endif //WAITUI_STR_H
+#endif//WAITUI_STR_H

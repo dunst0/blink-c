@@ -1,0 +1,32 @@
+namespace org.test
+
+import org.test.home
+import org.test.office.Building as OfficeBuilding
+
+class Test(Hi : Int) extends Raum(Hi, "uff") {
+    var H = "H"
+    var a = "a"
+    var i = 0
+
+    func T () = H as Bool
+    func Y() = {
+        if (true) { "s" } else { "S" }
+        if ("HAUS" == "hause") { "ungleich" }
+        "String"
+        42
+        let ABC : Int in {
+            ABC = new ABC("uii")
+            Console.log("ffff");
+        }
+        this
+        null
+    }
+
+    func Test() = 6 / (3 - 1)
+
+    func OP() = !true
+
+    func Run(help : Bool) = while (true) "true"
+
+    func operator++() = i + 1
+}

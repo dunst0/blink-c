@@ -39,7 +39,7 @@ static int parser_pop_yy_state(parser_extra_lexer *lexerExtra);
 
 #define RETURN_SEMICOLON_IF_NEEDED                                             \
     switch (yyextra->lastToken) {                                              \
-        case IMPORT_KEYWORD:                                                   \
+        case IMPORT_NAME:                                                      \
         case INTEGER_LITERAL:                                                  \
         case DECIMAL_LITERAL:                                                  \
         case STRING_LITERAL:                                                   \
@@ -76,18 +76,35 @@ identifier          (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
                                                                                             BEGIN(NAMESPACE);
                                                                                             RETURN(NAMESPACE_KEYWORD);
                                                                                         }
-<INITIAL>"import"                                                                       BEGIN(IMPORT);
-
+<INITIAL>"import"                                                                       {
+                                                                                            BEGIN(IMPORT);
+                                                                                            RETURN(IMPORT_KEYWORD);
+                                                                                        }
 <IMPORT>{not_whitespace}+                                                               {
+                                                                                            str importName = STR_NULL_INIT;
+                                                                                            importName.s   = yytext;
+                                                                                            importName.len = yyleng;
+
                                                                                             if (!parser_push_yy_state(yyextra, yytext, yyleng)) {
                                                                                                 yyerror(yylloc, yyextra->extraParser, "could not push lexer state to stack");
                                                                                                 RETURN(YYerror);
                                                                                             }
 
                                                                                             BEGIN(INITIAL);
-                                                                                            RETURN(IMPORT_KEYWORD);
+                                                                                            RETURN(IMPORT_NAME);
                                                                                         }
 <NAMESPACE>{namespace_name}                                                             {
+                                                                                            str namespaceName = STR_NULL_INIT;
+                                                                                            namespaceName.s   = yytext;
+                                                                                            namespaceName.len = yyleng;
+
+                                                                                            yylval->symbolValue = symbol_new(namespaceName, SYMBOL_TYPE_UNDEFINED,
+                                                                                                                             yylloc->first_line, yylloc->first_column);
+                                                                                            if (!yylval->symbolValue) {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+
                                                                                             BEGIN(INITIAL);
                                                                                             RETURN(NAMESPACE_NAME);
                                                                                         }

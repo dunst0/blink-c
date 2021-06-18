@@ -29,7 +29,7 @@ static str parser_source_stdin = STR_STATIC_INIT("stdin");
 //  Public functions
 // -----------------------------------------------------------------------------
 
-parser *parser_new(str sourceFileName, str currentDirectory,
+parser *parser_new(str sourceFileName, str workingDirectory,
                    unsigned int debug) {
     parser *this = NULL;
 
@@ -48,9 +48,9 @@ parser *parser_new(str sourceFileName, str currentDirectory,
     }
     this->extraParser.sourceFileName = this->sourceFileName;
 
-    STR_COPY_WITH_NUL(&this->currentDirectory, &currentDirectory);
-    if (!this->currentDirectory.s) {
-        log_fatal("could not allocate memory for currentDirectory");
+    STR_COPY_WITH_NUL(&this->workingDirectory, &workingDirectory);
+    if (!this->workingDirectory.s) {
+        log_fatal("could not allocate memory for workingDirectory");
         parser_destroy(&this);
         return NULL;
     }
@@ -58,6 +58,13 @@ parser *parser_new(str sourceFileName, str currentDirectory,
     this->extraParser.symtable = symboltable_new();
     if (!this->extraParser.symtable) {
         log_fatal("could not create symboltable");
+        parser_destroy(&this);
+        return NULL;
+    }
+
+    this->extraLexer.importStack = parser_yy_state_list_new();
+    if (!this->extraLexer.importStack) {
+        log_fatal("could not allocate memory for importStack");
         parser_destroy(&this);
         return NULL;
     }
@@ -71,24 +78,20 @@ parser *parser_new(str sourceFileName, str currentDirectory,
         return NULL;
     }
 
-    FILE *sourceFile = NULL;
-
     if (parser_source_stdin.len == sourceFileName.len &&
         memcmp(parser_source_stdin.s, sourceFileName.s,
                parser_source_stdin.len) == 0) {
-        sourceFile = stdin;
+        this->sourceFile = stdin;
     } else {
         this->sourceFile = fopen(sourceFileName.s, "r");
-        sourceFile       = this->sourceFile;
-
-        if (!sourceFile) {
+        if (!this->sourceFile) {
             log_error("could not open filename: '%s'", this->sourceFileName.s);
             parser_destroy(&this);
             return NULL;
         }
     }
 
-    yyset_in(sourceFile, this->extraParser.scanner);
+    yyset_in(this->sourceFile, this->extraParser.scanner);
     if (this->debug & PARSER_DEBUG_LEXER) {
         yyset_debug(1, this->extraParser.scanner);
     }
@@ -103,13 +106,16 @@ void parser_destroy(parser **this) {
 
     if (!this || !(*this)) { return; }
 
+    parser_yy_state_list_destroy(&(*this)->extraLexer.importStack);
     symboltable_destroy(&(*this)->extraParser.symtable);
     if ((*this)->extraParser.scanner) {
         yylex_destroy((*this)->extraParser.scanner);
     }
-    if ((*this)->sourceFile) { fclose((*this)->sourceFile); }
+    if ((*this)->sourceFile && (*this)->sourceFile != stdin) {
+        fclose((*this)->sourceFile);
+    }
     STR_FREE(&(*this)->sourceFileName);
-    STR_FREE(&(*this)->currentDirectory);
+    STR_FREE(&(*this)->workingDirectory);
 
     free(*this);
     *this = NULL;
