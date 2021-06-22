@@ -69,10 +69,10 @@ extern void parser_destroy(parser **this);
 extern int parser_parse(parser *this);
 
 /**
- * @brief Return the resulting ast after parsing.
- * @param[in] this The parser to retrieve the ast from
+ * @brief Return the resulting waitui_ast after parsing.
+ * @param[in] this The parser to retrieve the waitui_ast from
  * @return A pointer to a AST or NULL if parsing failed or hasn't run
  */
-extern ast *parser_get_ast(parser *this);
+extern waitui_ast *parser_get_ast(parser *this);
 
 #endif //WAITUI_PARSER_H

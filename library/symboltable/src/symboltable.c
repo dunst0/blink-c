@@ -43,7 +43,7 @@ CREATE_HASHTABLE_TYPE_CUSTOM(IMPLEMENTATION, symbol, symbol,
 symboltable *symboltable_new(void) {
     symboltable *this = NULL;
 
-    log_trace("creating new symboltable");
+    waitui_log_trace("creating new symboltable");
 
     this = calloc(1, sizeof(*this));
     if (!this) { return NULL; }
@@ -51,18 +51,18 @@ symboltable *symboltable_new(void) {
     this->currentScope = 0;
     this->symbols      = symbol_hashtable_new(SYMBOLTABLE_SIZE);
     if (!this->symbols) {
-        log_fatal("could not allocate memory for symbol_hashtable");
+        waitui_log_fatal("could not allocate memory for symbol_hashtable");
         symboltable_destroy(&this);
         return NULL;
     }
 
-    log_trace("new symboltable successful created");
+    waitui_log_trace("new symboltable successful created");
 
     return this;
 }
 
 void symboltable_destroy(symboltable **this) {
-    log_trace("destroying symboltable");
+    waitui_log_trace("destroying symboltable");
 
     if (!this || !(*this)) { return; }
 
@@ -71,7 +71,7 @@ void symboltable_destroy(symboltable **this) {
     free(*this);
     *this = NULL;
 
-    log_trace("symboltable successful destroyed");
+    waitui_log_trace("symboltable successful destroyed");
 }
 
 void symboltable_enter_scope(symboltable *this) {
@@ -79,13 +79,13 @@ void symboltable_enter_scope(symboltable *this) {
 
     this->currentScope++;
 
-    log_debug("entering new scope: %ld", this->currentScope);
+    waitui_log_debug("entering new scope: %ld", this->currentScope);
 }
 
 void symboltable_exit_scope(symboltable *this) {
     if (!this) { return; }
 
-    log_debug("leaving scope: %ld", this->currentScope);
+    waitui_log_debug("leaving scope: %ld", this->currentScope);
 
     for (unsigned long int i = 0; i < this->symbols->size; ++i) {
         if (this->symbols->list[i]) {
@@ -110,7 +110,7 @@ void symboltable_exit_scope(symboltable *this) {
         }
     }
 
-    log_trace("left current scope: %ld", this->currentScope);
+    waitui_log_trace("left current scope: %ld", this->currentScope);
 
     this->currentScope--;
 }
@@ -118,7 +118,7 @@ void symboltable_exit_scope(symboltable *this) {
 void symboltable_enter_declaration_mode(symboltable *this) {
     if (!this) { return; }
 
-    log_debug("entering declaration mode");
+    waitui_log_debug("entering declaration mode");
 
     this->declarationMode = 1;
 }
@@ -126,7 +126,7 @@ void symboltable_enter_declaration_mode(symboltable *this) {
 void symboltable_leave_declaration_mode(symboltable *this) {
     if (!this) { return; }
 
-    log_debug("leaving declaration mode");
+    waitui_log_debug("leaving declaration mode");
 
     this->declarationMode = 0;
 }
@@ -143,7 +143,7 @@ int symboltable_add_symbol(symboltable *this, str identifier,
             if (!reference) { goto error; }
 
             if (foundSymbol->scope == this->currentScope) {
-                log_error("multiple declaration of identifier '%.*s' at "
+                waitui_log_error("multiple declaration of identifier '%.*s' at "
                           "%llu:%llu",
                           STR_FMT(&identifier), reference->line,
                           reference->column);
@@ -161,7 +161,7 @@ int symboltable_add_symbol(symboltable *this, str identifier,
 
             symbol_increment_refcount(*newSymbol);
 
-            log_debug(
+            waitui_log_debug(
                     "declaring new symbol with identifier '%.*s' in scope %ld",
                     STR_FMT(&identifier), this->currentScope);
         } else {
@@ -175,7 +175,7 @@ int symboltable_add_symbol(symboltable *this, str identifier,
                 goto error;
             }
 
-            log_debug("referencing known symbol with identifier '%.*s' in "
+            waitui_log_debug("referencing known symbol with identifier '%.*s' in "
                       "scope %ld",
                       STR_FMT(&identifier), this->currentScope);
 
@@ -196,11 +196,11 @@ int symboltable_add_symbol(symboltable *this, str identifier,
         symbol_increment_refcount(*newSymbol);
 
         if (this->declarationMode) {
-            log_debug("declaring new symbol with identifier '%.*s' in scope "
+            waitui_log_debug("declaring new symbol with identifier '%.*s' in scope "
                       "%ld",
                       STR_FMT(&identifier), this->currentScope);
         } else {
-            log_debug("referencing new symbol with identifier '%.*s' in "
+            waitui_log_debug("referencing new symbol with identifier '%.*s' in "
                       "scope %ld",
                       STR_FMT(&identifier), this->currentScope);
         }

@@ -11,6 +11,7 @@ project(waitui
 
 add_subdirectory(app)
 add_subdirectory(library/ast)
+add_subdirectory(library/ast_printer)
 add_subdirectory(library/hashtable)
 add_subdirectory(library/list)
 add_subdirectory(library/log)

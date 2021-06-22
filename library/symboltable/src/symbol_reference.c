@@ -22,7 +22,7 @@ symbol_reference *symbol_reference_new(unsigned long int line,
                                        unsigned long int column) {
     symbol_reference *this = NULL;
 
-    log_trace("creating new symbol_reference");
+    waitui_log_trace("creating new symbol_reference");
 
     this = calloc(1, sizeof(*this));
     if (!this) { return NULL; }
@@ -30,18 +30,18 @@ symbol_reference *symbol_reference_new(unsigned long int line,
     this->line   = line;
     this->column = column;
 
-    log_trace("new symbol_reference successful created");
+    waitui_log_trace("new symbol_reference successful created");
 
     return this;
 }
 
 void symbol_reference_destroy(symbol_reference **this) {
-    log_trace("destroying symbol_reference");
+    waitui_log_trace("destroying symbol_reference");
 
     if (!this || !(*this)) { return; }
 
     free(*this);
     *this = NULL;
 
-    log_trace("symbol_reference successful destroyed");
+    waitui_log_trace("symbol_reference successful destroyed");
 }

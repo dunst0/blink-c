@@ -13,7 +13,7 @@
 // -----------------------------------------------------------------------------
 
 /**
- * @brief TODO
+ * @brief The maximum number of possible callbacks to register.
  */
 #define MAX_CALLBACKS 32
 
@@ -23,23 +23,23 @@
 // -----------------------------------------------------------------------------
 
 /**
- * @brief TODO
+ * @brief Internal type to store the log callback function with all its info.
  */
-typedef struct log_callback {
-    log_log_fn logFn;
-    int level;
-    void *user_data;
-} log_callback;
+typedef struct waitui_log_callback {
+    waitui_log_logging_fn logFn;
+    waitui_log_level level;
+    void *userData;
+} waitui_log_callback;
 
 /**
- * @brief TODO
+ * @brief Internal type to store the log with all its info.
  */
-typedef struct log {
-    log_lock_fn lockFn;
-    int level;
+typedef struct waitui_log {
+    waitui_log_lock_fn lockFn;
+    waitui_log_level level;
     bool quiet;
-    log_callback callbacks[MAX_CALLBACKS];
-    void *user_data;
+    waitui_log_callback callbacks[MAX_CALLBACKS];
+    void *userData;
 } log;
 
 
@@ -48,22 +48,22 @@ typedef struct log {
 // -----------------------------------------------------------------------------
 
 /**
- * @brief TODO
+ * @brief The internal state of the log lib.
  */
-static log L;
+static struct waitui_log L;
 
 /**
- * @brief TODO
+ * @brief String representations of the log levels.
  */
-static const char *log_level_strings[] = {
+static const char *waitui_log_level_strings[] = {
         "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL",
 };
 
 #ifdef LOG_USE_COLOR
 /**
- * @brief TODO
+ * @brief Color representations of the log levels.
  */
-static const char *log_level_colors[] = {
+static const char *waitui_log_level_colors[] = {
         "\x1b[94m", "\x1b[36m", "\x1b[32m", "\x1b[33m", "\x1b[31m", "\x1b[35m",
 };
 #endif
@@ -74,66 +74,76 @@ static const char *log_level_colors[] = {
 // -----------------------------------------------------------------------------
 
 /**
- * @brief TODO
- * @param level
- * @return
+ * @brief Return the string representations of the log level.
+ * @param level The level to return as a string.
+ * @return The string representations of the log level or empty when out of bounds.
  */
-static const char *log_level_string(int level) {
-    if (level < LOG_TRACE || level >= LOG_MAX) { return ""; }
-    return log_level_strings[level];
+static inline const char *waitui_log_levelAsString(waitui_log_level level) {
+    if (level < WAITUI_LOG_TRACE || level >= WAITUI_LOG_MAX) { return ""; }
+    return waitui_log_level_strings[level];
 }
 
 /**
- * @brief TODO
+ * @brief Return the color representations of the log level.
+ * @param level The level to return as a color.
+ * @return The color representations of the log level or empty when out of bounds.
  */
-static inline void log_lock(void) {
-    if (L.lockFn) { L.lockFn(true, L.user_data); }
+static inline const char *waitui_log_levelAsColor(waitui_log_level level) {
+    if (level < WAITUI_LOG_TRACE || level >= WAITUI_LOG_MAX) { return ""; }
+    return waitui_log_level_colors[level];
 }
 
 /**
- * @brief TODO
+ * @brief Calls the locking callback function to get the lock.
  */
-static inline void log_unlock(void) {
-    if (L.lockFn) { L.lockFn(false, L.user_data); }
+static inline void waitui_log_lock(void) {
+    if (L.lockFn) { L.lockFn(true, L.userData); }
+}
+
+/**
+ * @brief Calls the locking callback function to release the lock.
+ */
+static inline void waitui_log_unlock(void) {
+    if (L.lockFn) { L.lockFn(false, L.userData); }
 }
 
 /**
  * @brief TODO
  * @param event
  */
-static void log_stdout_callback(log_event *event) {
+static void waitui_log_stdout_callback(waitui_log_event *event) {
     char buffer[16];
     buffer[strftime(buffer, sizeof(buffer), "%H:%M:%S", event->time)] = '\0';
 
 #ifdef LOG_USE_COLOR
-    fprintf(event->user_data, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ", buffer,
-            log_level_colors[event->level], log_level_strings[event->level],
-            event->file, event->line);
+    fprintf(event->userData, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ", buffer,
+            waitui_log_levelAsColor(event->level),
+            waitui_log_levelAsString(event->level), event->file, event->line);
 #else
-    fprintf(event->user_data, "%s %-5s %s:%d: ", buffer,
-            log_level_strings[event->level], event->file, event->line);
+    fprintf(event->userData, "%s %-5s %s:%d: ", buffer,
+            waitui_log_levelAsString(event->level), event->file, event->line);
 #endif
 
-    vfprintf(event->user_data, event->format, event->ap);
-    fprintf(event->user_data, "\n");
-    fflush(event->user_data);
+    vfprintf(event->userData, event->format, event->ap);
+    fprintf(event->userData, "\n");
+    fflush(event->userData);
 }
 
 /**
  * @brief TODO
  * @param event
  */
-static void log_file_callback(log_event *event) {
+static void waitui_log_file_callback(waitui_log_event *event) {
     char buffer[64];
     buffer[strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", event->time)] =
             '\0';
 
-    fprintf(event->user_data, "%s %-5s %s:%d: ", buffer,
-            log_level_strings[event->level], event->file, event->line);
+    fprintf(event->userData, "%s %-5s %s:%d: ", buffer,
+            waitui_log_levelAsString(event->level), event->file, event->line);
 
-    vfprintf(event->user_data, event->format, event->ap);
-    fprintf(event->user_data, "\n");
-    fflush(event->user_data);
+    vfprintf(event->userData, event->format, event->ap);
+    fprintf(event->userData, "\n");
+    fflush(event->userData);
 }
 
 /**
@@ -141,13 +151,14 @@ static void log_file_callback(log_event *event) {
  * @param event
  * @param user_data
  */
-static inline void log_init_event(log_event *event, void *user_data) {
+static inline void waitui_log_init_event(waitui_log_event *event,
+                                         void *userData) {
     if (!event->time) {
         time_t t    = time(NULL);
         event->time = localtime(&t);
     }
 
-    event->user_data = user_data;
+    event->userData = userData;
 }
 
 
@@ -155,58 +166,59 @@ static inline void log_init_event(log_event *event, void *user_data) {
 //  Public functions
 // -----------------------------------------------------------------------------
 
-void log_set_lock(log_lock_fn lockFn, void *user_data) {
-    L.lockFn    = lockFn;
-    L.user_data = user_data;
+void waitui_log_set_lock(waitui_log_lock_fn lockFn, void *userData) {
+    L.lockFn   = lockFn;
+    L.userData = userData;
 }
 
-void log_set_level(int level) { L.level = level; }
+void waitui_log_setLevel(waitui_log_level level) { L.level = level; }
 
-void log_set_quiet(bool enable) { L.quiet = enable; }
+void waitui_log_setQuiet(bool enable) { L.quiet = enable; }
 
-int log_add_callback(log_log_fn logFn, void *user_data, int level) {
+int waitui_log_addCallback(waitui_log_logging_fn logFn, void *userData,
+                           waitui_log_level level) {
     for (int i = 0; i < MAX_CALLBACKS; ++i) {
         if (!L.callbacks[i].logFn) {
-            L.callbacks[i] = (log_callback){.logFn     = logFn,
-                                            .user_data = user_data,
-                                            .level     = level};
+            L.callbacks[i] = (waitui_log_callback){.logFn    = logFn,
+                                                   .userData = userData,
+                                                   .level    = level};
             return 1;
         }
     }
     return 0;
 }
 
-int log_add_file(FILE *file, int level) {
-    return log_add_callback(log_file_callback, file, level);
+int waitui_log_addFile(FILE *file, waitui_log_level level) {
+    return waitui_log_addCallback(waitui_log_file_callback, file, level);
 }
 
-void log_write_log(int level, const char *file, int line, const char *format,
-                   ...) {
-    log_event event = {
+void waitui_log_writeLog(waitui_log_level level, const char *file, int line,
+                         const char *format, ...) {
+    waitui_log_event event = {
             .format = format,
             .file   = file,
             .line   = line,
             .level  = level,
     };
 
-    log_lock();
+    waitui_log_lock();
 
     if (!L.quiet && level >= L.level) {
-        log_init_event(&event, stderr);
+        waitui_log_init_event(&event, stderr);
         va_start(event.ap, format);
-        log_stdout_callback(&event);
+        waitui_log_stdout_callback(&event);
         va_end(event.ap);
     }
 
     for (int i = 0; i < MAX_CALLBACKS && L.callbacks[i].logFn; ++i) {
-        log_callback *cb = &L.callbacks[i];
+        waitui_log_callback *cb = &L.callbacks[i];
         if (level >= cb->level) {
-            log_init_event(&event, cb->user_data);
+            waitui_log_init_event(&event, cb->userData);
             va_start(event.ap, format);
             cb->logFn(&event);
             va_end(event.ap);
         }
     }
 
-    log_unlock();
+    waitui_log_unlock();
 }

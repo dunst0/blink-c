@@ -16,7 +16,7 @@ class Test(Hi : Int) extends Raum(Hi, "uff") {
         42
         let ABC : Int in {
             ABC = new ABC("uii")
-            Console.log("ffff");
+            Console.waitui_log("ffff");
         }
         this
         null

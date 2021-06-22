@@ -14,11 +14,9 @@ target_sources(ast
         PRIVATE
         "src/ast.c"
         "src/ast_node.c"
-        "src/ast_printer.c"
         PUBLIC
         "include/waitui/ast.h"
         "include/waitui/ast_node.h"
-        "include/waitui/ast_printer.h"
         )
 
 target_include_directories(ast PUBLIC "include")

@@ -52,7 +52,7 @@ CREATE_LIST_TYPE(INTERFACE, parser_yy_state, parser_yy_state)
  */
 typedef struct parser_extra_parser {
     void *scanner;
-    ast *resultAst;
+    waitui_ast *resultAst;
     str sourceFileName;
     symboltable *symtable;
 } parser_extra_parser;

@@ -148,27 +148,27 @@ identifier          (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
 "++"                                                                                    RETURN(DOUBLE_PLUS_OPERATOR);
 "--"                                                                                    RETURN(DOUBLE_MINUS_OPERATOR);
 
-"+="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL; RETURN(ASSIGNMENT); }
-"-="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL; RETURN(ASSIGNMENT); }
-"*="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_TIMES_EQUAL; RETURN(ASSIGNMENT); }
-"/="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_DIV_EQUAL; RETURN(ASSIGNMENT); }
-"%="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_MODULO_EQUAL; RETURN(ASSIGNMENT); }
-"&="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_AND_EQUAL; RETURN(ASSIGNMENT); }
-"^="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_CARET_EQUAL; RETURN(ASSIGNMENT); }
-"~="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL; RETURN(ASSIGNMENT); }
-"|="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL; RETURN(ASSIGNMENT); }
+"+="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL; RETURN(ASSIGNMENT); }
+"-="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL; RETURN(ASSIGNMENT); }
+"*="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_TIMES_EQUAL; RETURN(ASSIGNMENT); }
+"/="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_DIV_EQUAL; RETURN(ASSIGNMENT); }
+"%="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_MODULO_EQUAL; RETURN(ASSIGNMENT); }
+"&="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_AND_EQUAL; RETURN(ASSIGNMENT); }
+"^="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_CARET_EQUAL; RETURN(ASSIGNMENT); }
+"~="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL; RETURN(ASSIGNMENT); }
+"|="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL; RETURN(ASSIGNMENT); }
 
-"&&"                                                                                    { yylval->operator = AST_BINARY_OPERATOR_DOUBLE_AND; RETURN(DOUBLE_AND_OPERATOR); }
-"||"                                                                                    { yylval->operator = AST_BINARY_OPERATOR_DOUBLE_PIPE; RETURN(DOUBLE_PIPE_OPERATOR); }
-"!"                                                                                     { yylval->operator = AST_UNARY_OPERATOR_NOT; RETURN(NOT_OPERATOR); }
+"&&"                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_DOUBLE_AND; RETURN(DOUBLE_AND_OPERATOR); }
+"||"                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_DOUBLE_PIPE; RETURN(DOUBLE_PIPE_OPERATOR); }
+"!"                                                                                     { yylval->operator = WAITUI_AST_UNARY_OPERATOR_NOT; RETURN(NOT_OPERATOR); }
 
-"=="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_EQUAL; RETURN(EQUALITY); }
-"!="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_NOT_EQUAL; RETURN(EQUALITY); }
+"=="                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_EQUAL; RETURN(EQUALITY); }
+"!="                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_NOT_EQUAL; RETURN(EQUALITY); }
 
-"<"                                                                                     { yylval->operator = AST_BINARY_OPERATOR_LESS; RETURN(RELATIONAL); }
-"<="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_LESS_EQUAL; RETURN(RELATIONAL); }
-">="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_GREATER; RETURN(RELATIONAL); }
-">"                                                                                     { yylval->operator = AST_BINARY_OPERATOR_GREATER_EQUAL; RETURN(RELATIONAL); }
+"<"                                                                                     { yylval->operator = WAITUI_AST_BINARY_OPERATOR_LESS; RETURN(RELATIONAL); }
+"<="                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_LESS_EQUAL; RETURN(RELATIONAL); }
+">="                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_GREATER; RETURN(RELATIONAL); }
+">"                                                                                     { yylval->operator = WAITUI_AST_BINARY_OPERATOR_GREATER_EQUAL; RETURN(RELATIONAL); }
 
 [-.=+*%/&^~|:,{\[(}\]);]                                                                RETURN(yytext[0]);
 

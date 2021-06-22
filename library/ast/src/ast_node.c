@@ -17,176 +17,358 @@
 // -----------------------------------------------------------------------------
 
 #define AST_NODE_DEFINITION_INIT(node_subtype)                                 \
-    this->astDefinitionType = AST_DEFINITION_TYPE_##node_subtype
+    this->astDefinitionType = WAITUI_AST_DEFINITION_TYPE_##node_subtype
 
 #define AST_NODE_EXPRESSION_INIT(node_subtype)                                 \
-    this->astExpressionType = AST_EXPRESSION_TYPE_##node_subtype
+    this->astExpressionType = WAITUI_AST_EXPRESSION_TYPE_##node_subtype
 
-#define AST_NODE_ALLOC_INIT(type, node_type, node_subtype)                     \
+#define AST_NODE_NEW(type, node_type, node_subtype)                            \
+    waitui_log_trace("creating new waitui_ast node " #type);                   \
     type *this = calloc(1, sizeof(*this));                                     \
     if (!this) { return NULL; }                                                \
-                                                                               \
-    this->astNodeType = AST_NODE_TYPE_##node_type;                             \
+    this->astNodeType = WAITUI_AST_NODE_TYPE_##node_type;                      \
     AST_NODE_##node_type##_INIT(node_subtype)
 
-#define AST_NODE_FREE()                                                        \
+#define AST_NODE_NEW_DONE(type)                                                \
+    waitui_log_trace("new waitui_ast node " #type " successful created");      \
+    return this
+
+#define AST_NODE_DESTROY(type)                                                 \
+    waitui_log_trace("destroying waitui_ast node " #type);                     \
+    if (!this || !(*this)) { return; }                                         \
+    waitui_log_trace("doing clean up fo waitui_ast node " #type)
+
+
+#define AST_NODE_DESTROY_DONE(type)                                            \
     free(*this);                                                               \
-    *this = NULL
+    *this = NULL;                                                              \
+    waitui_log_trace("waitui_ast node " #type " successful destroyed")
+
+#define WAITUI_AST_NODE_GET(type, error)                                       \
+    waitui_log_trace("get data from waitui_ast node " #type);                  \
+    if (!this) { return (error); }                                             \
+    waitui_log_trace("doing get data from waitui_ast node " #type)
+
+#define WAITUI_AST_NODE_SET(type)                                              \
+    waitui_log_trace("set data in waitui_ast node " #type);                    \
+    if (!this) { return; }                                                     \
+    waitui_log_trace("doing set data in waitui_ast node " #type)
+
+#define WAITUI_AST_NODE_SET_DONE(type)                                         \
+    waitui_log_trace("successful set data in waitui_ast node " #type)
+
+
+// -----------------------------------------------------------------------------
+//  Local types implementation
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief Struct representing an AST node.
+ */
+struct waitui_ast_node {
+    WAITUI_AST_NODE_PROPERTIES
+};
+
+/**
+ * @brief Struct representing an AST definition.
+ */
+struct waitui_ast_definition {
+    WAITUI_AST_DEFINITION_PROPERTIES
+};
+
+/**
+ * @brief Struct representing an AST expression.
+ */
+struct waitui_ast_expression {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+};
+
+/**
+ * @brief Struct representing an AST program.
+ */
+struct waitui_ast_program {
+    WAITUI_AST_DEFINITION_PROPERTIES
+    waitui_ast_namespace_list *namespaces;
+};
+
+/**
+ * @brief Struct representing an AST namespace.
+ */
+struct waitui_ast_namespace {
+    WAITUI_AST_DEFINITION_PROPERTIES
+    symbol *name;
+    waitui_ast_import_list *imports;
+    waitui_ast_class_list *classes;
+};
+
+/**
+ * @brief Struct representing an AST import.
+ */
+struct waitui_ast_import {
+    WAITUI_AST_DEFINITION_PROPERTIES
+};
+
+/**
+ * @brief Struct representing an AST class.
+ */
+struct waitui_ast_class {
+    WAITUI_AST_DEFINITION_PROPERTIES
+    symbol *name;
+    waitui_ast_formal_list *parameters;
+    symbol *superClass;
+    waitui_ast_expression_list *superClassArgs;
+    waitui_ast_property_list *properties;
+    waitui_ast_function_list *functions;
+};
+
+/**
+ * @brief Struct representing an AST formal.
+ */
+struct waitui_ast_formal {
+    WAITUI_AST_DEFINITION_PROPERTIES
+    symbol *identifier;
+    symbol *type;
+    bool isLazy;
+};
+
+/**
+ * @brief Struct representing an AST property.
+ */
+struct waitui_ast_property {
+    WAITUI_AST_DEFINITION_PROPERTIES
+    symbol *name;
+    symbol *type;
+    waitui_ast_expression *value;
+};
+
+/**
+ * @brief Struct representing an AST function.
+ */
+struct waitui_ast_function {
+    WAITUI_AST_DEFINITION_PROPERTIES
+    symbol *functionName;
+    waitui_ast_formal_list *parameters;
+    symbol *returnType;
+    waitui_ast_expression *body;
+    waitui_ast_function_visibility visibility;
+    bool isAbstract;
+    bool isFinal;
+    bool isOverwrite;
+};
+
+/**
+ * @brief Struct representing an AST block.
+ */
+struct waitui_ast_block {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    waitui_ast_expression_list *expressions;
+};
+
+
+/**
+ * @brief Struct representing an AST let.
+ */
+struct waitui_ast_let {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    waitui_ast_initialization_list *initializations;
+    waitui_ast_expression *body;
+};
 
 
 // -----------------------------------------------------------------------------
 //  Public functions
 // -----------------------------------------------------------------------------
 
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_namespace, namespace)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_import, import)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_class, class)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_expression, expression)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_formal, formal)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_property, property)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_function, function)
-CREATE_LIST_TYPE(IMPLEMENTATION, ast_initialization, initialization)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_namespace, namespace)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_import, import)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_class, class)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_expression, expression)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_formal, formal)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_property, property)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_function, function)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_initialization, initialization)
 
-void ast_node_destroy(ast_node **this) {
+waitui_ast_node_type waitui_ast_node_getNodeType(const waitui_ast_node *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_node, WAITUI_AST_NODE_TYPE_UNDEFINED);
+    return this->astNodeType;
+}
+
+void waitui_ast_node_destroy(waitui_ast_node **this) {
     if (!this || !(*this)) { return; }
 
     switch ((*this)->astNodeType) {
-        case AST_NODE_TYPE_EXPRESSION:
-            ast_expression_destroy((ast_expression **) this);
+        case WAITUI_AST_NODE_TYPE_EXPRESSION:
+            waitui_ast_expression_destroy((waitui_ast_expression **) this);
             break;
-        case AST_NODE_TYPE_DEFINITION:
-            ast_definition_destroy((ast_definition **) this);
+        case WAITUI_AST_NODE_TYPE_DEFINITION:
+            waitui_ast_definition_destroy((waitui_ast_definition **) this);
+            break;
+        default:
+            waitui_log_trace(
+                    "trying to destroy a node with an undefined node type");
             break;
     }
 }
 
-void ast_definition_destroy(ast_definition **this) {
+waitui_ast_definition_type
+waitui_ast_definition_getDefinitionType(const waitui_ast_definition *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_definition,
+                        WAITUI_AST_DEFINITION_TYPE_UNDEFINED);
+    return this->astDefinitionType;
+}
+
+void waitui_ast_definition_destroy(waitui_ast_definition **this) {
     if (!this || !(*this)) { return; }
 
     switch ((*this)->astDefinitionType) {
-        case AST_DEFINITION_TYPE_FORMAL:
-            ast_formal_destroy((ast_formal **) this);
+        case WAITUI_AST_DEFINITION_TYPE_FORMAL:
+            waitui_ast_formal_destroy((waitui_ast_formal **) this);
             break;
-        case AST_DEFINITION_TYPE_PROPERTY:
-            ast_property_destroy((ast_property **) this);
+        case WAITUI_AST_DEFINITION_TYPE_PROPERTY:
+            waitui_ast_property_destroy((waitui_ast_property **) this);
             break;
-        case AST_DEFINITION_TYPE_FUNCTION:
-            ast_function_destroy((ast_function **) this);
+        case WAITUI_AST_DEFINITION_TYPE_FUNCTION:
+            waitui_ast_function_destroy((waitui_ast_function **) this);
             break;
-        case AST_DEFINITION_TYPE_CLASS:
-            ast_class_destroy((ast_class **) this);
+        case WAITUI_AST_DEFINITION_TYPE_CLASS:
+            waitui_ast_class_destroy((waitui_ast_class **) this);
             break;
-        case AST_DEFINITION_TYPE_PROGRAM:
-            ast_program_destroy((ast_program **) this);
+        case WAITUI_AST_DEFINITION_TYPE_PROGRAM:
+            waitui_ast_program_destroy((waitui_ast_program **) this);
             break;
-        case AST_DEFINITION_TYPE_IMPORT:
-            ast_import_destroy((ast_import **) this);
+        case WAITUI_AST_DEFINITION_TYPE_IMPORT:
+            waitui_ast_import_destroy((waitui_ast_import **) this);
             break;
-        case AST_DEFINITION_TYPE_NAMESPACE:
-            ast_namespace_destroy((ast_namespace **) this);
+        case WAITUI_AST_DEFINITION_TYPE_NAMESPACE:
+            waitui_ast_namespace_destroy((waitui_ast_namespace **) this);
+            break;
+        default:
+            waitui_log_trace("trying to destroy a definition with an undefined "
+                             "definition type");
             break;
     }
 }
 
-void ast_expression_destroy(ast_expression **this) {
+waitui_ast_expression_type
+waitui_ast_expression_getExpressionType(const waitui_ast_expression *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_expression,
+                        WAITUI_AST_EXPRESSION_TYPE_UNDEFINED);
+    return this->astExpressionType;
+}
+
+void waitui_ast_expression_destroy(waitui_ast_expression **this) {
     if (!this || !(*this)) { return; }
 
     switch ((*this)->astExpressionType) {
-        case AST_EXPRESSION_TYPE_INTEGER_LITERAL:
-            ast_integer_literal_destroy((ast_integer_literal **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_INTEGER_LITERAL:
+            waitui_ast_integer_literal_destroy(
+                    (waitui_ast_integer_literal **) this);
             break;
-        case AST_EXPRESSION_TYPE_BOOLEAN_LITERAL:
-            ast_boolean_literal_destroy((ast_boolean_literal **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_BOOLEAN_LITERAL:
+            waitui_ast_boolean_literal_destroy(
+                    (waitui_ast_boolean_literal **) this);
             break;
-        case AST_EXPRESSION_TYPE_DECIMAL_LITERAL:
-            ast_decimal_literal_destroy((ast_decimal_literal **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_DECIMAL_LITERAL:
+            waitui_ast_decimal_literal_destroy(
+                    (waitui_ast_decimal_literal **) this);
             break;
-        case AST_EXPRESSION_TYPE_NULL_LITERAL:
-            ast_null_literal_destroy((ast_null_literal **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_NULL_LITERAL:
+            waitui_ast_null_literal_destroy((waitui_ast_null_literal **) this);
             break;
-        case AST_EXPRESSION_TYPE_STRING_LITERAL:
-            ast_string_literal_destroy((ast_string_literal **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_STRING_LITERAL:
+            waitui_ast_string_literal_destroy(
+                    (waitui_ast_string_literal **) this);
             break;
-        case AST_EXPRESSION_TYPE_ASSIGNMENT:
-            ast_assignment_destroy((ast_assignment **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_ASSIGNMENT:
+            waitui_ast_assignment_destroy((waitui_ast_assignment **) this);
             break;
-        case AST_EXPRESSION_TYPE_REFERENCE:
-            ast_reference_destroy((ast_reference **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_REFERENCE:
+            waitui_ast_reference_destroy((waitui_ast_reference **) this);
             break;
-        case AST_EXPRESSION_TYPE_THIS_LITERAL:
-            ast_this_literal_destroy((ast_this_literal **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_THIS_LITERAL:
+            waitui_ast_this_literal_destroy((waitui_ast_this_literal **) this);
             break;
-        case AST_EXPRESSION_TYPE_CAST:
-            ast_cast_destroy((ast_cast **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_CAST:
+            waitui_ast_cast_destroy((waitui_ast_cast **) this);
             break;
-        case AST_EXPRESSION_TYPE_LET:
-            ast_let_destroy((ast_let **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_LET:
+            waitui_ast_let_destroy((waitui_ast_let **) this);
             break;
-        case AST_EXPRESSION_TYPE_BLOCK:
-            ast_block_destroy((ast_block **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_BLOCK:
+            waitui_ast_block_destroy((waitui_ast_block **) this);
             break;
-        case AST_EXPRESSION_TYPE_CONSTRUCTOR_CALL:
-            ast_constructor_call_destroy((ast_constructor_call **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_CONSTRUCTOR_CALL:
+            waitui_ast_constructor_call_destroy(
+                    (waitui_ast_constructor_call **) this);
             break;
-        case AST_EXPRESSION_TYPE_FUNCTION_CALL:
-            ast_function_call_destroy((ast_function_call **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_FUNCTION_CALL:
+            waitui_ast_function_call_destroy(
+                    (waitui_ast_function_call **) this);
             break;
-        case AST_EXPRESSION_TYPE_SUPER_FUNCTION_CALL:
-            ast_super_function_call_destroy((ast_super_function_call **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_SUPER_FUNCTION_CALL:
+            waitui_ast_super_function_call_destroy(
+                    (waitui_ast_super_function_call **) this);
             break;
-        case AST_EXPRESSION_TYPE_BINARY_EXPRESSION:
-            ast_binary_expression_destroy((ast_binary_expression **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_BINARY_EXPRESSION:
+            waitui_ast_binary_expression_destroy(
+                    (waitui_ast_binary_expression **) this);
             break;
-        case AST_EXPRESSION_TYPE_UNARY_EXPRESSION:
-            ast_unary_expression_destroy((ast_unary_expression **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_UNARY_EXPRESSION:
+            waitui_ast_unary_expression_destroy(
+                    (waitui_ast_unary_expression **) this);
             break;
-        case AST_EXPRESSION_TYPE_IF_ELSE:
-            ast_if_else_destroy((ast_if_else **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_IF_ELSE:
+            waitui_ast_if_else_destroy((waitui_ast_if_else **) this);
             break;
-        case AST_EXPRESSION_TYPE_WHILE:
-            ast_while_destroy((ast_while **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_WHILE:
+            waitui_ast_while_destroy((waitui_ast_while **) this);
             break;
-        case AST_EXPRESSION_TYPE_LAZY_EXPRESSION:
-            ast_lazy_expression_destroy((ast_lazy_expression **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_LAZY_EXPRESSION:
+            waitui_ast_lazy_expression_destroy(
+                    (waitui_ast_lazy_expression **) this);
             break;
-        case AST_EXPRESSION_TYPE_NATIVE_EXPRESSION:
-            ast_native_expression_destroy((ast_native_expression **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_NATIVE_EXPRESSION:
+            waitui_ast_native_expression_destroy(
+                    (waitui_ast_native_expression **) this);
             break;
-        case AST_EXPRESSION_TYPE_INITIALIZATION:
-            ast_initialization_destroy((ast_initialization **) this);
+        case WAITUI_AST_EXPRESSION_TYPE_INITIALIZATION:
+            waitui_ast_initialization_destroy(
+                    (waitui_ast_initialization **) this);
+            break;
+        default:
+            waitui_log_trace("trying to destroy a expression with an undefined "
+                             "expression type");
             break;
     }
 }
 
-ast_program *ast_program_new(ast_namespace_list *namespaces) {
-    log_trace("creating new ast_program");
-
-    AST_NODE_ALLOC_INIT(ast_program, DEFINITION, PROGRAM);
+waitui_ast_program *
+waitui_ast_program_new(waitui_ast_namespace_list *namespaces) {
+    AST_NODE_NEW(waitui_ast_program, DEFINITION, PROGRAM);
 
     this->namespaces = namespaces;
 
-    log_trace("new ast_program successful created");
-
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_program);
 }
 
-void ast_program_destroy(ast_program **this) {
-    log_trace("destroying ast_program");
-
-    if (!this || !(*this)) { return; }
-
-    ast_namespace_list_destroy(&(*this)->namespaces);
-
-    AST_NODE_FREE();
-
-    log_trace("ast_program successful destroyed");
+waitui_ast_namespace_list *
+waitui_ast_program_getNamespaces(waitui_ast_program *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_program, NULL);
+    return this->namespaces;
 }
 
-ast_namespace *ast_namespace_new(symbol *name, ast_import_list *imports,
-                                 ast_class_list *classes) {
-    log_trace("creating new ast_namespace");
+void waitui_ast_program_destroy(waitui_ast_program **this) {
+    AST_NODE_DESTROY(waitui_ast_program);
 
-    AST_NODE_ALLOC_INIT(ast_namespace, DEFINITION, NAMESPACE);
+    waitui_ast_namespace_list_destroy(&(*this)->namespaces);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_program);
+}
+
+waitui_ast_namespace *waitui_ast_namespace_new(symbol *name,
+                                               waitui_ast_import_list *imports,
+                                               waitui_ast_class_list *classes) {
+    AST_NODE_NEW(waitui_ast_namespace, DEFINITION, NAMESPACE);
 
     this->name    = name;
     this->imports = imports;
@@ -194,53 +376,56 @@ ast_namespace *ast_namespace_new(symbol *name, ast_import_list *imports,
 
     symbol_increment_refcount(name);
 
-    log_trace("new ast_namespace successful created");
-
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_namespace);
 }
 
-void ast_namespace_destroy(ast_namespace **this) {
-    log_trace("destroying ast_namespace");
+symbol *waitui_ast_namespace_getName(waitui_ast_namespace *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_namespace, NULL);
+    return this->name;
+}
 
-    if (!this || !(*this)) { return; }
+waitui_ast_import_list *
+waitui_ast_namespace_getImports(waitui_ast_namespace *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_namespace, NULL);
+    return this->imports;
+}
+
+waitui_ast_class_list *
+waitui_ast_namespace_getClasses(waitui_ast_namespace *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_namespace, NULL);
+    return this->classes;
+}
+
+void waitui_ast_namespace_destroy(waitui_ast_namespace **this) {
+    AST_NODE_DESTROY(waitui_ast_namespace);
 
     symbol_decrement_refcount(&(*this)->name);
-    ast_import_list_destroy(&(*this)->imports);
-    ast_class_list_destroy(&(*this)->classes);
 
-    AST_NODE_FREE();
+    waitui_ast_import_list_destroy(&(*this)->imports);
+    waitui_ast_class_list_destroy(&(*this)->classes);
 
-    log_trace("ast_namespace successful destroyed");
+    AST_NODE_DESTROY_DONE(waitui_ast_namespace);
 }
 
-ast_import *ast_import_new(void) {
-    log_trace("creating new ast_import");
+waitui_ast_import *waitui_ast_import_new(void) {
+    AST_NODE_NEW(waitui_ast_import, DEFINITION, IMPORT);
 
-    AST_NODE_ALLOC_INIT(ast_import, DEFINITION, IMPORT);
-
-    log_trace("new ast_import successful created");
-
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_import);
 }
 
-void ast_import_destroy(ast_import **this) {
-    log_trace("destroying ast_import");
+void waitui_ast_import_destroy(waitui_ast_import **this) {
+    AST_NODE_DESTROY(waitui_ast_import);
 
-    if (!this || !(*this)) { return; }
-
-    AST_NODE_FREE();
-
-    log_trace("ast_import successful destroyed");
+    AST_NODE_DESTROY_DONE(waitui_ast_import);
 }
 
-ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
-                         symbol *superClass,
-                         ast_expression_list *superClassArgs,
-                         ast_property_list *properties,
-                         ast_function_list *functions) {
-    log_trace("creating new ast_class");
-
-    AST_NODE_ALLOC_INIT(ast_class, DEFINITION, CLASS);
+waitui_ast_class *
+waitui_ast_class_new(symbol *name, waitui_ast_formal_list *parameters,
+                     symbol *superClass,
+                     waitui_ast_expression_list *superClassArgs,
+                     waitui_ast_property_list *properties,
+                     waitui_ast_function_list *functions) {
+    AST_NODE_NEW(waitui_ast_class, DEFINITION, CLASS);
 
     this->name           = name;
     this->parameters     = parameters;
@@ -252,79 +437,112 @@ ast_class *ast_class_new(symbol *name, ast_formal_list *parameters,
     symbol_increment_refcount(name);
     symbol_increment_refcount(superClass);
 
-    log_trace("new ast_class successful created");
-
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_class);
 }
 
-void ast_class_set_name(ast_class *this, symbol *name) {
-    log_trace("ast_class setting name");
+symbol *waitui_ast_class_getName(waitui_ast_class *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_class, NULL);
+    return this->name;
+}
 
-    if (!this || !name) { return; }
+void waitui_ast_class_setName(waitui_ast_class *this, symbol *name) {
+    WAITUI_AST_NODE_SET(waitui_ast_class);
+
+    if (!name) { return; }
 
     if (this->name) { symbol_decrement_refcount(&this->name); }
     this->name = name;
+
     symbol_increment_refcount(name);
 
-    log_trace("ast_class set name");
+    WAITUI_AST_NODE_SET_DONE(waitui_ast_class);
 }
 
-void ast_class_set_parameters(ast_class *this, ast_formal_list *parameters) {
-    log_trace("ast_class setting parameters");
+waitui_ast_formal_list *waitui_ast_class_getParameters(waitui_ast_class *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_class, NULL);
+    return this->parameters;
+}
 
-    if (!this || !parameters) { return; }
+void waitui_ast_class_setParameters(waitui_ast_class *this,
+                                    waitui_ast_formal_list *parameters) {
+    WAITUI_AST_NODE_SET(waitui_ast_class);
 
-    if (this->parameters) { ast_formal_list_destroy(&this->parameters); }
+    if (!parameters) { return; }
+
+    if (this->parameters) { waitui_ast_formal_list_destroy(&this->parameters); }
     this->parameters = parameters;
 
-    log_trace("ast_class set parameters");
+    WAITUI_AST_NODE_SET_DONE(waitui_ast_class);
 }
 
-void ast_class_set_super_class(ast_class *this, symbol *superClass) {
-    log_trace("ast_class setting superClass");
+symbol *waitui_ast_class_getSuperClass(waitui_ast_class *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_class, NULL);
+    return this->superClass;
+}
 
-    if (!this || !superClass) { return; }
+void waitui_ast_class_setSuperClass(waitui_ast_class *this,
+                                    symbol *superClass) {
+    WAITUI_AST_NODE_SET(waitui_ast_class);
+
+    if (!superClass) { return; }
 
     if (this->superClass) { symbol_decrement_refcount(&this->superClass); }
     this->superClass = superClass;
+
     symbol_increment_refcount(superClass);
 
-    log_trace("ast_class set superClass");
+    WAITUI_AST_NODE_SET_DONE(waitui_ast_class);
 }
 
-void ast_class_set_super_class_args(ast_class *this,
-                                    ast_expression_list *superClassArgs) {
-    log_trace("ast_class setting superClassArgs");
+waitui_ast_expression_list *
+waitui_ast_class_getSuperClassArgs(waitui_ast_class *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_class, NULL);
+    return this->superClassArgs;
+}
 
-    if (!this || !superClassArgs) { return; }
+void waitui_ast_class_setSuperClassArgs(
+        waitui_ast_class *this, waitui_ast_expression_list *superClassArgs) {
+    WAITUI_AST_NODE_SET(waitui_ast_class);
+
+    if (!superClassArgs) { return; }
 
     if (this->superClassArgs) {
-        ast_expression_list_destroy(&this->superClassArgs);
+        waitui_ast_expression_list_destroy(&this->superClassArgs);
     }
     this->superClassArgs = superClassArgs;
 
-    log_trace("ast_class set superClassArgs");
+    WAITUI_AST_NODE_SET_DONE(waitui_ast_class);
 }
 
-void ast_class_destroy(ast_class **this) {
-    log_trace("destroying ast_class");
+waitui_ast_property_list *
+waitui_ast_class_getProperties(waitui_ast_class *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_class, NULL);
+    return this->properties;
+}
 
-    if (!this || !(*this)) { return; }
+waitui_ast_function_list *
+waitui_ast_class_getFunctions(waitui_ast_class *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_class, NULL);
+    return this->functions;
+}
 
-    symbol_decrement_refcount(&(*this)->name);
-    ast_formal_list_destroy(&(*this)->parameters);
+void waitui_ast_class_destroy(waitui_ast_class **this) {
+    AST_NODE_DESTROY(waitui_ast_class);
+
     symbol_decrement_refcount(&(*this)->superClass);
-    ast_expression_list_destroy(&(*this)->superClassArgs);
-    ast_property_list_destroy(&(*this)->properties);
-    ast_function_list_destroy(&(*this)->functions);
+    symbol_decrement_refcount(&(*this)->name);
 
-    AST_NODE_FREE();
+    waitui_ast_formal_list_destroy(&(*this)->parameters);
+    waitui_ast_expression_list_destroy(&(*this)->superClassArgs);
+    waitui_ast_property_list_destroy(&(*this)->properties);
+    waitui_ast_function_list_destroy(&(*this)->functions);
 
-    log_trace("ast_class successful destroyed");
+    AST_NODE_DESTROY_DONE(waitui_ast_class);
 }
 
-ast_formal *ast_formal_new(symbol *identifier, symbol *type, bool isLazy) {
-    AST_NODE_ALLOC_INIT(ast_formal, DEFINITION, FORMAL);
+waitui_ast_formal *waitui_ast_formal_new(symbol *identifier, symbol *type,
+                                         bool isLazy) {
+    AST_NODE_NEW(waitui_ast_formal, DEFINITION, FORMAL);
 
     this->identifier = identifier;
     this->type       = type;
@@ -333,25 +551,40 @@ ast_formal *ast_formal_new(symbol *identifier, symbol *type, bool isLazy) {
     symbol_increment_refcount(identifier);
     symbol_increment_refcount(type);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_formal);
 }
 
-void ast_formal_destroy(ast_formal **this) {
-    if (!this || !(*this)) { return; }
+symbol *waitui_ast_formal_getIdentifier(waitui_ast_formal *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_formal, NULL);
+    return this->identifier;
+}
 
-    symbol_decrement_refcount(&(*this)->identifier);
+symbol *waitui_ast_formal_getType(waitui_ast_formal *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_formal, NULL);
+    return this->type;
+}
+
+bool waitui_ast_formal_isLazy(waitui_ast_formal *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_formal, NULL);
+    return this->isLazy;
+}
+
+void waitui_ast_formal_destroy(waitui_ast_formal **this) {
+    AST_NODE_DESTROY(waitui_ast_formal);
+
     symbol_decrement_refcount(&(*this)->type);
+    symbol_decrement_refcount(&(*this)->identifier);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_formal);
 }
 
-ast_function *ast_function_new(symbol *functionName,
-                               ast_formal_list *parameters, symbol *returnType,
-                               ast_expression *body,
-                               ast_function_visibility visibility,
-                               bool isAbstract, bool isFinal,
-                               bool isOverwrite) {
-    AST_NODE_ALLOC_INIT(ast_function, DEFINITION, FUNCTION);
+waitui_ast_function *
+waitui_ast_function_new(symbol *functionName,
+                        waitui_ast_formal_list *parameters, symbol *returnType,
+                        waitui_ast_expression *body,
+                        waitui_ast_function_visibility visibility,
+                        bool isAbstract, bool isFinal, bool isOverwrite) {
+    AST_NODE_NEW(waitui_ast_function, DEFINITION, FUNCTION);
 
     this->functionName = functionName;
     this->parameters   = parameters;
@@ -365,56 +598,112 @@ ast_function *ast_function_new(symbol *functionName,
     symbol_increment_refcount(functionName);
     symbol_increment_refcount(returnType);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_function);
 }
 
-void ast_function_set_body(ast_function *this, ast_expression *body) {
-    if (!this) { return; }
+symbol *waitui_ast_function_getFunctionName(waitui_ast_function *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function, NULL);
+    return this->functionName;
+}
 
-    if (this->body) { ast_expression_destroy(&this->body); }
+waitui_ast_formal_list *
+waitui_ast_function_getParameters(waitui_ast_function *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function, NULL);
+    return this->parameters;
+}
 
+symbol *waitui_ast_function_getReturnType(waitui_ast_function *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function, NULL);
+    return this->returnType;
+}
+
+waitui_ast_expression *waitui_ast_function_getBody(waitui_ast_function *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function, NULL);
+    return this->body;
+}
+
+void waitui_ast_function_setBody(waitui_ast_function *this,
+                                 waitui_ast_expression *body) {
+    WAITUI_AST_NODE_SET(waitui_ast_function);
+
+    if (this->body) { waitui_ast_expression_destroy(&this->body); }
     this->body = body;
+
+    WAITUI_AST_NODE_SET_DONE(waitui_ast_function);
 }
 
-void ast_function_set_visibility(ast_function *this,
-                                 ast_function_visibility visibility) {
-    if (!this) { return; }
+waitui_ast_function_visibility
+waitui_ast_function_getVisibility(waitui_ast_function *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function,
+                        WAITUI_AST_FUNCTION_VISIBILITY_PUBLIC);
+    return this->visibility;
+}
+
+void waitui_ast_function_setVisibility(
+        waitui_ast_function *this, waitui_ast_function_visibility visibility) {
+    WAITUI_AST_NODE_SET(waitui_ast_function);
 
     this->visibility = visibility;
+
+    WAITUI_AST_NODE_SET_DONE(waitui_ast_function);
 }
 
-void ast_function_set_abstract(ast_function *this, bool isAbstract) {
-    if (!this) { return; }
+bool waitui_ast_function_isAbstract(waitui_ast_function *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function, NULL);
+    return this->isAbstract;
+}
+
+void waitui_ast_function_setAbstract(waitui_ast_function *this,
+                                     bool isAbstract) {
+    WAITUI_AST_NODE_SET(waitui_ast_function);
 
     this->isAbstract = isAbstract;
+
+    WAITUI_AST_NODE_SET_DONE(waitui_ast_function);
 }
 
-void ast_function_set_final(ast_function *this, bool isFinal) {
-    if (!this) { return; }
+bool waitui_ast_function_isFinal(waitui_ast_function *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function, NULL);
+    return this->isFinal;
+}
+
+void waitui_ast_function_setFinal(waitui_ast_function *this, bool isFinal) {
+    WAITUI_AST_NODE_SET(waitui_ast_function);
 
     this->isFinal = isFinal;
+
+    WAITUI_AST_NODE_SET_DONE(waitui_ast_function);
 }
 
-void ast_function_set_overwrite(ast_function *this, bool isOverwrite) {
-    if (!this) { return; }
+bool waitui_ast_function_isOverwrite(waitui_ast_function *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function, NULL);
+    return this->isOverwrite;
+}
+
+void waitui_ast_function_setOverwrite(waitui_ast_function *this,
+                                      bool isOverwrite) {
+    WAITUI_AST_NODE_SET(waitui_ast_function);
 
     this->isOverwrite = isOverwrite;
+
+    WAITUI_AST_NODE_SET_DONE(waitui_ast_function);
 }
 
-void ast_function_destroy(ast_function **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_function_destroy(waitui_ast_function **this) {
+    AST_NODE_DESTROY(waitui_ast_function);
 
-    symbol_decrement_refcount(&(*this)->functionName);
-    ast_formal_list_destroy(&(*this)->parameters);
     symbol_decrement_refcount(&(*this)->returnType);
-    ast_expression_destroy(&(*this)->body);
+    symbol_decrement_refcount(&(*this)->functionName);
 
-    AST_NODE_FREE();
+    waitui_ast_formal_list_destroy(&(*this)->parameters);
+    waitui_ast_expression_destroy(&(*this)->body);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_function);
 }
 
-ast_property *ast_property_new(symbol *name, symbol *type,
-                               ast_expression *value) {
-    AST_NODE_ALLOC_INIT(ast_property, DEFINITION, PROPERTY);
+waitui_ast_property *waitui_ast_property_new(symbol *name, symbol *type,
+                                             waitui_ast_expression *value) {
+    AST_NODE_NEW(waitui_ast_property, DEFINITION, PROPERTY);
 
     this->name  = name;
     this->type  = type;
@@ -423,57 +712,93 @@ ast_property *ast_property_new(symbol *name, symbol *type,
     symbol_increment_refcount(name);
     symbol_increment_refcount(type);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_property);
 }
 
-void ast_property_destroy(ast_property **this) {
-    if (!this || !(*this)) { return; }
+symbol *waitui_ast_property_getName(waitui_ast_property *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_property, NULL);
+    return this->name;
+}
+
+symbol *waitui_ast_property_getType(waitui_ast_property *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_property, NULL);
+    return this->type;
+}
+
+waitui_ast_expression *waitui_ast_property_getValue(waitui_ast_property *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_property, NULL);
+    return this->value;
+}
+
+void waitui_ast_property_destroy(waitui_ast_property **this) {
+    AST_NODE_DESTROY(waitui_ast_property);
 
     symbol_decrement_refcount(&(*this)->name);
     symbol_decrement_refcount(&(*this)->type);
-    ast_expression_destroy(&(*this)->value);
 
-    AST_NODE_FREE();
+    waitui_ast_expression_destroy(&(*this)->value);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_property);
 }
 
-ast_block *ast_block_new(ast_expression_list *expressions) {
-    AST_NODE_ALLOC_INIT(ast_block, EXPRESSION, BLOCK);
+waitui_ast_block *
+waitui_ast_block_new(waitui_ast_expression_list *expressions) {
+    AST_NODE_NEW(waitui_ast_block, EXPRESSION, BLOCK);
 
     this->expressions = expressions;
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_block);
 }
 
-void ast_block_destroy(ast_block **this) {
-    if (!this || !(*this)) { return; }
-
-    ast_expression_list_destroy(&(*this)->expressions);
-
-    AST_NODE_FREE();
+waitui_ast_expression_list *
+waitui_ast_block_getExpressions(waitui_ast_block *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_block, NULL);
+    return this->expressions;
 }
 
-ast_let *ast_let_new(ast_initialization_list *initializations,
-                     ast_expression *body) {
-    AST_NODE_ALLOC_INIT(ast_let, EXPRESSION, LET);
+void waitui_ast_block_destroy(waitui_ast_block **this) {
+    AST_NODE_DESTROY(waitui_ast_block);
+
+    waitui_ast_expression_list_destroy(&(*this)->expressions);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_block);
+}
+
+waitui_ast_let *
+waitui_ast_let_new(waitui_ast_initialization_list *initializations,
+                            waitui_ast_expression *body) {
+    AST_NODE_NEW(waitui_ast_let, EXPRESSION, LET);
 
     this->initializations = initializations;
     this->body            = body;
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_let);
 }
 
-void ast_let_destroy(ast_let **this) {
-    if (!this || !(*this)) { return; }
-
-    ast_initialization_list_destroy(&(*this)->initializations);
-    ast_expression_destroy(&(*this)->body);
-
-    AST_NODE_FREE();
+waitui_ast_initialization_list *
+waitui_ast_let_getInitializations(waitui_ast_let *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_let, NULL);
+    return this->initializations;
 }
 
-ast_initialization *ast_initialization_new(symbol *identifier, symbol *type,
-                                           ast_expression *value) {
-    AST_NODE_ALLOC_INIT(ast_initialization, EXPRESSION, INITIALIZATION);
+waitui_ast_expression *waitui_ast_let_getBody(waitui_ast_let *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_let, NULL);
+    return this->body;
+}
+
+void waitui_ast_let_destroy(waitui_ast_let **this) {
+    AST_NODE_DESTROY(waitui_ast_let);
+
+    waitui_ast_initialization_list_destroy(&(*this)->initializations);
+    waitui_ast_expression_destroy(&(*this)->body);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_let);
+}
+
+waitui_ast_initialization *
+waitui_ast_initialization_new(symbol *identifier, symbol *type,
+                              waitui_ast_expression *value) {
+    AST_NODE_NEW(waitui_ast_initialization, EXPRESSION, INITIALIZATION);
 
     this->identifier = identifier;
     this->type       = type;
@@ -482,23 +807,25 @@ ast_initialization *ast_initialization_new(symbol *identifier, symbol *type,
     symbol_increment_refcount(identifier);
     symbol_increment_refcount(type);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_initialization);
 }
 
-void ast_initialization_destroy(ast_initialization **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_initialization_destroy(waitui_ast_initialization **this) {
+    AST_NODE_DESTROY(waitui_ast_initialization);
 
     symbol_decrement_refcount(&(*this)->identifier);
     symbol_decrement_refcount(&(*this)->type);
-    ast_expression_destroy(&(*this)->value);
 
-    AST_NODE_FREE();
+    waitui_ast_expression_destroy(&(*this)->value);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_initialization);
 }
 
-ast_assignment *ast_assignment_new(symbol *identifier,
-                                   ast_assignment_operator operator,
-                                   ast_expression * value) {
-    AST_NODE_ALLOC_INIT(ast_assignment, EXPRESSION, ASSIGNMENT);
+waitui_ast_assignment *
+waitui_ast_assignment_new(symbol *identifier,
+                          waitui_ast_assignment_operator operator,
+                          waitui_ast_expression * value) {
+    AST_NODE_NEW(waitui_ast_assignment, EXPRESSION, ASSIGNMENT);
 
     this->identifier = identifier;
     this->operator   = operator;
@@ -506,174 +833,184 @@ ast_assignment *ast_assignment_new(symbol *identifier,
 
     symbol_increment_refcount(identifier);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_assignment);
 }
 
-void ast_assignment_destroy(ast_assignment **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_assignment_destroy(waitui_ast_assignment **this) {
+    AST_NODE_DESTROY(waitui_ast_assignment);
 
     symbol_decrement_refcount(&(*this)->identifier);
-    ast_expression_destroy(&(*this)->value);
 
-    AST_NODE_FREE();
+    waitui_ast_expression_destroy(&(*this)->value);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_assignment);
 }
 
-ast_cast *ast_cast_new(ast_expression *object, symbol *type) {
-    AST_NODE_ALLOC_INIT(ast_cast, EXPRESSION, CAST);
+waitui_ast_cast *waitui_ast_cast_new(waitui_ast_expression *object,
+                                     symbol *type) {
+    AST_NODE_NEW(waitui_ast_cast, EXPRESSION, CAST);
 
     this->object = object;
     this->type   = type;
 
     symbol_increment_refcount(type);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_cast);
 }
 
-void ast_cast_destroy(ast_cast **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_cast_destroy(waitui_ast_cast **this) {
+    AST_NODE_DESTROY(waitui_ast_cast);
 
-    ast_expression_destroy(&(*this)->object);
     symbol_decrement_refcount(&(*this)->type);
 
-    AST_NODE_FREE();
+    waitui_ast_expression_destroy(&(*this)->object);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_cast);
 }
 
-ast_if_else *ast_if_else_new(ast_expression *condition,
-                             ast_expression *thenBranch,
-                             ast_expression *elseBranch) {
-    AST_NODE_ALLOC_INIT(ast_if_else, EXPRESSION, IF_ELSE);
+waitui_ast_if_else *waitui_ast_if_else_new(waitui_ast_expression *condition,
+                                           waitui_ast_expression *thenBranch,
+                                           waitui_ast_expression *elseBranch) {
+    AST_NODE_NEW(waitui_ast_if_else, EXPRESSION, IF_ELSE);
 
     this->condition  = condition;
     this->thenBranch = thenBranch;
     this->elseBranch = elseBranch;
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_if_else);
 }
 
-void ast_if_else_destroy(ast_if_else **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_if_else_destroy(waitui_ast_if_else **this) {
+    AST_NODE_DESTROY(waitui_ast_if_else);
 
-    ast_expression_destroy(&(*this)->condition);
-    ast_expression_destroy(&(*this)->thenBranch);
-    ast_expression_destroy(&(*this)->elseBranch);
+    waitui_ast_expression_destroy(&(*this)->condition);
+    waitui_ast_expression_destroy(&(*this)->thenBranch);
+    waitui_ast_expression_destroy(&(*this)->elseBranch);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_if_else);
 }
 
-ast_while *ast_while_new(ast_expression *condition, ast_expression *body) {
-    AST_NODE_ALLOC_INIT(ast_while, EXPRESSION, WHILE);
+waitui_ast_while *waitui_ast_while_new(waitui_ast_expression *condition,
+                                       waitui_ast_expression *body) {
+    AST_NODE_NEW(waitui_ast_while, EXPRESSION, WHILE);
 
     this->condition = condition;
     this->body      = body;
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_while);
 }
 
-void ast_while_destroy(ast_while **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_while_destroy(waitui_ast_while **this) {
+    AST_NODE_DESTROY(waitui_ast_while);
 
-    ast_expression_destroy(&(*this)->condition);
-    ast_expression_destroy(&(*this)->body);
+    waitui_ast_expression_destroy(&(*this)->condition);
+    waitui_ast_expression_destroy(&(*this)->body);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_while);
 }
 
-ast_binary_expression *ast_binary_expression_new(ast_expression *left,
-                                                 ast_binary_operator operator,
-                                                 ast_expression * right) {
-    AST_NODE_ALLOC_INIT(ast_binary_expression, EXPRESSION, BINARY_EXPRESSION);
+waitui_ast_binary_expression *
+waitui_ast_binary_expression_new(waitui_ast_expression *left,
+                                 waitui_ast_binary_operator operator,
+                                 waitui_ast_expression * right) {
+    AST_NODE_NEW(waitui_ast_binary_expression, EXPRESSION, BINARY_EXPRESSION);
 
     this->left    = left;
     this->operator= operator;
     this->right   = right;
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_binary_expression);
 }
 
-void ast_binary_expression_destroy(ast_binary_expression **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_binary_expression_destroy(waitui_ast_binary_expression **this) {
+    AST_NODE_DESTROY(waitui_ast_binary_expression);
 
-    ast_expression_destroy(&(*this)->left);
-    ast_expression_destroy(&(*this)->right);
+    waitui_ast_expression_destroy(&(*this)->left);
+    waitui_ast_expression_destroy(&(*this)->right);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_binary_expression);
 }
 
-ast_unary_expression *ast_unary_expression_new(ast_unary_operator operator,
-                                               ast_expression * expression) {
-    AST_NODE_ALLOC_INIT(ast_unary_expression, EXPRESSION, UNARY_EXPRESSION);
+waitui_ast_unary_expression *
+waitui_ast_unary_expression_new(waitui_ast_unary_operator operator,
+                                waitui_ast_expression * expression) {
+    AST_NODE_NEW(waitui_ast_unary_expression, EXPRESSION, UNARY_EXPRESSION);
 
     this->operator   = operator;
     this->expression = expression;
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_unary_expression);
 }
 
-void ast_unary_expression_destroy(ast_unary_expression **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_unary_expression_destroy(waitui_ast_unary_expression **this) {
+    AST_NODE_DESTROY(waitui_ast_unary_expression);
 
-    ast_expression_destroy(&(*this)->expression);
+    waitui_ast_expression_destroy(&(*this)->expression);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_unary_expression);
 }
 
-ast_lazy_expression *ast_lazy_expression_new(ast_expression *expression,
-                                             void *context) {
-    AST_NODE_ALLOC_INIT(ast_lazy_expression, EXPRESSION, LAZY_EXPRESSION);
+waitui_ast_lazy_expression *
+waitui_ast_lazy_expression_new(waitui_ast_expression *expression,
+                               void *context) {
+    AST_NODE_NEW(waitui_ast_lazy_expression, EXPRESSION, LAZY_EXPRESSION);
 
     this->expression = expression;
     this->context    = context;
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_lazy_expression);
 }
 
-void ast_lazy_expression_destroy(ast_lazy_expression **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_lazy_expression_destroy(waitui_ast_lazy_expression **this) {
+    AST_NODE_DESTROY(waitui_ast_lazy_expression);
 
-    ast_expression_destroy(&(*this)->expression);
+    waitui_ast_expression_destroy(&(*this)->expression);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_lazy_expression);
 }
 
-ast_native_expression *ast_native_expression_new(void *func) {
-    AST_NODE_ALLOC_INIT(ast_native_expression, EXPRESSION, NATIVE_EXPRESSION);
+waitui_ast_native_expression *waitui_ast_native_expression_new(void *func) {
+    AST_NODE_NEW(waitui_ast_native_expression, EXPRESSION, NATIVE_EXPRESSION);
 
     this->func = func;
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_native_expression);
 }
 
-void ast_native_expression_destroy(ast_native_expression **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_native_expression_destroy(waitui_ast_native_expression **this) {
+    AST_NODE_DESTROY(waitui_ast_native_expression);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_native_expression);
 }
 
-ast_constructor_call *ast_constructor_call_new(symbol *name,
-                                               ast_expression_list *args) {
-    AST_NODE_ALLOC_INIT(ast_constructor_call, EXPRESSION, CONSTRUCTOR_CALL);
+waitui_ast_constructor_call *
+waitui_ast_constructor_call_new(symbol *name,
+                                waitui_ast_expression_list *args) {
+    AST_NODE_NEW(waitui_ast_constructor_call, EXPRESSION, CONSTRUCTOR_CALL);
 
     this->name = name;
     this->args = args;
 
     symbol_increment_refcount(name);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_constructor_call);
 }
 
-void ast_constructor_call_destroy(ast_constructor_call **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_constructor_call_destroy(waitui_ast_constructor_call **this) {
+    AST_NODE_DESTROY(waitui_ast_constructor_call);
 
     symbol_decrement_refcount(&(*this)->name);
-    ast_expression_list_destroy(&(*this)->args);
 
-    AST_NODE_FREE();
+    waitui_ast_expression_list_destroy(&(*this)->args);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_constructor_call);
 }
 
-ast_function_call *ast_function_call_new(ast_expression *object,
-                                         symbol *functionName,
-                                         ast_expression_list *args) {
-    AST_NODE_ALLOC_INIT(ast_function_call, EXPRESSION, FUNCTION_CALL);
+waitui_ast_function_call *
+waitui_ast_function_call_new(waitui_ast_expression *object,
+                             symbol *functionName,
+                             waitui_ast_expression_list *args) {
+    AST_NODE_NEW(waitui_ast_function_call, EXPRESSION, FUNCTION_CALL);
 
     this->object       = object;
     this->functionName = functionName;
@@ -681,152 +1018,157 @@ ast_function_call *ast_function_call_new(ast_expression *object,
 
     symbol_increment_refcount(functionName);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_function_call);
 }
 
-void ast_function_call_destroy(ast_function_call **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_function_call_destroy(waitui_ast_function_call **this) {
+    AST_NODE_DESTROY(waitui_ast_function_call);
 
-    ast_expression_destroy(&(*this)->object);
     symbol_decrement_refcount(&(*this)->functionName);
-    ast_expression_list_destroy(&(*this)->args);
 
-    AST_NODE_FREE();
+    waitui_ast_expression_destroy(&(*this)->object);
+    waitui_ast_expression_list_destroy(&(*this)->args);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_function_call);
 }
 
-ast_super_function_call *
-ast_super_function_call_new(symbol *functionName, ast_expression_list *args) {
-    AST_NODE_ALLOC_INIT(ast_super_function_call, EXPRESSION,
-                        SUPER_FUNCTION_CALL);
+waitui_ast_super_function_call *
+waitui_ast_super_function_call_new(symbol *functionName,
+                                   waitui_ast_expression_list *args) {
+    AST_NODE_NEW(waitui_ast_super_function_call, EXPRESSION,
+                 SUPER_FUNCTION_CALL);
 
     this->functionName = functionName;
     this->args         = args;
 
     symbol_increment_refcount(functionName);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_super_function_call);
 }
 
-void ast_super_function_call_destroy(ast_super_function_call **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_super_function_call_destroy(
+        waitui_ast_super_function_call **this) {
+    AST_NODE_DESTROY(waitui_ast_super_function_call);
 
     symbol_decrement_refcount(&(*this)->functionName);
-    ast_expression_list_destroy(&(*this)->args);
 
-    AST_NODE_FREE();
+    waitui_ast_expression_list_destroy(&(*this)->args);
+
+    AST_NODE_DESTROY_DONE(waitui_ast_super_function_call);
 }
 
-ast_reference *ast_reference_new(symbol *value) {
-    AST_NODE_ALLOC_INIT(ast_reference, EXPRESSION, REFERENCE);
+waitui_ast_reference *waitui_ast_reference_new(symbol *value) {
+    AST_NODE_NEW(waitui_ast_reference, EXPRESSION, REFERENCE);
 
     this->value = value;
+
     symbol_increment_refcount(value);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_reference);
 }
 
-void ast_reference_destroy(ast_reference **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_reference_destroy(waitui_ast_reference **this) {
+    AST_NODE_DESTROY(waitui_ast_reference);
 
     symbol_decrement_refcount(&(*this)->value);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_reference);
 }
 
-ast_this_literal *ast_this_literal_new(void) {
-    AST_NODE_ALLOC_INIT(ast_this_literal, EXPRESSION, THIS_LITERAL);
+waitui_ast_this_literal *waitui_ast_this_literal_new(void) {
+    AST_NODE_NEW(waitui_ast_this_literal, EXPRESSION, THIS_LITERAL);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_this_literal);
 }
 
-void ast_this_literal_destroy(ast_this_literal **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_this_literal_destroy(waitui_ast_this_literal **this) {
+    AST_NODE_DESTROY(waitui_ast_this_literal);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_this_literal);
 }
 
-ast_integer_literal *ast_integer_literal_new(str value) {
-    AST_NODE_ALLOC_INIT(ast_integer_literal, EXPRESSION, INTEGER_LITERAL);
+waitui_ast_integer_literal *waitui_ast_integer_literal_new(str value) {
+    AST_NODE_NEW(waitui_ast_integer_literal, EXPRESSION, INTEGER_LITERAL);
 
     STR_COPY(&this->value, &value);
     if (!this->value.s) {
-        ast_integer_literal_destroy(&this);
+        waitui_ast_integer_literal_destroy(&this);
         return NULL;
     }
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_integer_literal);
 }
 
-void ast_integer_literal_destroy(ast_integer_literal **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_integer_literal_destroy(waitui_ast_integer_literal **this) {
+    AST_NODE_DESTROY(waitui_ast_integer_literal);
 
     STR_FREE(&(*this)->value);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_integer_literal);
 }
 
-ast_boolean_literal *ast_boolean_literal_new(bool value) {
-    AST_NODE_ALLOC_INIT(ast_boolean_literal, EXPRESSION, BOOLEAN_LITERAL);
+waitui_ast_boolean_literal *waitui_ast_boolean_literal_new(bool value) {
+    AST_NODE_NEW(waitui_ast_boolean_literal, EXPRESSION, BOOLEAN_LITERAL);
 
     this->value = value;
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_boolean_literal);
 }
 
-void ast_boolean_literal_destroy(ast_boolean_literal **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_boolean_literal_destroy(waitui_ast_boolean_literal **this) {
+    AST_NODE_DESTROY(waitui_ast_boolean_literal);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_boolean_literal);
 }
 
-ast_decimal_literal *ast_decimal_literal_new(str value) {
-    AST_NODE_ALLOC_INIT(ast_decimal_literal, EXPRESSION, DECIMAL_LITERAL);
+waitui_ast_decimal_literal *waitui_ast_decimal_literal_new(str value) {
+    AST_NODE_NEW(waitui_ast_decimal_literal, EXPRESSION, DECIMAL_LITERAL);
 
     STR_COPY(&this->value, &value);
     if (!this->value.s) {
-        ast_decimal_literal_destroy(&this);
+        waitui_ast_decimal_literal_destroy(&this);
         return NULL;
     }
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_decimal_literal);
 }
 
-void ast_decimal_literal_destroy(ast_decimal_literal **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_decimal_literal_destroy(waitui_ast_decimal_literal **this) {
+    AST_NODE_DESTROY(waitui_ast_decimal_literal);
 
     STR_FREE(&(*this)->value);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_decimal_literal);
 }
 
-ast_null_literal *ast_null_literal_new(void) {
-    AST_NODE_ALLOC_INIT(ast_null_literal, EXPRESSION, NULL_LITERAL);
+waitui_ast_null_literal *waitui_ast_null_literal_new(void) {
+    AST_NODE_NEW(waitui_ast_null_literal, EXPRESSION, NULL_LITERAL);
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_null_literal);
 }
 
-void ast_null_literal_destroy(ast_null_literal **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_null_literal_destroy(waitui_ast_null_literal **this) {
+    AST_NODE_DESTROY(waitui_ast_null_literal);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_null_literal);
 }
 
-ast_string_literal *ast_string_literal_new(str value) {
-    AST_NODE_ALLOC_INIT(ast_string_literal, EXPRESSION, STRING_LITERAL);
+waitui_ast_string_literal *waitui_ast_string_literal_new(str value) {
+    AST_NODE_NEW(waitui_ast_string_literal, EXPRESSION, STRING_LITERAL);
 
     STR_COPY(&this->value, &value);
     if (!this->value.s) {
-        ast_string_literal_destroy(&this);
+        waitui_ast_string_literal_destroy(&this);
         return NULL;
     }
 
-    return this;
+    AST_NODE_NEW_DONE(waitui_ast_string_literal);
 }
 
-void ast_string_literal_destroy(ast_string_literal **this) {
-    if (!this || !(*this)) { return; }
+void waitui_ast_string_literal_destroy(waitui_ast_string_literal **this) {
+    AST_NODE_DESTROY(waitui_ast_string_literal);
 
     STR_FREE(&(*this)->value);
 
-    AST_NODE_FREE();
+    AST_NODE_DESTROY_DONE(waitui_ast_string_literal);
 }
