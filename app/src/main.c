@@ -1,5 +1,7 @@
 #include "waitui/version.h"
 
+#include <waitui/log.h>
+#include <waitui/ast_printer.h>
 #include <waitui/parser.h>
 #include <waitui/str.h>
 
@@ -40,7 +42,7 @@ int main(int argc, char **argv) {
     int result = WAITUI_SUCCESS;
 
     parser *waituiParser = NULL;
-    ast *waituiAst       = NULL;
+    waitui_ast *waituiAst       = NULL;
     FILE *graphFile      = NULL;
 
     if (argc == 2) {
@@ -48,7 +50,12 @@ int main(int argc, char **argv) {
         sourceFileName.s   = argv[1];
     }
 
-    parserDebug = PARSER_DEBUG_SYMBOLTABLE;
+    waitui_log_setLevel(WAITUI_LOG_DEBUG);
+    waitui_log_setQuiet(false);
+
+    parserDebug = PARSER_DEBUG_NONE | PARSER_DEBUG_LEXER | PARSER_DEBUG_PARSER;
+
+    waitui_log_debug("waitui start execution");
 
     waituiParser = parser_new(sourceFileName, currentDirectory, parserDebug);
     if (!waituiParser) {
@@ -56,13 +63,13 @@ int main(int argc, char **argv) {
         goto done;
     }
 
+    waitui_log_trace("start parsing input");
     if (!parser_parse(waituiParser)) {
-        fprintf(stderr, "Error: parsing failed\n");
+        waitui_log_fatal("parsing input failed");
         result = WAITUI_FAILURE;
         goto done;
-    } else {
-        fprintf(stderr, "Debug: parsing worked\n");
     }
+    waitui_log_debug("input was parsed successful");
 
     waituiAst = parser_get_ast(waituiParser);
     if (!waituiAst) {
@@ -87,9 +94,9 @@ int main(int argc, char **argv) {
         result = WAITUI_OTHER_ERROR;
         goto done;
     }
-    ast_generate_graph(waituiAst, graphFile);
+    waitui_ast_printer_generateGraph(waituiAst, graphFile);
 
-    fprintf(stderr, "Debug: done!\n");
+    waitui_log_debug("waitui execution done");
 
 done:
     if (graphFile) { fclose(graphFile); }

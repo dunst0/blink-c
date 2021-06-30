@@ -27,7 +27,6 @@ typedef struct symboltable {
     long int currentScope;
     int declarationMode;
     symbol_hashtable *symbols;
-    int debug;
 } symboltable;
 
 
@@ -37,10 +36,9 @@ typedef struct symboltable {
 
 /**
  * @brief Create the SymbolTable.
- * @param[in] debug Whether to print debug info or not
  * @return On success a pointer to SymbolTable, else NULL
  */
-extern symboltable *symboltable_new(int debug);
+extern symboltable *symboltable_new(void);
 
 /**
  * @brief Destroy the SymbolTable and its content.

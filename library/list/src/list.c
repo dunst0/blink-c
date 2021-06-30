@@ -32,7 +32,9 @@ void list_destroy(list **this) {
         list_node *temp = (*this)->head;
         (*this)->head   = (*this)->head->next;
 
-        (*this)->elementDestroyCallback(&temp->element);
+        if ((*this)->elementDestroyCallback) {
+            (*this)->elementDestroyCallback(&temp->element);
+        }
         free(temp);
     }
 

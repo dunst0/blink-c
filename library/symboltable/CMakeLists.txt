@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 
 include("project-meta-info.in")
 
@@ -23,4 +23,4 @@ target_sources(symboltable
 
 target_include_directories(symboltable PUBLIC "include")
 
-target_link_libraries(symboltable PUBLIC hashtable list utils)
+target_link_libraries(symboltable PUBLIC hashtable list utils log)

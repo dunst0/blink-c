@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 
 include("project-meta-info.in")
 
@@ -19,7 +19,7 @@ target_sources(waitui
 
 target_include_directories(waitui PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/include")
 
-target_link_libraries(waitui PRIVATE ast list parser symboltable hashtable)
+target_link_libraries(waitui PRIVATE ast ast_printer list log parser symboltable hashtable)
 
 configure_file(
         "include/waitui/version.h.in"

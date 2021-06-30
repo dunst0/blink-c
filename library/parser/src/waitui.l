@@ -17,6 +17,9 @@
 
 #include <stdio.h>
 
+static int parser_push_yy_state(parser_extra_lexer *lexerExtra, char *import, int importLength);
+static int parser_pop_yy_state(parser_extra_lexer *lexerExtra);
+
 #define YY_USER_ACTION                                                         \
     yylloc->filename     = yylloc->filename;                                   \
     yylloc->first_line   = yylloc->last_line;                                  \
@@ -36,6 +39,7 @@
 
 #define RETURN_SEMICOLON_IF_NEEDED                                             \
     switch (yyextra->lastToken) {                                              \
+        case IMPORT_NAME:                                                      \
         case INTEGER_LITERAL:                                                  \
         case DECIMAL_LITERAL:                                                  \
         case STRING_LITERAL:                                                   \
@@ -52,9 +56,7 @@
 %}
 
 %x IMPORT
-%x PACKAGE
-%x CLASS
-%x FUNCTION
+%x NAMESPACE
 
 letter              [a-zA-Z]
 digit               [0-9]
@@ -63,49 +65,70 @@ exponent_part       [eE][-+]?{positive_number}
 operator            ([-+*\/=><!&%~$^]=?)|\+\+|--
 whitespace          [ \a\f\t\r\v]
 not_whitespace      [^ \a\f\t\r\v\n]
-function_name       (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
-identifier          ({letter}|_)({letter}|{digit}|_)*
+namespace_name      (({letter}|_)({letter}|{digit}|_|\.)*({letter}|{digit}|_))
+identifier          (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
 
 %%
 
-<INITIAL,CLASS,FUNCTION,IMPORT,PACKAGE>{whitespace}*                                    /* eat the whitespace */
+<INITIAL,IMPORT,NAMESPACE>{whitespace}*                                                 /* eat the whitespace */
 
-<INITIAL>"import"                                                                       BEGIN(IMPORT);
-<INITIAL>"package"                                                                      BEGIN(PACKAGE);
-
-<IMPORT>{not_whitespace}+                                                               {
-                                                                                            printf("<IMPORT_KEYWORD: %s>\n", yytext);
-
-                                                                                            BEGIN(INITIAL);
+<INITIAL>"namespace"                                                                    {
+                                                                                            BEGIN(NAMESPACE);
+                                                                                            RETURN(NAMESPACE_KEYWORD);
+                                                                                        }
+<INITIAL>"import"                                                                       {
+                                                                                            BEGIN(IMPORT);
                                                                                             RETURN(IMPORT_KEYWORD);
                                                                                         }
-<PACKAGE>{not_whitespace}+                                                              {
-                                                                                            printf("<PACKAGE_KEYWORD: %s>\n", yytext);
+<IMPORT>{not_whitespace}+                                                               {
+                                                                                            str importName = STR_NULL_INIT;
+                                                                                            importName.s   = yytext;
+                                                                                            importName.len = yyleng;
+
+                                                                                            if (!parser_push_yy_state(yyextra, yytext, yyleng)) {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not push lexer state to stack");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+
                                                                                             BEGIN(INITIAL);
-                                                                                            RETURN(PACKAGE_KEYWORD);
+                                                                                            RETURN(IMPORT_NAME);
+                                                                                        }
+<NAMESPACE>{namespace_name}                                                             {
+                                                                                            str namespaceName = STR_NULL_INIT;
+                                                                                            namespaceName.s   = yytext;
+                                                                                            namespaceName.len = yyleng;
+
+                                                                                            yylval->symbolValue = symbol_new(namespaceName, SYMBOL_TYPE_UNDEFINED,
+                                                                                                                             yylloc->first_line, yylloc->first_column);
+                                                                                            if (!yylval->symbolValue) {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+
+                                                                                            BEGIN(INITIAL);
+                                                                                            RETURN(NAMESPACE_NAME);
                                                                                         }
 
 <<EOF>>                                                                                 {
-                                                                                            /*if (!lexer_pop_yy_state()) {*/
+                                                                                            if (!parser_pop_yy_state(yyextra)) {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not pop lexer state from stack");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+
+                                                                                            if (--(yyextra->import_stack_ptr) < 0) {
                                                                                                 yyterminate();
-                                                                                            /*}*/
+                                                                                            }
                                                                                         }
 
 
 "abstract"                                                                              RETURN(ABSTRACT_KEYWORD);
 "as"                                                                                    RETURN(AS_KEYWORD);
-"class"                                                                                 {
-                                                                                            BEGIN(CLASS);
-                                                                                            RETURN(CLASS_KEYWORD);
-                                                                                        }
+"class"                                                                                 RETURN(CLASS_KEYWORD);
 "else"                                                                                  RETURN(ELSE_KEYWORD);
 "extends"                                                                               RETURN(EXTENDS_KEYWORD);
 "false"                                                                                 RETURN(FALSE_LITERAL);
 "final"                                                                                 RETURN(FINAL_KEYWORD);
-"func"                                                                                  {
-                                                                                            BEGIN(FUNCTION);
-                                                                                            RETURN(FUNC_KEYWORD);
-                                                                                        }
+"func"                                                                                  RETURN(FUNC_KEYWORD);
 "if"                                                                                    RETURN(IF_KEYWORD);
 "in"                                                                                    RETURN(IN_KEYWORD);
 "lazy"                                                                                  RETURN(LAZY_KEYWORD);
@@ -125,27 +148,27 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
 "++"                                                                                    RETURN(DOUBLE_PLUS_OPERATOR);
 "--"                                                                                    RETURN(DOUBLE_MINUS_OPERATOR);
 
-"+="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL; RETURN(ASSIGNMENT); }
-"-="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL; RETURN(ASSIGNMENT); }
-"*="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_TIMES_EQUAL; RETURN(ASSIGNMENT); }
-"/="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_DIV_EQUAL; RETURN(ASSIGNMENT); }
-"%="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_MODULO_EQUAL; RETURN(ASSIGNMENT); }
-"&="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_AND_EQUAL; RETURN(ASSIGNMENT); }
-"^="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_CARET_EQUAL; RETURN(ASSIGNMENT); }
-"~="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL; RETURN(ASSIGNMENT); }
-"|="                                                                                    { yylval->operator = AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL; RETURN(ASSIGNMENT); }
+"+="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL; RETURN(ASSIGNMENT); }
+"-="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL; RETURN(ASSIGNMENT); }
+"*="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_TIMES_EQUAL; RETURN(ASSIGNMENT); }
+"/="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_DIV_EQUAL; RETURN(ASSIGNMENT); }
+"%="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_MODULO_EQUAL; RETURN(ASSIGNMENT); }
+"&="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_AND_EQUAL; RETURN(ASSIGNMENT); }
+"^="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_CARET_EQUAL; RETURN(ASSIGNMENT); }
+"~="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_TILDE_EQUAL; RETURN(ASSIGNMENT); }
+"|="                                                                                    { yylval->operator = WAITUI_AST_ASSIGNMENT_OPERATOR_PIPE_EQUAL; RETURN(ASSIGNMENT); }
 
-"&&"                                                                                    { yylval->operator = AST_BINARY_OPERATOR_DOUBLE_AND; RETURN(DOUBLE_AND_OPERATOR); }
-"||"                                                                                    { yylval->operator = AST_BINARY_OPERATOR_DOUBLE_PIPE; RETURN(DOUBLE_PIPE_OPERATOR); }
-"!"                                                                                     { yylval->operator = AST_UNARY_OPERATOR_NOT; RETURN(NOT_OPERATOR); }
+"&&"                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_DOUBLE_AND; RETURN(DOUBLE_AND_OPERATOR); }
+"||"                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_DOUBLE_PIPE; RETURN(DOUBLE_PIPE_OPERATOR); }
+"!"                                                                                     { yylval->operator = WAITUI_AST_UNARY_OPERATOR_NOT; RETURN(NOT_OPERATOR); }
 
-"=="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_EQUAL; RETURN(EQUALITY); }
-"!="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_NOT_EQUAL; RETURN(EQUALITY); }
+"=="                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_EQUAL; RETURN(EQUALITY); }
+"!="                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_NOT_EQUAL; RETURN(EQUALITY); }
 
-"<"                                                                                     { yylval->operator = AST_BINARY_OPERATOR_LESS; RETURN(RELATIONAL); }
-"<="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_LESS_EQUAL; RETURN(RELATIONAL); }
-">="                                                                                    { yylval->operator = AST_BINARY_OPERATOR_GREATER; RETURN(RELATIONAL); }
-">"                                                                                     { yylval->operator = AST_BINARY_OPERATOR_GREATER_EQUAL; RETURN(RELATIONAL); }
+"<"                                                                                     { yylval->operator = WAITUI_AST_BINARY_OPERATOR_LESS; RETURN(RELATIONAL); }
+"<="                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_LESS_EQUAL; RETURN(RELATIONAL); }
+">="                                                                                    { yylval->operator = WAITUI_AST_BINARY_OPERATOR_GREATER; RETURN(RELATIONAL); }
+">"                                                                                     { yylval->operator = WAITUI_AST_BINARY_OPERATOR_GREATER_EQUAL; RETURN(RELATIONAL); }
 
 [-.=+*%/&^~|:,{\[(}\]);]                                                                RETURN(yytext[0]);
 
@@ -153,68 +176,14 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
 ((0|{positive_number})?\.{digit}+{exponent_part}?)|({positive_number}{exponent_part})   { yylval->value.s = yytext; yylval->value.len = yyleng; RETURN(DECIMAL_LITERAL); }
 \"(\\.|[^"\\])*\"                                                                       { yylval->value.s = yytext + 1; yylval->value.len = yyleng - 2; RETURN(STRING_LITERAL); }
 
-<FUNCTION>{function_name}|{function_name}/{whitespace}*\(                               {
-                                                                                            str functionName = STR_NULL_INIT;
-                                                                                            functionName.s   = yytext;
-                                                                                            functionName.len = yyleng;
-
-                                                                                            printf("<FUNCTION_NAME: %.*s>\n", STR_FMT(&functionName));
-
-                                                                                            yylval->symbolValue = symbol_new(functionName, SYMBOL_TYPE_FUNCTION_NAME,
-                                                                                                                             yylloc->first_line, yylloc->first_column);
-                                                                                            if (yylval->symbolValue) {
-                                                                                                BEGIN(INITIAL);
-                                                                                                RETURN(FUNCTION_NAME);
-                                                                                            } else {
-                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
-                                                                                                RETURN(YYerror);
-                                                                                            }
-                                                                                        }
-{function_name}/{whitespace}*\(                                                         {
-                                                                                            str functionName = STR_NULL_INIT;
-                                                                                            functionName.s   = yytext;
-                                                                                            functionName.len = yyleng;
-
-                                                                                            printf("<FUNCTION_NAME: %.*s>\n", STR_FMT(&functionName));
-
-                                                                                            yylval->symbolValue = symbol_new(functionName, SYMBOL_TYPE_FUNCTION_NAME,
-                                                                                                                             yylloc->first_line, yylloc->first_column);
-                                                                                            if (yylval->symbolValue) {
-                                                                                                BEGIN(INITIAL);
-                                                                                                RETURN(FUNCTION_NAME);
-                                                                                            } else {
-                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
-                                                                                                RETURN(YYerror);
-                                                                                            }
-                                                                                        }
-<CLASS>{identifier}                                                                     {
-                                                                                            str className = STR_NULL_INIT;
-                                                                                            className.s   = yytext;
-                                                                                            className.len = yyleng;
-
-                                                                                            printf("<CLASS_NAME: %.*s>\n", STR_FMT(&className));
-
-                                                                                            yylval->symbolValue = symbol_new(className, SYMBOL_TYPE_CLASS_NAME,
-                                                                                                                             yylloc->first_line, yylloc->first_column);
-                                                                                            if (yylval->symbolValue) {
-                                                                                                BEGIN(INITIAL);
-                                                                                                RETURN(IDENTIFIER);
-                                                                                            } else {
-                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
-                                                                                                RETURN(YYerror);
-                                                                                            }
-                                                                                        }
 {identifier}                                                                            {
                                                                                             str identifier = STR_NULL_INIT;
                                                                                             identifier.s   = yytext;
                                                                                             identifier.len = yyleng;
 
-                                                                                            printf("<IDENTIFIER: %.*s>\n", STR_FMT(&identifier));
-
-                                                                                            yylval->symbolValue = symbol_new(identifier, SYMBOL_TYPE_IDENTIFIER,
+                                                                                            yylval->symbolValue = symbol_new(identifier, SYMBOL_TYPE_UNDEFINED,
                                                                                                                              yylloc->first_line, yylloc->first_column);
                                                                                             if (yylval->symbolValue) {
-                                                                                                BEGIN(INITIAL);
                                                                                                 RETURN(IDENTIFIER);
                                                                                             } else {
                                                                                                 yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
@@ -229,3 +198,11 @@ identifier          ({letter}|_)({letter}|{digit}|_)*
 <*>.                                                                                    { yyerror(yylloc, yyextra->extraParser, "unexpected input"); }
 
 %%
+
+static int parser_push_yy_state(parser_extra_lexer *lexerExtra, char *import, int importLength) {
+    return 1;
+}
+
+static int parser_pop_yy_state(parser_extra_lexer *lexerExtra) {
+    return 1;
+}

@@ -9,7 +9,18 @@
 #define WAITUI_PARSER_HELPER_H
 
 #include <waitui/ast.h>
+#include <waitui/list.h>
 #include <waitui/symboltable.h>
+
+
+// -----------------------------------------------------------------------------
+//  Public defines
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief TODO
+ */
+#define MAX_IMPORT_DEPTH 1024
 
 
 // -----------------------------------------------------------------------------
@@ -17,11 +28,31 @@
 // -----------------------------------------------------------------------------
 
 /**
+ * @brief TODO
+ */
+typedef struct parser_yy_state {
+    void *state;
+    str filename;
+    int first_line;
+    int last_line;
+    int first_column;
+    int last_column;
+} parser_yy_state;
+
+extern parser_yy_state *parser_yy_state_new(str filename, int first_line,
+                                            int last_line, int first_column,
+                                            int last_column, void *state);
+
+extern void parser_yy_state_destroy(parser_yy_state **this);
+
+CREATE_LIST_TYPE(INTERFACE, parser_yy_state, parser_yy_state)
+
+/**
  * @brief Type for extra parser data.
  */
 typedef struct parser_extra_parser {
     void *scanner;
-    ast *resultAst;
+    waitui_ast *resultAst;
     str sourceFileName;
     symboltable *symtable;
 } parser_extra_parser;
@@ -31,7 +62,10 @@ typedef struct parser_extra_parser {
  */
 typedef struct parser_extra_lexer {
     int lastToken;
+    parser_yy_state_list *importStack;
+    int import_stack_ptr;
     parser_extra_parser *extraParser;
 } parser_extra_lexer;
 
-#endif //WAITUI_PARSER_HELPER_H
+
+#endif//WAITUI_PARSER_HELPER_H

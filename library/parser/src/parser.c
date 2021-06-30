@@ -7,9 +7,12 @@
 
 #include "waitui/parser.h"
 
+// clang-format off
 #include "waitui/parser_impl.h"
-
 #include "waitui/lexer_impl.h"
+// clang-format on
+
+#include <waitui/log.h>
 
 
 // -----------------------------------------------------------------------------
@@ -26,9 +29,11 @@ static str parser_source_stdin = STR_STATIC_INIT("stdin");
 //  Public functions
 // -----------------------------------------------------------------------------
 
-parser *parser_new(str sourceFileName, str currentDirectory,
+parser *parser_new(str sourceFileName, str workingDirectory,
                    unsigned int debug) {
     parser *this = NULL;
+
+    waitui_log_trace("creating new parser");
 
     this = calloc(1, sizeof(*this));
     if (!this) { return NULL; }
@@ -36,17 +41,30 @@ parser *parser_new(str sourceFileName, str currentDirectory,
     this->debug = debug;
 
     STR_COPY_WITH_NUL(&this->sourceFileName, &sourceFileName);
-    STR_COPY_WITH_NUL(&this->currentDirectory, &currentDirectory);
-    if (!this->sourceFileName.s || !this->currentDirectory.s) {
+    if (!this->sourceFileName.s) {
+        waitui_log_fatal("could not allocate memory for sourceFileName");
+        parser_destroy(&this);
+        return NULL;
+    }
+    this->extraParser.sourceFileName = this->sourceFileName;
+
+    STR_COPY_WITH_NUL(&this->workingDirectory, &workingDirectory);
+    if (!this->workingDirectory.s) {
+        waitui_log_fatal("could not allocate memory for workingDirectory");
         parser_destroy(&this);
         return NULL;
     }
 
-    this->extraParser.sourceFileName = this->sourceFileName;
-
-    this->extraParser.symtable =
-            symboltable_new((debug & PARSER_DEBUG_SYMBOLTABLE) != 0);
+    this->extraParser.symtable = symboltable_new();
     if (!this->extraParser.symtable) {
+        waitui_log_fatal("could not create symboltable");
+        parser_destroy(&this);
+        return NULL;
+    }
+
+    this->extraLexer.importStack = parser_yy_state_list_new();
+    if (!this->extraLexer.importStack) {
+        waitui_log_fatal("could not allocate memory for importStack");
         parser_destroy(&this);
         return NULL;
     }
@@ -55,49 +73,54 @@ parser *parser_new(str sourceFileName, str currentDirectory,
     this->extraLexer.lastToken   = -1;
 
     if (yylex_init_extra(&this->extraLexer, &this->extraParser.scanner) != 0) {
+        waitui_log_fatal("could not initialize the lexer with extra data");
         parser_destroy(&this);
         return NULL;
     }
 
-    FILE *sourceFile = NULL;
-
     if (parser_source_stdin.len == sourceFileName.len &&
         memcmp(parser_source_stdin.s, sourceFileName.s,
                parser_source_stdin.len) == 0) {
-        sourceFile = stdin;
+        this->sourceFile = stdin;
     } else {
         this->sourceFile = fopen(sourceFileName.s, "r");
-        sourceFile       = this->sourceFile;
-
-        if (!sourceFile) {
-            fprintf(stderr, "Error: could not open filename: '%s'\n",
-                    this->sourceFileName.s);
+        if (!this->sourceFile) {
+            waitui_log_error("could not open filename: '%s'", this->sourceFileName.s);
             parser_destroy(&this);
             return NULL;
         }
     }
 
-    yyset_in(sourceFile, this->extraParser.scanner);
+    yyset_in(this->sourceFile, this->extraParser.scanner);
     if (this->debug & PARSER_DEBUG_LEXER) {
         yyset_debug(1, this->extraParser.scanner);
     }
+
+    waitui_log_trace("new parser successful created");
 
     return this;
 }
 
 void parser_destroy(parser **this) {
+    waitui_log_trace("destroying parser");
+
     if (!this || !(*this)) { return; }
 
+    parser_yy_state_list_destroy(&(*this)->extraLexer.importStack);
     symboltable_destroy(&(*this)->extraParser.symtable);
     if ((*this)->extraParser.scanner) {
         yylex_destroy((*this)->extraParser.scanner);
     }
-    if ((*this)->sourceFile) { fclose((*this)->sourceFile); }
+    if ((*this)->sourceFile && (*this)->sourceFile != stdin) {
+        fclose((*this)->sourceFile);
+    }
     STR_FREE(&(*this)->sourceFileName);
-    STR_FREE(&(*this)->currentDirectory);
+    STR_FREE(&(*this)->workingDirectory);
 
     free(*this);
     *this = NULL;
+
+    waitui_log_trace("parser successful destroyed");
 }
 
 int parser_parse(parser *this) {
@@ -110,7 +133,9 @@ int parser_parse(parser *this) {
     return 1;
 }
 
-ast *parser_get_ast(parser *this) {
+waitui_ast *parser_get_ast(parser *this) {
+    waitui_log_trace("getting waitui_ast from parser");
+
     if (!this) { return 0; }
 
     return this->extraParser.resultAst;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
 
 include("project-meta-info.in")
 
@@ -10,17 +10,17 @@ project(waitui-ast
 
 add_library(ast OBJECT)
 
+target_compile_features(ast PRIVATE c_std_11)
+
 target_sources(ast
         PRIVATE
         "src/ast.c"
         "src/ast_node.c"
-        "src/ast_printer.c"
         PUBLIC
         "include/waitui/ast.h"
         "include/waitui/ast_node.h"
-        "include/waitui/ast_printer.h"
         )
 
 target_include_directories(ast PUBLIC "include")
 
-target_link_libraries(ast PUBLIC list symboltable utils)
+target_link_libraries(ast PUBLIC list symboltable utils log)
