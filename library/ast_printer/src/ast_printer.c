@@ -176,6 +176,19 @@ static inline const char *waitui_ast_printer_functionVisibilityToString(
 }
 
 /**
+ * @brief Return the str belonging to the symbol.
+ * @param[in] input The symbol to return the str from
+ * @return The str belonging to the symbol or STR_NULL_INIT
+ */
+static inline str waitui_ast_printer_symbolToStr(const symbol *input) {
+    str output = STR_NULL_INIT;
+
+    if (input) { output = input->identifier; }
+
+    return output;
+}
+
+/**
  * @brief Print a graph node.
  * @param[in] printer The printer to print to
  * @param[in] node The node str to use
@@ -238,23 +251,22 @@ static void waitui_ast_printer_printProgram(waitui_ast_program *programNode,
 
     str title = STR_STATIC_INIT("waitui_ast_program");
 
+    const waitui_ast_namespace_list *namespaces =
+            waitui_ast_program_getNamespaces(programNode);
+
     waitui_ast_printer_printGraphNode(
             printer, &title, nodeCount,
             WAITUI_AST_PRINTER_TABLE_BEGIN WAITUI_AST_PRINTER_TITLE_ROW
                     WAITUI_AST_PRINTER_KEY_PORT WAITUI_AST_PRINTER_TABLE_END,
             STR_FMT(&title), "program_namespaces", nodeCount, "namespaces");
 
-    {
-        waitui_ast_namespace_list *namespaces =
-                waitui_ast_program_getNamespaces(programNode);
-        if (namespaces) {
-            for (list_node *node = namespaces->head; node; node = node->next) {
-                waitui_ast_printer_printGraphLinkLeft(
-                        printer, &title, "program_namespaces", nodeCount);
-                WAITUI_AST_EXECUTE_CALLBACKS(
-                        printer->callbacks,
-                        (waitui_ast_namespace *) node->element, args);
-            }
+    if (namespaces) {
+        for (list_node *node = namespaces->head; node; node = node->next) {
+            waitui_ast_printer_printGraphLinkLeft(
+                    printer, &title, "program_namespaces", nodeCount);
+            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
+                                         (waitui_ast_namespace *) node->element,
+                                         args);
         }
     }
 }
@@ -272,12 +284,10 @@ waitui_ast_printer_printNamespace(waitui_ast_namespace *namespaceNode,
 
     str title = STR_STATIC_INIT("waitui_ast_namespace");
 
-    str name = STR_NULL_INIT;
-
-    {
-        symbol *nameSymbol = waitui_ast_namespace_getName(namespaceNode);
-        if (nameSymbol) { name = nameSymbol->identifier; }
-    }
+    const str name = waitui_ast_printer_symbolToStr(
+            waitui_ast_namespace_getName(namespaceNode));
+    const waitui_ast_class_list *classes =
+            waitui_ast_namespace_getClasses(namespaceNode);
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -288,18 +298,14 @@ waitui_ast_printer_printNamespace(waitui_ast_namespace *namespaceNode,
             STR_FMT(&title), "name", STR_FMT(&name), "namespaces_classes",
             nodeCount, "classes");
 
-    {
-        waitui_ast_class_list *classes =
-                waitui_ast_namespace_getClasses(namespaceNode);
-        if (classes) {
-            list_node *node = NULL;
-            for (node = classes->head; node; node = node->next) {
-                waitui_ast_printer_printGraphLinkLeft(
-                        printer, &title, "namespaces_classes", nodeCount);
-                WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
-                                             (waitui_ast_class *) node->element,
-                                             args);
-            }
+    if (classes) {
+        list_node *node = NULL;
+        for (node = classes->head; node; node = node->next) {
+            waitui_ast_printer_printGraphLinkLeft(
+                    printer, &title, "namespaces_classes", nodeCount);
+            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
+                                         (waitui_ast_class *) node->element,
+                                         args);
         }
     }
 }
@@ -316,17 +322,18 @@ static void waitui_ast_printer_printClass(waitui_ast_class *classNode,
 
     str title = STR_STATIC_INIT("waitui_ast_class");
 
-    str className      = STR_NULL_INIT;
-    str superClassName = STR_NULL_INIT;
-
-    {
-        symbol *classNameSymbol = waitui_ast_class_getName(classNode);
-        if (classNameSymbol) { className = classNameSymbol->identifier; }
-    }
-    {
-        symbol *superClassSymbol = waitui_ast_class_getSuperClass(classNode);
-        if (superClassSymbol) { superClassName = superClassSymbol->identifier; }
-    }
+    const str className =
+            waitui_ast_printer_symbolToStr(waitui_ast_class_getName(classNode));
+    const str superClassName = waitui_ast_printer_symbolToStr(
+            waitui_ast_class_getSuperClass(classNode));
+    const waitui_ast_formal_list *parameters =
+            waitui_ast_class_getParameters(classNode);
+    const waitui_ast_expression_list *superClassArgs =
+            waitui_ast_class_getSuperClassArgs(classNode);
+    const waitui_ast_property_list *properties =
+            waitui_ast_class_getProperties(classNode);
+    const waitui_ast_function_list *functions =
+            waitui_ast_class_getFunctions(classNode);
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -343,60 +350,43 @@ static void waitui_ast_printer_printClass(waitui_ast_class *classNode,
             "class_properties", nodeCount, "properties", "class_functions",
             nodeCount, "functions");
 
-    {
-        waitui_ast_formal_list *parameters =
-                waitui_ast_class_getParameters(classNode);
-        if (parameters) {
-            for (list_node *node = parameters->head; node; node = node->next) {
-                waitui_ast_printer_printGraphLinkLeft(
-                        printer, &title, "class_parameters", nodeCount);
-                WAITUI_AST_EXECUTE_CALLBACKS(
-                        printer->callbacks, (waitui_ast_formal *) node->element,
-                        args);
-            }
+    if (parameters) {
+        for (list_node *node = parameters->head; node; node = node->next) {
+            waitui_ast_printer_printGraphLinkLeft(
+                    printer, &title, "class_parameters", nodeCount);
+            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
+                                         (waitui_ast_formal *) node->element,
+                                         args);
         }
     }
 
-    {
-        waitui_ast_expression_list *superClassArgs =
-                waitui_ast_class_getSuperClassArgs(classNode);
-        if (superClassArgs) {
-            for (list_node *node = superClassArgs->head; node;
-                 node            = node->next) {
-                waitui_ast_printer_printGraphLinkLeft(
-                        printer, &title, "class_super_class_args", nodeCount);
-                WAITUI_AST_EXECUTE_CALLBACKS(
-                        printer->callbacks,
-                        (waitui_ast_expression *) node->element, args);
-            }
+    if (superClassArgs) {
+        for (list_node *node = superClassArgs->head; node; node = node->next) {
+            waitui_ast_printer_printGraphLinkLeft(
+                    printer, &title, "class_super_class_args", nodeCount);
+            WAITUI_AST_EXECUTE_CALLBACKS(
+                    printer->callbacks, (waitui_ast_expression *) node->element,
+                    args);
         }
     }
 
-    {
-        waitui_ast_property_list *properties =
-                waitui_ast_class_getProperties(classNode);
-        if (properties) {
-            for (list_node *node = properties->head; node; node = node->next) {
-                waitui_ast_printer_printGraphLinkLeft(
-                        printer, &title, "class_properties", nodeCount);
-                WAITUI_AST_EXECUTE_CALLBACKS(
-                        printer->callbacks,
-                        (waitui_ast_property *) node->element, args);
-            }
+    if (properties) {
+        for (list_node *node = properties->head; node; node = node->next) {
+            waitui_ast_printer_printGraphLinkLeft(
+                    printer, &title, "class_properties", nodeCount);
+            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
+                                         (waitui_ast_property *) node->element,
+                                         args);
         }
     }
 
-    {
-        waitui_ast_function_list *functions =
-                waitui_ast_class_getFunctions(classNode);
-        if (functions) {
-            for (list_node *node = functions->head; node; node = node->next) {
-                waitui_ast_printer_printGraphLinkLeft(
-                        printer, &title, "class_functions", nodeCount);
-                WAITUI_AST_EXECUTE_CALLBACKS(
-                        printer->callbacks,
-                        (waitui_ast_function *) node->element, args);
-            }
+    if (functions) {
+        for (list_node *node = functions->head; node; node = node->next) {
+            waitui_ast_printer_printGraphLinkLeft(printer, &title,
+                                                  "class_functions", nodeCount);
+            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
+                                         (waitui_ast_function *) node->element,
+                                         args);
         }
     }
 }
@@ -413,21 +403,12 @@ static void waitui_ast_printer_printFormal(waitui_ast_formal *formalNode,
 
     str title = STR_STATIC_INIT("waitui_ast_formal");
 
-    str identifier = STR_NULL_INIT;
-    str type       = STR_NULL_INIT;
-    bool isLazy    = false;
-
-    {
-        symbol *identifierSymbol = waitui_ast_formal_getIdentifier(formalNode);
-        if (identifierSymbol) { identifier = identifierSymbol->identifier; }
-    }
-
-    {
-        symbol *typeSymbol = waitui_ast_formal_getType(formalNode);
-        if (typeSymbol) { type = typeSymbol->identifier; }
-    }
-
-    isLazy = waitui_ast_formal_isLazy(formalNode);
+    const str identifier = waitui_ast_printer_symbolToStr(
+            waitui_ast_formal_getIdentifier(formalNode));
+    const str type = waitui_ast_printer_symbolToStr(
+            waitui_ast_formal_getType(formalNode));
+    const char *isLazy = waitui_ast_printer_boolToString(
+            waitui_ast_formal_isLazy(formalNode));
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -438,7 +419,7 @@ static void waitui_ast_printer_printFormal(waitui_ast_formal *formalNode,
                                     WAITUI_AST_PRINTER_KEY_STRING_VALUE
                                             WAITUI_AST_PRINTER_TABLE_END,
             STR_FMT(&title), "identifier", STR_FMT(&identifier), "type",
-            STR_FMT(&type), "isLazy", waitui_ast_printer_boolToString(isLazy));
+            STR_FMT(&type), "isLazy", isLazy);
 }
 
 /**
@@ -453,18 +434,12 @@ static void waitui_ast_printer_printProperty(waitui_ast_property *propertyNode,
 
     str title = STR_STATIC_INIT("waitui_ast_property");
 
-    str name = STR_NULL_INIT;
-    str type = STR_NULL_INIT;
-
-    {
-        symbol *propertySymbol = waitui_ast_property_getName(propertyNode);
-        if (propertySymbol) { name = propertySymbol->identifier; }
-    }
-
-    {
-        symbol *typeSymbol = waitui_ast_property_getType(propertyNode);
-        if (typeSymbol) { type = typeSymbol->identifier; }
-    }
+    const str name = waitui_ast_printer_symbolToStr(
+            waitui_ast_property_getName(propertyNode));
+    const str type = waitui_ast_printer_symbolToStr(
+            waitui_ast_property_getType(propertyNode));
+    const waitui_ast_expression *value =
+            waitui_ast_property_getValue(propertyNode);
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -477,14 +452,10 @@ static void waitui_ast_printer_printProperty(waitui_ast_property *propertyNode,
             STR_FMT(&title), "name", STR_FMT(&name), "type", STR_FMT(&type),
             "property_value", nodeCount, "value");
 
-    {
-        waitui_ast_expression *value =
-                waitui_ast_property_getValue(propertyNode);
-        if (value) {
-            waitui_ast_printer_printGraphLinkLeft(printer, &title,
-                                                  "property_value", nodeCount);
-            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, value, args);
-        }
+    if (value) {
+        waitui_ast_printer_printGraphLinkLeft(printer, &title, "property_value",
+                                              nodeCount);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, value, args);
     }
 }
 
@@ -500,30 +471,22 @@ static void waitui_ast_printer_printFunction(waitui_ast_function *functionNode,
 
     str title = STR_STATIC_INIT("waitui_ast_function");
 
-    str name         = STR_NULL_INIT;
-    str returnType   = STR_NULL_INIT;
-    bool isAbstract  = false;
-    bool isFinal     = false;
-    bool isOverwrite = false;
-    waitui_ast_function_visibility visibility =
-            WAITUI_AST_FUNCTION_VISIBILITY_PUBLIC;
-
-    {
-        symbol *functionNameSymbol =
-                waitui_ast_function_getFunctionName(functionNode);
-        if (functionNameSymbol) { name = functionNameSymbol->identifier; }
-    }
-
-    {
-        symbol *returnTypeSymbol =
-                waitui_ast_function_getReturnType(functionNode);
-        if (returnTypeSymbol) { returnType = returnTypeSymbol->identifier; }
-    }
-
-    visibility  = waitui_ast_function_getVisibility(functionNode);
-    isAbstract  = waitui_ast_function_isAbstract(functionNode);
-    isFinal     = waitui_ast_function_isFinal(functionNode);
-    isOverwrite = waitui_ast_function_isOverwrite(functionNode);
+    const str name = waitui_ast_printer_symbolToStr(
+            waitui_ast_function_getFunctionName(functionNode));
+    const str returnType = waitui_ast_printer_symbolToStr(
+            waitui_ast_function_getReturnType(functionNode));
+    const char *isAbstract = waitui_ast_printer_boolToString(
+            waitui_ast_function_isAbstract(functionNode));
+    const char *isFinal = waitui_ast_printer_boolToString(
+            waitui_ast_function_isFinal(functionNode));
+    const char *isOverwrite = waitui_ast_printer_boolToString(
+            waitui_ast_function_isOverwrite(functionNode));
+    const char *visibility = waitui_ast_printer_functionVisibilityToString(
+            waitui_ast_function_getVisibility(functionNode));
+    const waitui_ast_formal_list *parameters =
+            waitui_ast_function_getParameters(functionNode);
+    const waitui_ast_expression *body =
+            waitui_ast_function_getBody(functionNode);
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -537,34 +500,24 @@ static void waitui_ast_printer_printFunction(waitui_ast_function *functionNode,
                                                             WAITUI_AST_PRINTER_TABLE_END,
             STR_FMT(&title), "name", STR_FMT(&name), "function_parameters",
             nodeCount, "parameters", "returnType", STR_FMT(&returnType),
-            "visibility",
-            waitui_ast_printer_functionVisibilityToString(visibility),
-            "isAbstract", waitui_ast_printer_boolToString(isAbstract),
-            "isFinal", waitui_ast_printer_boolToString(isFinal), "isOverwrite",
-            waitui_ast_printer_boolToString(isOverwrite), "function_body",
-            nodeCount, "body");
+            "visibility", visibility, "isAbstract", isAbstract, "isFinal",
+            isFinal, "isOverwrite", isOverwrite, "function_body", nodeCount,
+            "body");
 
-    {
-        waitui_ast_formal_list *parameters =
-                waitui_ast_function_getParameters(functionNode);
-        if (parameters) {
-            for (list_node *node = parameters->head; node; node = node->next) {
-                waitui_ast_printer_printGraphLinkLeft(
-                        printer, &title, "function_parameters", nodeCount);
-                WAITUI_AST_EXECUTE_CALLBACKS(
-                        printer->callbacks, (waitui_ast_formal *) node->element,
-                        args);
-            }
+    if (parameters) {
+        for (list_node *node = parameters->head; node; node = node->next) {
+            waitui_ast_printer_printGraphLinkLeft(
+                    printer, &title, "function_parameters", nodeCount);
+            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
+                                         (waitui_ast_formal *) node->element,
+                                         args);
         }
     }
 
-    {
-        waitui_ast_expression *body = waitui_ast_function_getBody(functionNode);
-        if (body) {
-            waitui_ast_printer_printGraphLinkLeft(printer, &title,
-                                                  "function_body", nodeCount);
-            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, body, args);
-        }
+    if (body) {
+        waitui_ast_printer_printGraphLinkLeft(printer, &title, "function_body",
+                                              nodeCount);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, body, args);
     }
 }
 
@@ -581,11 +534,12 @@ waitui_ast_printer_printAssignment(waitui_ast_assignment *assignmentNode,
 
     str title = STR_STATIC_INIT("waitui_ast_assignment");
 
-    str identifier = STR_NULL_INIT;
-
-    if (assignmentNode->identifier) {
-        identifier = assignmentNode->identifier->identifier;
-    }
+    const str identifier = waitui_ast_printer_symbolToStr(
+            waitui_ast_assignment_getIdentifier(assignmentNode));
+    const char *operator= waitui_ast_printer_assignmentOperatorToString(
+            waitui_ast_assignment_getOperator(assignmentNode));
+    const waitui_ast_expression *value =
+            waitui_ast_assignment_getValue(assignmentNode);
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -595,15 +549,12 @@ waitui_ast_printer_printAssignment(waitui_ast_assignment *assignmentNode,
                             WAITUI_AST_PRINTER_KEY_STRING_VALUE
                                     WAITUI_AST_PRINTER_KEY_PORT
                                             WAITUI_AST_PRINTER_TABLE_END,
-            STR_FMT(&title), "identifier", STR_FMT(&identifier), "operator",
-            waitui_ast_printer_assignmentOperatorToString(
-                    assignmentNode->operator),
-            "assignment_value", nodeCount, "value");
-    if (assignmentNode->value) {
+            STR_FMT(&title), "identifier", STR_FMT(&identifier),
+            "operator", operator, "assignment_value", nodeCount, "value");
+    if (value) {
         waitui_ast_printer_printGraphLinkLeft(printer, &title,
                                               "assignment_value", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, assignmentNode->value,
-                                     args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, value, args);
     }
 }
 
@@ -619,13 +570,15 @@ static void waitui_ast_printer_printStringLiteral(
 
     str title = STR_STATIC_INIT("waitui_ast_string_literal");
 
+    const str *value = waitui_ast_string_literal_getValue(stringLiteralNode);
+
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
             printer, &title, nodeCount,
             WAITUI_AST_PRINTER_TABLE_BEGIN WAITUI_AST_PRINTER_TITLE_ROW
                     WAITUI_AST_PRINTER_KEY_STR_VALUE
                             WAITUI_AST_PRINTER_TABLE_END,
-            STR_FMT(&title), "value", STR_FMT(&stringLiteralNode->value));
+            STR_FMT(&title), "value", STR_FMT(value));
 }
 
 /**
@@ -640,13 +593,15 @@ static void waitui_ast_printer_printIntegerLiteral(
 
     str title = STR_STATIC_INIT("waitui_ast_integer_literal");
 
+    const str *value = waitui_ast_integer_literal_getValue(integerLiteralNode);
+
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
             printer, &title, nodeCount,
             WAITUI_AST_PRINTER_TABLE_BEGIN WAITUI_AST_PRINTER_TITLE_ROW
                     WAITUI_AST_PRINTER_KEY_STR_VALUE
                             WAITUI_AST_PRINTER_TABLE_END,
-            STR_FMT(&title), "value", STR_FMT(&integerLiteralNode->value));
+            STR_FMT(&title), "value", STR_FMT(value));
 }
 
 /**
@@ -683,14 +638,16 @@ static void waitui_ast_printer_printBooleanLiteral(
 
     str title = STR_STATIC_INIT("waitui_ast_boolean_literal");
 
+    const char *value = waitui_ast_printer_boolToString(
+            waitui_ast_boolean_literal_getValue(booleanLiteralNode));
+
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
             printer, &title, nodeCount,
             WAITUI_AST_PRINTER_TABLE_BEGIN WAITUI_AST_PRINTER_TITLE_ROW
                     WAITUI_AST_PRINTER_KEY_STRING_VALUE
                             WAITUI_AST_PRINTER_TABLE_END,
-            STR_FMT(&title), "value",
-            waitui_ast_printer_boolToString(booleanLiteralNode->value));
+            STR_FMT(&title), "value", value);
 }
 
 /**
@@ -728,9 +685,8 @@ waitui_ast_printer_printReference(waitui_ast_reference *referenceNode,
 
     str title = STR_STATIC_INIT("waitui_ast_reference");
 
-    str identifier = STR_NULL_INIT;
-
-    if (referenceNode->value) { identifier = referenceNode->value->identifier; }
+    const str identifier = waitui_ast_printer_symbolToStr(
+            waitui_ast_reference_getValue(referenceNode));
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -753,9 +709,9 @@ static void waitui_ast_printer_printCast(waitui_ast_cast *castNode,
 
     str title = STR_STATIC_INIT("waitui_ast_cast");
 
-    str type = STR_NULL_INIT;
-
-    if (castNode->type) { type = castNode->type->identifier; }
+    const str type =
+            waitui_ast_printer_symbolToStr(waitui_ast_cast_getType(castNode));
+    const waitui_ast_expression *object = waitui_ast_cast_getObject(castNode);
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -765,11 +721,11 @@ static void waitui_ast_printer_printCast(waitui_ast_cast *castNode,
                             WAITUI_AST_PRINTER_TABLE_END,
             STR_FMT(&title), "cast_object", nodeCount, "object", "type",
             STR_FMT(&type));
-    if (castNode->object) {
+
+    if (object) {
         waitui_ast_printer_printGraphLinkLeft(printer, &title, "cast_object",
                                               nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, castNode->object,
-                                     args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, object, args);
     }
 }
 
@@ -785,6 +741,9 @@ static void waitui_ast_printer_printBlock(waitui_ast_block *blockNode,
 
     str title = STR_STATIC_INIT("waitui_ast_block");
 
+    const waitui_ast_expression_list *expressions =
+            waitui_ast_block_getExpressions(blockNode);
+
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
             printer, &title, nodeCount,
@@ -792,17 +751,13 @@ static void waitui_ast_printer_printBlock(waitui_ast_block *blockNode,
                     WAITUI_AST_PRINTER_KEY_PORT WAITUI_AST_PRINTER_TABLE_END,
             STR_FMT(&title), "block_expressions", nodeCount, "expressions");
 
-    {
-        waitui_ast_expression_list *expressions =
-                waitui_ast_block_getExpressions(blockNode);
-        if (expressions) {
-            for (list_node *node = expressions->head; node; node = node->next) {
-                waitui_ast_printer_printGraphLinkLeft(
-                        printer, &title, "block_expressions", nodeCount);
-                WAITUI_AST_EXECUTE_CALLBACKS(
-                        printer->callbacks, (waitui_ast_formal *) node->element,
-                        args);
-            }
+    if (expressions) {
+        for (list_node *node = expressions->head; node; node = node->next) {
+            waitui_ast_printer_printGraphLinkLeft(
+                    printer, &title, "block_expressions", nodeCount);
+            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
+                                         (waitui_ast_formal *) node->element,
+                                         args);
         }
     }
 }
@@ -816,15 +771,13 @@ static void waitui_ast_printer_printConstructorCall(
         waitui_ast_constructor_call *constructorCallNode, void *args) {
     waitui_ast_printer *printer  = (waitui_ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
-    list_node *node              = NULL;
 
     str title = STR_STATIC_INIT("waitui_ast_constructor_call");
 
-    str name = STR_NULL_INIT;
-
-    if (constructorCallNode->name) {
-        name = constructorCallNode->name->identifier;
-    }
+    const str name = waitui_ast_printer_symbolToStr(
+            waitui_ast_constructor_call_getName(constructorCallNode));
+    const waitui_ast_expression_list *argsList =
+            waitui_ast_constructor_call_getArgs(constructorCallNode);
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -835,8 +788,8 @@ static void waitui_ast_printer_printConstructorCall(
             STR_FMT(&title), "name", STR_FMT(&name), "constructor_call_args",
             nodeCount, "args");
 
-    if (constructorCallNode->args) {
-        for (node = constructorCallNode->args->head; node; node = node->next) {
+    if (argsList) {
+        for (list_node *node = argsList->head; node; node = node->next) {
             waitui_ast_printer_printGraphLinkLeft(
                     printer, &title, "constructor_call_args", nodeCount);
             WAITUI_AST_EXECUTE_CALLBACKS(
@@ -857,6 +810,10 @@ static void waitui_ast_printer_printLet(waitui_ast_let *letNode, void *args) {
 
     str title = STR_STATIC_INIT("waitui_ast_let");
 
+    const waitui_ast_initialization_list *initializations =
+            waitui_ast_let_getInitializations(letNode);
+    const waitui_ast_expression *body = waitui_ast_let_getBody(letNode);
+
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
             printer, &title, nodeCount,
@@ -866,28 +823,20 @@ static void waitui_ast_printer_printLet(waitui_ast_let *letNode, void *args) {
             STR_FMT(&title), "let_initializations", nodeCount,
             "initializations", "let_body", nodeCount, "body");
 
-    {
-        waitui_ast_initialization_list *initializations =
-                waitui_ast_let_getInitializations(letNode);
-        if (initializations) {
-            for (list_node *node = initializations->head; node;
-                 node            = node->next) {
-                waitui_ast_printer_printGraphLinkLeft(
-                        printer, &title, "let_initializations", nodeCount);
-                WAITUI_AST_EXECUTE_CALLBACKS(
-                        printer->callbacks,
-                        (waitui_ast_expression *) node->element, args);
-            }
+    if (initializations) {
+        for (list_node *node = initializations->head; node; node = node->next) {
+            waitui_ast_printer_printGraphLinkLeft(
+                    printer, &title, "let_initializations", nodeCount);
+            WAITUI_AST_EXECUTE_CALLBACKS(
+                    printer->callbacks, (waitui_ast_expression *) node->element,
+                    args);
         }
     }
 
-    {
-        waitui_ast_expression *body = waitui_ast_let_getBody(letNode);
-        if (body) {
-            waitui_ast_printer_printGraphLinkLeft(printer, &title, "let_body",
-                                                  nodeCount);
-            WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, body, args);
-        }
+    if (body) {
+        waitui_ast_printer_printGraphLinkLeft(printer, &title, "let_body",
+                                              nodeCount);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, body, args);
     }
 }
 
@@ -903,15 +852,12 @@ static void waitui_ast_printer_printInitialization(
 
     str title = STR_STATIC_INIT("waitui_ast_initialization");
 
-    str identifier = STR_NULL_INIT;
-    str type       = STR_NULL_INIT;
-
-    if (initializationNode->identifier) {
-        identifier = initializationNode->identifier->identifier;
-    }
-    if (initializationNode->type) {
-        type = initializationNode->type->identifier;
-    }
+    const str identifier = waitui_ast_printer_symbolToStr(
+            waitui_ast_initialization_getIdentifier(initializationNode));
+    const str type = waitui_ast_printer_symbolToStr(
+            waitui_ast_initialization_getType(initializationNode));
+    const waitui_ast_expression *value =
+            waitui_ast_initialization_getValue(initializationNode);
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -923,11 +869,11 @@ static void waitui_ast_printer_printInitialization(
                                             WAITUI_AST_PRINTER_TABLE_END,
             STR_FMT(&title), "identifier", STR_FMT(&identifier), "type",
             STR_FMT(&type), "initialization_value", nodeCount, "value");
-    if (initializationNode->value) {
+
+    if (value) {
         waitui_ast_printer_printGraphLinkLeft(
                 printer, &title, "initialization_value", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
-                                     initializationNode->value, args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, value, args);
     }
 }
 
@@ -943,6 +889,13 @@ static void waitui_ast_printer_printBinaryExpression(
 
     str title = STR_STATIC_INIT("waitui_ast_binary_expression");
 
+    const waitui_ast_expression *left =
+            waitui_ast_binary_expression_getLeft(binaryExpressionNode);
+    const char *operator= waitui_ast_printer_binaryOperatorToString(
+            waitui_ast_binary_expression_getOperator(binaryExpressionNode));
+    const waitui_ast_expression *right =
+            waitui_ast_binary_expression_getRight(binaryExpressionNode);
+
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
             printer, &title, nodeCount,
@@ -952,23 +905,19 @@ static void waitui_ast_printer_printBinaryExpression(
                                     WAITUI_AST_PRINTER_KEY_PORT
                                             WAITUI_AST_PRINTER_TABLE_END,
             STR_FMT(&title), "binary_expression_left", nodeCount, "left",
-            "operator",
-            waitui_ast_printer_binaryOperatorToString(
-                    binaryExpressionNode->operator),
-            "binary_expression_right", nodeCount, "right");
+            "operator", operator, "binary_expression_right", nodeCount,
+            "right");
 
-    if (binaryExpressionNode->left) {
+    if (left) {
         waitui_ast_printer_printGraphLinkLeft(
                 printer, &title, "binary_expression_left", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
-                                     binaryExpressionNode->left, args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, left, args);
     }
 
-    if (binaryExpressionNode->right) {
+    if (right) {
         waitui_ast_printer_printGraphLinkLeft(
                 printer, &title, "binary_expression_right", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
-                                     binaryExpressionNode->right, args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, right, args);
     }
 }
 
@@ -984,6 +933,11 @@ static void waitui_ast_printer_printUnaryExpression(
 
     str title = STR_STATIC_INIT("waitui_ast_unary_expression");
 
+    const char *operator= waitui_ast_printer_unaryOperatorToString(
+            waitui_ast_unary_expression_getOperator(unaryExpressionNode));
+    const waitui_ast_expression *expression =
+            waitui_ast_unary_expression_getExpression(unaryExpressionNode);
+
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
             printer, &title, nodeCount,
@@ -991,16 +945,13 @@ static void waitui_ast_printer_printUnaryExpression(
                     WAITUI_AST_PRINTER_KEY_STRING_VALUE
                             WAITUI_AST_PRINTER_KEY_PORT
                                     WAITUI_AST_PRINTER_TABLE_END,
-            STR_FMT(&title), "operator",
-            waitui_ast_printer_unaryOperatorToString(
-                    unaryExpressionNode->operator),
+            STR_FMT(&title), "operator", operator,
             "unary_expression_expression", nodeCount, "expression");
 
-    if (unaryExpressionNode->expression) {
+    if (expression) {
         waitui_ast_printer_printGraphLinkLeft(
                 printer, &title, "unary_expression_expression", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
-                                     unaryExpressionNode->expression, args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, expression, args);
     }
 }
 
@@ -1016,8 +967,15 @@ static void waitui_ast_printer_printIfElse(waitui_ast_if_else *ifElseNode,
 
     str title = STR_STATIC_INIT("waitui_ast_if_else");
 
+    const waitui_ast_expression *condition =
+            waitui_ast_if_else_getCondition(ifElseNode);
+    const waitui_ast_expression *thenBranch =
+            waitui_ast_if_else_getThenBranch(ifElseNode);
+    const waitui_ast_expression *elseBranch =
+            waitui_ast_if_else_getElseBranch(ifElseNode);
+
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
-    if (!ifElseNode->elseBranch) {
+    if (!elseBranch) {
         waitui_ast_printer_printGraphNode(
                 printer, &title, nodeCount,
                 WAITUI_AST_PRINTER_TABLE_BEGIN WAITUI_AST_PRINTER_TITLE_ROW
@@ -1037,25 +995,22 @@ static void waitui_ast_printer_printIfElse(waitui_ast_if_else *ifElseNode,
                 "if_else_else_branch", nodeCount, "elseBranch");
     }
 
-    if (ifElseNode->condition) {
+    if (condition) {
         waitui_ast_printer_printGraphLinkLeft(printer, &title,
                                               "if_else_condition", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, ifElseNode->condition,
-                                     args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, condition, args);
     }
 
-    if (ifElseNode->thenBranch) {
+    if (thenBranch) {
         waitui_ast_printer_printGraphLinkLeft(printer, &title,
                                               "if_else_then_branch", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, ifElseNode->thenBranch,
-                                     args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, thenBranch, args);
     }
 
-    if (ifElseNode->elseBranch) {
+    if (elseBranch) {
         waitui_ast_printer_printGraphLinkLeft(printer, &title,
                                               "if_else_else_branch", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, ifElseNode->elseBranch,
-                                     args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, elseBranch, args);
     }
 }
 
@@ -1071,6 +1026,10 @@ static void waitui_ast_printer_printWhile(waitui_ast_while *whileNode,
 
     str title = STR_STATIC_INIT("waitui_ast_while");
 
+    const waitui_ast_expression *condition =
+            waitui_ast_while_getCondition(whileNode);
+    const waitui_ast_expression *body = waitui_ast_while_getBody(whileNode);
+
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
             printer, &title, nodeCount,
@@ -1080,17 +1039,16 @@ static void waitui_ast_printer_printWhile(waitui_ast_while *whileNode,
             STR_FMT(&title), "while_condition", nodeCount, "condition",
             "while_body", nodeCount, "body");
 
-    if (whileNode->condition) {
+    if (condition) {
         waitui_ast_printer_printGraphLinkLeft(printer, &title,
                                               "while_condition", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, whileNode->condition,
-                                     args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, condition, args);
     }
 
-    if (whileNode->body) {
+    if (body) {
         waitui_ast_printer_printGraphLinkLeft(printer, &title, "while_body",
                                               nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, whileNode->body, args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, body, args);
     }
 }
 
@@ -1104,15 +1062,15 @@ waitui_ast_printer_printFunctionCall(waitui_ast_function_call *functionCallNode,
                                      void *args) {
     waitui_ast_printer *printer  = (waitui_ast_printer *) args;
     unsigned long long nodeCount = printer->nodeCount++;
-    list_node *node              = NULL;
 
     str title = STR_STATIC_INIT("waitui_ast_function_call");
 
-    str functionName = STR_NULL_INIT;
-
-    if (functionCallNode->functionName) {
-        functionName = functionCallNode->functionName->identifier;
-    }
+    const str functionName = waitui_ast_printer_symbolToStr(
+            waitui_ast_function_call_getFunctionName(functionCallNode));
+    const waitui_ast_expression *object =
+            waitui_ast_function_call_getObject(functionCallNode);
+    const waitui_ast_expression_list *argsList =
+            waitui_ast_function_call_getArgs(functionCallNode);
 
     waitui_ast_printer_printGraphLinkRight(printer, &title, nodeCount);
     waitui_ast_printer_printGraphNode(
@@ -1125,15 +1083,14 @@ waitui_ast_printer_printFunctionCall(waitui_ast_function_call *functionCallNode,
             "functionName", STR_FMT(&functionName), "function_call_args",
             nodeCount, "args");
 
-    if (functionCallNode->object) {
+    if (object) {
         waitui_ast_printer_printGraphLinkLeft(
                 printer, &title, "function_call_object", nodeCount);
-        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks,
-                                     functionCallNode->object, args);
+        WAITUI_AST_EXECUTE_CALLBACKS(printer->callbacks, object, args);
     }
 
-    if (functionCallNode->args) {
-        for (node = functionCallNode->args->head; node; node = node->next) {
+    if (argsList) {
+        for (list_node *node = argsList->head; node; node = node->next) {
             waitui_ast_printer_printGraphLinkLeft(
                     printer, &title, "function_call_args", nodeCount);
             WAITUI_AST_EXECUTE_CALLBACKS(

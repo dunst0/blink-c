@@ -38,7 +38,6 @@
     if (!this || !(*this)) { return; }                                         \
     waitui_log_trace("doing clean up fo waitui_ast node " #type)
 
-
 #define AST_NODE_DESTROY_DONE(type)                                            \
     free(*this);                                                               \
     *this = NULL;                                                              \
@@ -57,9 +56,29 @@
 #define WAITUI_AST_NODE_SET_DONE(type)                                         \
     waitui_log_trace("successful set data in waitui_ast node " #type)
 
+/**
+ * @brief Properties for an AST node in general.
+ */
+#define WAITUI_AST_NODE_PROPERTIES waitui_ast_node_type astNodeType;
+
+/**
+ * @brief Properties for a definition AST node in general.
+ */
+#define WAITUI_AST_DEFINITION_PROPERTIES                                       \
+    WAITUI_AST_NODE_PROPERTIES                                                 \
+    waitui_ast_definition_type astDefinitionType;
+
+/**
+ * @brief Properties for an expression AST node in general.
+ */
+#define WAITUI_AST_EXPRESSION_PROPERTIES                                       \
+    WAITUI_AST_NODE_PROPERTIES                                                 \
+    waitui_ast_expression_type astExpressionType;                              \
+    void *expressionType;// FIXME: not specified
+
 
 // -----------------------------------------------------------------------------
-//  Local types implementation
+//  Local types
 // -----------------------------------------------------------------------------
 
 /**
@@ -164,7 +183,6 @@ struct waitui_ast_block {
     waitui_ast_expression_list *expressions;
 };
 
-
 /**
  * @brief Struct representing an AST let.
  */
@@ -172,6 +190,172 @@ struct waitui_ast_let {
     WAITUI_AST_EXPRESSION_PROPERTIES
     waitui_ast_initialization_list *initializations;
     waitui_ast_expression *body;
+};
+
+/**
+ * @brief Struct representing an AST initialization.
+ */
+struct waitui_ast_initialization {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    symbol *identifier;
+    symbol *type;
+    waitui_ast_expression *value;
+};
+
+/**
+ * @brief Struct representing an AST assignment.
+ */
+struct waitui_ast_assignment {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    symbol *identifier;
+    waitui_ast_assignment_operator operator;
+    waitui_ast_expression *value;
+};
+
+/**
+ * @brief Struct representing an AST cast.
+ */
+struct waitui_ast_cast {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    symbol *type;
+    waitui_ast_expression *object;
+};
+
+/**
+ * @brief Struct representing an AST if else.
+ */
+struct waitui_ast_if_else {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    waitui_ast_expression *condition;
+    waitui_ast_expression *thenBranch;
+    waitui_ast_expression *elseBranch;
+};
+
+/**
+ * @brief Struct representing an AST while.
+ */
+struct waitui_ast_while {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    waitui_ast_expression *condition;
+    waitui_ast_expression *body;
+};
+
+/**
+ * @brief Struct representing an AST binary expression.
+ */
+struct waitui_ast_binary_expression {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    waitui_ast_expression *left;
+    waitui_ast_binary_operator operator;
+    waitui_ast_expression *right;
+};
+
+/**
+ * @brief Struct representing an AST unary expression.
+ */
+struct waitui_ast_unary_expression {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    waitui_ast_unary_operator operator;
+    waitui_ast_expression *expression;
+};
+
+/**
+ * @brief Struct representing an AST lazy expression.
+ */
+struct waitui_ast_lazy_expression {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    waitui_ast_expression *expression;
+    void *context;// FIXME: not specified
+};
+
+/**
+ * @brief Struct representing an AST native expression.
+ */
+struct waitui_ast_native_expression {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    void *func;// FIXME: not specified
+};
+
+/**
+ * @brief Struct representing an AST constructor call.
+ */
+struct waitui_ast_constructor_call {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    symbol *name;
+    waitui_ast_expression_list *args;
+};
+
+/**
+ * @brief Struct representing an AST function call.
+ */
+struct waitui_ast_function_call {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    waitui_ast_expression *object;
+    symbol *functionName;
+    waitui_ast_expression_list *args;
+};
+
+/**
+ * @brief Struct representing an AST super function call.
+ */
+struct waitui_ast_super_function_call {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    symbol *functionName;
+    waitui_ast_expression_list *args;
+};
+
+/**
+ * @brief Struct representing an AST reference.
+ */
+struct waitui_ast_reference {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    symbol *value;
+};
+
+/**
+ * @brief Struct representing an AST reference.
+ */
+struct waitui_ast_this_literal {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+};
+
+/**
+ * @brief Struct representing an AST integer literal.
+ */
+struct waitui_ast_integer_literal {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    str value;
+};
+
+/**
+ * @brief Struct representing an AST boolean literal.
+ */
+struct waitui_ast_boolean_literal {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    bool value;
+};
+
+/**
+ * @brief Struct representing an AST decimal literal.
+ */
+struct waitui_ast_decimal_literal {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    str value;
+};
+
+/**
+ * @brief Struct representing an AST null literal.
+ */
+struct waitui_ast_null_literal {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+};
+
+/**
+ * @brief Struct representing an AST string literal.
+ */
+struct waitui_ast_string_literal {
+    WAITUI_AST_EXPRESSION_PROPERTIES
+    str value;
 };
 
 
@@ -635,7 +819,7 @@ void waitui_ast_function_setBody(waitui_ast_function *this,
 waitui_ast_function_visibility
 waitui_ast_function_getVisibility(waitui_ast_function *this) {
     WAITUI_AST_NODE_GET(waitui_ast_function,
-                        WAITUI_AST_FUNCTION_VISIBILITY_PUBLIC);
+                        WAITUI_AST_FUNCTION_VISIBILITY_UNDEFINED);
     return this->visibility;
 }
 
@@ -766,7 +950,7 @@ void waitui_ast_block_destroy(waitui_ast_block **this) {
 
 waitui_ast_let *
 waitui_ast_let_new(waitui_ast_initialization_list *initializations,
-                            waitui_ast_expression *body) {
+                   waitui_ast_expression *body) {
     AST_NODE_NEW(waitui_ast_let, EXPRESSION, LET);
 
     this->initializations = initializations;
@@ -810,6 +994,23 @@ waitui_ast_initialization_new(symbol *identifier, symbol *type,
     AST_NODE_NEW_DONE(waitui_ast_initialization);
 }
 
+symbol *
+waitui_ast_initialization_getIdentifier(waitui_ast_initialization *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_initialization, NULL);
+    return this->identifier;
+}
+
+symbol *waitui_ast_initialization_getType(waitui_ast_initialization *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_initialization, NULL);
+    return this->type;
+}
+
+waitui_ast_expression *
+waitui_ast_initialization_getValue(waitui_ast_initialization *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_initialization, NULL);
+    return this->value;
+}
+
 void waitui_ast_initialization_destroy(waitui_ast_initialization **this) {
     AST_NODE_DESTROY(waitui_ast_initialization);
 
@@ -836,6 +1037,24 @@ waitui_ast_assignment_new(symbol *identifier,
     AST_NODE_NEW_DONE(waitui_ast_assignment);
 }
 
+symbol *waitui_ast_assignment_getIdentifier(waitui_ast_assignment *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_assignment, NULL);
+    return this->identifier;
+}
+
+waitui_ast_assignment_operator
+waitui_ast_assignment_getOperator(waitui_ast_assignment *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_assignment,
+                        WAITUI_AST_ASSIGNMENT_OPERATOR_UNDEFINED);
+    return this->operator;
+}
+
+waitui_ast_expression *
+waitui_ast_assignment_getValue(waitui_ast_assignment *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_assignment, NULL);
+    return this->value;
+}
+
 void waitui_ast_assignment_destroy(waitui_ast_assignment **this) {
     AST_NODE_DESTROY(waitui_ast_assignment);
 
@@ -856,6 +1075,16 @@ waitui_ast_cast *waitui_ast_cast_new(waitui_ast_expression *object,
     symbol_increment_refcount(type);
 
     AST_NODE_NEW_DONE(waitui_ast_cast);
+}
+
+waitui_ast_expression *waitui_ast_cast_getObject(waitui_ast_cast *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_cast, NULL);
+    return this->object;
+}
+
+symbol *waitui_ast_cast_getType(waitui_ast_cast *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_cast, NULL);
+    return this->type;
 }
 
 void waitui_ast_cast_destroy(waitui_ast_cast **this) {
@@ -880,6 +1109,24 @@ waitui_ast_if_else *waitui_ast_if_else_new(waitui_ast_expression *condition,
     AST_NODE_NEW_DONE(waitui_ast_if_else);
 }
 
+waitui_ast_expression *
+waitui_ast_if_else_getCondition(waitui_ast_if_else *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_if_else, NULL);
+    return this->condition;
+}
+
+waitui_ast_expression *
+waitui_ast_if_else_getThenBranch(waitui_ast_if_else *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_if_else, NULL);
+    return this->thenBranch;
+}
+
+waitui_ast_expression *
+waitui_ast_if_else_getElseBranch(waitui_ast_if_else *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_if_else, NULL);
+    return this->elseBranch;
+}
+
 void waitui_ast_if_else_destroy(waitui_ast_if_else **this) {
     AST_NODE_DESTROY(waitui_ast_if_else);
 
@@ -898,6 +1145,16 @@ waitui_ast_while *waitui_ast_while_new(waitui_ast_expression *condition,
     this->body      = body;
 
     AST_NODE_NEW_DONE(waitui_ast_while);
+}
+
+waitui_ast_expression *waitui_ast_while_getCondition(waitui_ast_while *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_while, NULL);
+    return this->condition;
+}
+
+waitui_ast_expression *waitui_ast_while_getBody(waitui_ast_while *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_while, NULL);
+    return this->body;
 }
 
 void waitui_ast_while_destroy(waitui_ast_while **this) {
@@ -922,6 +1179,25 @@ waitui_ast_binary_expression_new(waitui_ast_expression *left,
     AST_NODE_NEW_DONE(waitui_ast_binary_expression);
 }
 
+waitui_ast_expression *
+waitui_ast_binary_expression_getLeft(waitui_ast_binary_expression *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_binary_expression, NULL);
+    return this->left;
+}
+
+waitui_ast_binary_operator
+waitui_ast_binary_expression_getOperator(waitui_ast_binary_expression *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_binary_expression,
+                        WAITUI_AST_BINARY_OPERATOR_UNDEFINED);
+    return this->operator;
+}
+
+waitui_ast_expression *
+waitui_ast_binary_expression_getRight(waitui_ast_binary_expression *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_binary_expression, NULL);
+    return this->right;
+}
+
 void waitui_ast_binary_expression_destroy(waitui_ast_binary_expression **this) {
     AST_NODE_DESTROY(waitui_ast_binary_expression);
 
@@ -940,6 +1216,19 @@ waitui_ast_unary_expression_new(waitui_ast_unary_operator operator,
     this->expression = expression;
 
     AST_NODE_NEW_DONE(waitui_ast_unary_expression);
+}
+
+waitui_ast_unary_operator
+waitui_ast_unary_expression_getOperator(waitui_ast_unary_expression *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_unary_expression,
+                        WAITUI_AST_UNARY_OPERATOR_UNDEFINED);
+    return this->operator;
+}
+
+waitui_ast_expression *
+waitui_ast_unary_expression_getExpression(waitui_ast_unary_expression *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_unary_expression, NULL);
+    return this->expression;
 }
 
 void waitui_ast_unary_expression_destroy(waitui_ast_unary_expression **this) {
@@ -996,6 +1285,17 @@ waitui_ast_constructor_call_new(symbol *name,
     AST_NODE_NEW_DONE(waitui_ast_constructor_call);
 }
 
+symbol *waitui_ast_constructor_call_getName(waitui_ast_constructor_call *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_constructor_call, NULL);
+    return this->name;
+}
+
+waitui_ast_expression_list *
+waitui_ast_constructor_call_getArgs(waitui_ast_constructor_call *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_constructor_call, NULL);
+    return this->args;
+}
+
 void waitui_ast_constructor_call_destroy(waitui_ast_constructor_call **this) {
     AST_NODE_DESTROY(waitui_ast_constructor_call);
 
@@ -1019,6 +1319,24 @@ waitui_ast_function_call_new(waitui_ast_expression *object,
     symbol_increment_refcount(functionName);
 
     AST_NODE_NEW_DONE(waitui_ast_function_call);
+}
+
+waitui_ast_expression *
+waitui_ast_function_call_getObject(waitui_ast_function_call *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function_call, NULL);
+    return this->object;
+}
+
+symbol *
+waitui_ast_function_call_getFunctionName(waitui_ast_function_call *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function_call, NULL);
+    return this->functionName;
+}
+
+waitui_ast_expression_list *
+waitui_ast_function_call_getArgs(waitui_ast_function_call *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_function_call, NULL);
+    return this->args;
 }
 
 void waitui_ast_function_call_destroy(waitui_ast_function_call **this) {
@@ -1046,6 +1364,18 @@ waitui_ast_super_function_call_new(symbol *functionName,
     AST_NODE_NEW_DONE(waitui_ast_super_function_call);
 }
 
+symbol *waitui_ast_super_function_call_getFunctionName(
+        waitui_ast_super_function_call *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_super_function_call, NULL);
+    return this->functionName;
+}
+
+waitui_ast_expression_list *
+waitui_ast_super_function_call_getArgs(waitui_ast_super_function_call *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_super_function_call, NULL);
+    return this->args;
+}
+
 void waitui_ast_super_function_call_destroy(
         waitui_ast_super_function_call **this) {
     AST_NODE_DESTROY(waitui_ast_super_function_call);
@@ -1065,6 +1395,11 @@ waitui_ast_reference *waitui_ast_reference_new(symbol *value) {
     symbol_increment_refcount(value);
 
     AST_NODE_NEW_DONE(waitui_ast_reference);
+}
+
+symbol *waitui_ast_reference_getValue(waitui_ast_reference *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_reference, NULL);
+    return this->value;
 }
 
 void waitui_ast_reference_destroy(waitui_ast_reference **this) {
@@ -1099,6 +1434,11 @@ waitui_ast_integer_literal *waitui_ast_integer_literal_new(str value) {
     AST_NODE_NEW_DONE(waitui_ast_integer_literal);
 }
 
+str *waitui_ast_integer_literal_getValue(waitui_ast_integer_literal *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_integer_literal, NULL);
+    return &this->value;
+}
+
 void waitui_ast_integer_literal_destroy(waitui_ast_integer_literal **this) {
     AST_NODE_DESTROY(waitui_ast_integer_literal);
 
@@ -1113,6 +1453,11 @@ waitui_ast_boolean_literal *waitui_ast_boolean_literal_new(bool value) {
     this->value = value;
 
     AST_NODE_NEW_DONE(waitui_ast_boolean_literal);
+}
+
+bool waitui_ast_boolean_literal_getValue(waitui_ast_boolean_literal *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_boolean_literal, true);
+    return this->value;
 }
 
 void waitui_ast_boolean_literal_destroy(waitui_ast_boolean_literal **this) {
@@ -1131,6 +1476,11 @@ waitui_ast_decimal_literal *waitui_ast_decimal_literal_new(str value) {
     }
 
     AST_NODE_NEW_DONE(waitui_ast_decimal_literal);
+}
+
+str *waitui_ast_decimal_literal_getValue(waitui_ast_decimal_literal *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_decimal_literal, NULL);
+    return &this->value;
 }
 
 void waitui_ast_decimal_literal_destroy(waitui_ast_decimal_literal **this) {
@@ -1163,6 +1513,11 @@ waitui_ast_string_literal *waitui_ast_string_literal_new(str value) {
     }
 
     AST_NODE_NEW_DONE(waitui_ast_string_literal);
+}
+
+str *waitui_ast_string_literal_getValue(waitui_ast_string_literal *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_string_literal, NULL);
+    return &this->value;
 }
 
 void waitui_ast_string_literal_destroy(waitui_ast_string_literal **this) {

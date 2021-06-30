@@ -124,6 +124,7 @@ typedef struct waitui_ast_property waitui_ast_property;
  * @brief Function visibility types possible for a function AST node.
  */
 typedef enum waitui_ast_function_visibility {
+    WAITUI_AST_FUNCTION_VISIBILITY_UNDEFINED,
     WAITUI_AST_FUNCTION_VISIBILITY_PUBLIC,
     WAITUI_AST_FUNCTION_VISIBILITY_PROTECTED,
     WAITUI_AST_FUNCTION_VISIBILITY_PRIVATE,
@@ -153,6 +154,7 @@ typedef struct waitui_ast_initialization waitui_ast_initialization;
  * @brief Assignment operator types possible for an assignment AST node.
  */
 typedef enum waitui_ast_assignment_operator {
+    WAITUI_AST_ASSIGNMENT_OPERATOR_UNDEFINED,
     WAITUI_AST_ASSIGNMENT_OPERATOR_EQUAL,
     WAITUI_AST_ASSIGNMENT_OPERATOR_PLUS_EQUAL,
     WAITUI_AST_ASSIGNMENT_OPERATOR_MINUS_EQUAL,
@@ -189,6 +191,7 @@ typedef struct waitui_ast_while waitui_ast_while;
  * @brief Binary operator types possible for a binary expression AST node.
  */
 typedef enum waitui_ast_binary_operator {
+    WAITUI_AST_BINARY_OPERATOR_UNDEFINED,
     WAITUI_AST_BINARY_OPERATOR_PLUS,
     WAITUI_AST_BINARY_OPERATOR_MINUS,
     WAITUI_AST_BINARY_OPERATOR_TIMES,
@@ -217,6 +220,7 @@ typedef struct waitui_ast_binary_expression waitui_ast_binary_expression;
  * @brief Unary operator types possible for a unary expression AST node.
  */
 typedef enum waitui_ast_unary_operator {
+    WAITUI_AST_UNARY_OPERATOR_UNDEFINED,
     WAITUI_AST_UNARY_OPERATOR_MINUS,
     WAITUI_AST_UNARY_OPERATOR_NOT,
     WAITUI_AST_UNARY_OPERATOR_DOUBLE_PLUS,
@@ -296,31 +300,6 @@ CREATE_LIST_TYPE(INTERFACE, waitui_ast_formal, formal)
 CREATE_LIST_TYPE(INTERFACE, waitui_ast_property, property)
 CREATE_LIST_TYPE(INTERFACE, waitui_ast_function, function)
 CREATE_LIST_TYPE(INTERFACE, waitui_ast_initialization, initialization)
-
-
-// -----------------------------------------------------------------------------
-//  Public defines
-// -----------------------------------------------------------------------------
-
-/**
- * @brief Properties for an AST node in general.
- */
-#define WAITUI_AST_NODE_PROPERTIES waitui_ast_node_type astNodeType;
-
-/**
- * @brief Properties for a definition AST node in general.
- */
-#define WAITUI_AST_DEFINITION_PROPERTIES                                       \
-    WAITUI_AST_NODE_PROPERTIES                                                 \
-    waitui_ast_definition_type astDefinitionType;
-
-/**
- * @brief Properties for an expression AST node in general.
- */
-#define WAITUI_AST_EXPRESSION_PROPERTIES                                       \
-    WAITUI_AST_NODE_PROPERTIES                                                 \
-    waitui_ast_expression_type astExpressionType;                              \
-    void *expressionType;// FIXME: not specified
 
 
 // -----------------------------------------------------------------------------
@@ -815,6 +794,30 @@ waitui_ast_initialization_new(symbol *identifier, symbol *type,
                               waitui_ast_expression *value);
 
 /**
+ * @brief Get the identifier for the initialization node for the AST.
+ * @param[in] this The initialization node to get the identifier from
+ * @return A pointer to symbol, else NULL
+ */
+extern symbol *
+waitui_ast_initialization_getIdentifier(waitui_ast_initialization *this);
+
+/**
+ * @brief Get the type for the initialization node for the AST.
+ * @param[in] this The initialization node to get the type from
+ * @return A pointer to symbol, else NULL
+ */
+extern symbol *
+waitui_ast_initialization_getType(waitui_ast_initialization *this);
+
+/**
+ * @brief Get the value for the initialization node for the AST.
+ * @param[in] this The initialization node to get the value from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_initialization_getValue(waitui_ast_initialization *this);
+
+/**
  * @brief Destroy an initialization node and its content.
  * @param[in,out] this The initialization node to destroy
  */
@@ -833,6 +836,29 @@ waitui_ast_assignment_new(symbol *identifier,
                           waitui_ast_expression * value);
 
 /**
+ * @brief Get the identifier for the assignment node for the AST.
+ * @param[in] this The assignment node to get the identifier from
+ * @return A pointer to symbol, else NULL
+ */
+extern symbol *waitui_ast_assignment_getIdentifier(waitui_ast_assignment *this);
+
+/**
+ * @brief Get the operator for the assignment node for the AST.
+ * @param[in] this The assignment node to get the operator from
+ * @return The operator used with this assignment node
+ */
+extern waitui_ast_assignment_operator
+waitui_ast_assignment_getOperator(waitui_ast_assignment *this);
+
+/**
+ * @brief Get the value for the assignment node for the AST.
+ * @param[in] this The assignment node to get the value from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_assignment_getValue(waitui_ast_assignment *this);
+
+/**
  * @brief Destroy an assignment node and its content.
  * @param[in,out] this The assignment node to destroy
  */
@@ -846,6 +872,20 @@ extern void waitui_ast_assignment_destroy(waitui_ast_assignment **this);
  */
 extern waitui_ast_cast *waitui_ast_cast_new(waitui_ast_expression *object,
                                             symbol *type);
+
+/**
+ * @brief Get the object for the cast node for the AST.
+ * @param[in] this The cast node to get the object from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *waitui_ast_cast_getObject(waitui_ast_cast *this);
+
+/**
+ * @brief Get the type for the cast node for the AST.
+ * @param[in] this The cast node to get the type from
+ * @return A pointer to symbol, else NULL
+ */
+extern symbol *waitui_ast_cast_getType(waitui_ast_cast *this);
 
 /**
  * @brief Destroy a cast node and its content.
@@ -866,6 +906,30 @@ waitui_ast_if_else_new(waitui_ast_expression *condition,
                        waitui_ast_expression *elseBranch);
 
 /**
+ * @brief Get the condition expression for the if else node for the AST.
+ * @param[in] this The if else node to get the condition expression from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_if_else_getCondition(waitui_ast_if_else *this);
+
+/**
+ * @brief Get the then expression for the if else node for the AST.
+ * @param[in] this The if else node to get the then expression from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_if_else_getThenBranch(waitui_ast_if_else *this);
+
+/**
+ * @brief Get the else expression for the if else node for the AST.
+ * @param[in] this The if else node to get the else expression from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_if_else_getElseBranch(waitui_ast_if_else *this);
+
+/**
  * @brief Destroy a if_else node and its content.
  * @param[in,out] this The if_else node to destroy
  */
@@ -881,17 +945,32 @@ extern waitui_ast_while *waitui_ast_while_new(waitui_ast_expression *condition,
                                               waitui_ast_expression *body);
 
 /**
+ * @brief Get the condition expression for the while node for the AST.
+ * @param[in] this The while node to get the condition expression from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_while_getCondition(waitui_ast_while *this);
+
+/**
+ * @brief Get the body for the while node for the AST.
+ * @param[in] this The while node to get the body from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *waitui_ast_while_getBody(waitui_ast_while *this);
+
+/**
  * @brief Destroy a while node and its content.
  * @param[in,out] this The while node to destroy
  */
 extern void waitui_ast_while_destroy(waitui_ast_while **this);
 
 /**
- * @brief TODO
- * @param left
- * @param operator
- * @param right
- * @return
+ * @brief Create a binary expression node for the AST.
+ * @param[in] left The left expression to use for the binary expression node
+ * @param[in] operator The operator to use for the binary expression node
+ * @param[in] right The right expression to use for the binary expression node
+ * @return On success a pointer to waitui_ast_binary_expression, else NULL
  */
 extern waitui_ast_binary_expression *
 waitui_ast_binary_expression_new(waitui_ast_expression *left,
@@ -899,34 +978,74 @@ waitui_ast_binary_expression_new(waitui_ast_expression *left,
                                  waitui_ast_expression * right);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Get the left expression for the binary expression node for the AST.
+ * @param[in] this The binary expression node to get the left expression from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_binary_expression_getLeft(waitui_ast_binary_expression *this);
+
+/**
+ * @brief Get the binary operator for the binary expression node for the AST.
+ * @param[in] this The binary expression node to get the right expression from
+ * @return The binary operator used with this binary expression node
+ */
+extern waitui_ast_binary_operator
+waitui_ast_binary_expression_getOperator(waitui_ast_binary_expression *this);
+
+/**
+ * @brief Get the right expression for the binary expression node for the AST.
+ * @param[in] this The binary expression node to get the right expression from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_binary_expression_getRight(waitui_ast_binary_expression *this);
+
+/**
+ * @brief Destroy a binary expression node and its content.
+ * @param[in,out] this The binary expression node to destroy
  */
 extern void
 waitui_ast_binary_expression_destroy(waitui_ast_binary_expression **this);
 
 /**
- * @brief TODO
- * @param operator
- * @param expression
- * @return
+ * @brief Create a unary expression node for the AST.
+ * @param[in] operator The operator to use for the unary expression node
+ * @param[in] expression The expression to use for the unary expression node
+ * @return On success a pointer to waitui_ast_unary_expression, else NULL
  */
 extern waitui_ast_unary_expression *
         waitui_ast_unary_expression_new(waitui_ast_unary_operator operator,
                                         waitui_ast_expression * expression);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Get the unary operator for the unary expression node for the AST.
+ * @param[in] this The binary expression node to get the right expression from
+ * @return The unary operator used with this unary expression node
+ */
+extern waitui_ast_unary_operator
+waitui_ast_unary_expression_getOperator(waitui_ast_unary_expression *this);
+
+/**
+ * @brief Get the unary operator for the unary expression node for the AST.
+ * @param[in] this The unary expression node to get the expression from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_unary_expression_getExpression(waitui_ast_unary_expression *this);
+
+/**
+ * @brief Destroy a unary expression node and its content.
+ * @param[in,out] this The unary expression node to destroy
  */
 extern void
 waitui_ast_unary_expression_destroy(waitui_ast_unary_expression **this);
 
 /**
  * @brief TODO
- * @param expression
- * @param context
- * @return
+ * @param expression TODO
+ * @param context TODO
+ * @return TODO
  */
 extern waitui_ast_lazy_expression *
 waitui_ast_lazy_expression_new(waitui_ast_expression *expression,
@@ -934,48 +1053,64 @@ waitui_ast_lazy_expression_new(waitui_ast_expression *expression,
 
 /**
  * @brief TODO
- * @param this
+ * @param this TODO
  */
 extern void
 waitui_ast_lazy_expression_destroy(waitui_ast_lazy_expression **this);
 
 /**
  * @brief TODO
- * @param func
- * @return
+ * @param func TODO
+ * @return TODO
  */
 extern waitui_ast_native_expression *
 waitui_ast_native_expression_new(void *func);
 
 /**
  * @brief TODO
- * @param this
+ * @param this TODO
  */
 extern void
 waitui_ast_native_expression_destroy(waitui_ast_native_expression **this);
 
 /**
- * @brief TODO
- * @param name
- * @param args
- * @return
+ * @brief Create a constructor call node for the AST.
+ * @param[in] name The name to use for the constructor call node
+ * @param[in] args The args to use for the constructor call node
+ * @return On success a pointer to waitui_ast_constructor_call, else NULL
  */
 extern waitui_ast_constructor_call *
 waitui_ast_constructor_call_new(symbol *name, waitui_ast_expression_list *args);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Get the functionName for the constructor call node for the AST.
+ * @param[in] this The constructor call node to get the functionName from
+ * @return A pointer to symbol, else NULL
+ */
+extern symbol *
+waitui_ast_constructor_call_getName(waitui_ast_constructor_call *this);
+
+/**
+ * @brief Get the args for the constructor call node for the AST.
+ * @param[in] this The constructor call node to get the args from
+ * @return A pointer to waitui_ast_expression_list, else NULL
+ */
+extern waitui_ast_expression_list *
+waitui_ast_constructor_call_getArgs(waitui_ast_constructor_call *this);
+
+/**
+ * @brief Destroy a constructor call node and its content.
+ * @param[in,out] this The constructor call node to destroy
  */
 extern void
 waitui_ast_constructor_call_destroy(waitui_ast_constructor_call **this);
 
 /**
- * @brief TODO
- * @param object
- * @param functionName
- * @param args
- * @return
+ * @brief Create a function call node for the AST.
+ * @param[in] object The object to use for the function call node
+ * @param[in] functionName The functionName to use for the function call node
+ * @param[in] args The args to use for the function call node
+ * @return On success a pointer to waitui_ast_function_call, else NULL
  */
 extern waitui_ast_function_call *
 waitui_ast_function_call_new(waitui_ast_expression *object,
@@ -983,34 +1118,81 @@ waitui_ast_function_call_new(waitui_ast_expression *object,
                              waitui_ast_expression_list *args);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Get the object for the function call node for the AST.
+ * @param[in] this The function call node to get the object from
+ * @return A pointer to waitui_ast_expression, else NULL
+ */
+extern waitui_ast_expression *
+waitui_ast_function_call_getObject(waitui_ast_function_call *this);
+
+/**
+ * @brief Get the functionName for the function call node for the AST.
+ * @param[in] this The function call node to get the functionName from
+ * @return A pointer to symbol, else NULL
+ */
+extern symbol *
+waitui_ast_function_call_getFunctionName(waitui_ast_function_call *this);
+
+/**
+ * @brief Get the args for the function call node for the AST.
+ * @param[in] this The function call node to get the args from
+ * @return A pointer to waitui_ast_expression_list, else NULL
+ */
+extern waitui_ast_expression_list *
+waitui_ast_function_call_getArgs(waitui_ast_function_call *this);
+
+/**
+ * @brief Destroy a function call node and its content.
+ * @param[in,out] this The function call node to destroy
  */
 extern void waitui_ast_function_call_destroy(waitui_ast_function_call **this);
 
 /**
- * @brief TODO
- * @param functionName
- * @param args
- * @return
+ * @brief Create a super function call node for the AST.
+ * @param[in] functionName The functionName to use for the super function call node
+ * @param[in] args The args to use for the super function call node
+ * @return On success a pointer to waitui_ast_super_function_call, else NULL
  */
 extern waitui_ast_super_function_call *
 waitui_ast_super_function_call_new(symbol *functionName,
                                    waitui_ast_expression_list *args);
 
 /**
- * @brief TODO
- * @param this
+ * @brief Get the functionName for the super function call node for the AST.
+ * @param[in] this The super function call node to get the functionName from
+ * @return A pointer to symbol, else NULL
+ */
+extern symbol *waitui_ast_super_function_call_getFunctionName(
+        waitui_ast_super_function_call *this);
+
+/**
+ * @brief Get the args for the super function call node for the AST.
+ * @param[in] this The super function call node to get the args from
+ * @return A pointer to waitui_ast_expression_list, else NULL
+ */
+extern waitui_ast_expression_list *
+waitui_ast_super_function_call_getArgs(waitui_ast_super_function_call *this);
+
+/**
+ * @brief Destroy a super function call node and its content.
+ * @param[in,out] this The super function call node to destroy
  */
 extern void
 waitui_ast_super_function_call_destroy(waitui_ast_super_function_call **this);
 
 /**
  * @brief Create a reference node for the AST.
- * @param[in] identifier The identifier to use for the reference node
+ * @param[in] value The value to use for the reference node
  * @return On success a pointer to waitui_ast_reference, else NULL
  */
 extern waitui_ast_reference *waitui_ast_reference_new(symbol *value);
+
+/**
+ * @brief Return the value for the reference node.
+ * @param[in] this The reference node to get the value from
+ * @return The A pointer to symbol holding the reference value, else NULL
+ */
+extern symbol *waitui_ast_reference_getValue(waitui_ast_reference *this);
 
 /**
  * @brief Destroy a reference node and its content.
@@ -1038,6 +1220,14 @@ extern void waitui_ast_this_literal_destroy(waitui_ast_this_literal **this);
 extern waitui_ast_integer_literal *waitui_ast_integer_literal_new(str value);
 
 /**
+ * @brief Return the value for the integer literal node.
+ * @param[in] this The integer literal node to get the value from
+ * @return The integer literal value
+ */
+extern str *
+waitui_ast_integer_literal_getValue(waitui_ast_integer_literal *this);
+
+/**
  * @brief Destroy a integer literal node and its content.
  * @param[in,out] this The integer literal node to destroy
  */
@@ -1052,6 +1242,14 @@ waitui_ast_integer_literal_destroy(waitui_ast_integer_literal **this);
 extern waitui_ast_boolean_literal *waitui_ast_boolean_literal_new(bool value);
 
 /**
+ * @brief Return the value for the boolean literal node.
+ * @param[in] this The boolean literal node to get the value from
+ * @return The boolean literal value
+ */
+extern bool
+waitui_ast_boolean_literal_getValue(waitui_ast_boolean_literal *this);
+
+/**
  * @brief Destroy a boolean literal node and its content.
  * @param[in,out] this The boolean literal node to destroy
  */
@@ -1064,6 +1262,14 @@ waitui_ast_boolean_literal_destroy(waitui_ast_boolean_literal **this);
  * @return On success a pointer to waitui_ast_decimal_literal, else NULL
  */
 extern waitui_ast_decimal_literal *waitui_ast_decimal_literal_new(str value);
+
+/**
+ * @brief Return the value for the decimal literal node.
+ * @param[in] this The decimal literal node to get the value from
+ * @return The decimal literal value
+ */
+extern str *
+waitui_ast_decimal_literal_getValue(waitui_ast_decimal_literal *this);
 
 /**
  * @brief Destroy a decimal literal node and its content.
@@ -1092,123 +1298,16 @@ extern void waitui_ast_null_literal_destroy(waitui_ast_null_literal **this);
 extern waitui_ast_string_literal *waitui_ast_string_literal_new(str value);
 
 /**
+ * @brief Return the value for the string literal node.
+ * @param[in] this The string literal node to get the value from
+ * @return The string literal value
+ */
+extern str *waitui_ast_string_literal_getValue(waitui_ast_string_literal *this);
+
+/**
  * @brief Destroy a string literal node and its content.
  * @param[in,out] this The string literal node to destroy
  */
 extern void waitui_ast_string_literal_destroy(waitui_ast_string_literal **this);
-
-
-// -----------------------------------------------------------------------------
-//  Public types implementation
-// -----------------------------------------------------------------------------
-
-struct waitui_ast_initialization {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    symbol *identifier;
-    symbol *type;
-    waitui_ast_expression *value;
-};
-
-struct waitui_ast_assignment {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    symbol *identifier;
-    waitui_ast_assignment_operator operator;
-    waitui_ast_expression *value;
-};
-
-struct waitui_ast_cast {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    symbol *type;
-    waitui_ast_expression *object;
-};
-
-struct waitui_ast_if_else {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    waitui_ast_expression *condition;
-    waitui_ast_expression *thenBranch;
-    waitui_ast_expression *elseBranch;
-};
-
-struct waitui_ast_while {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    waitui_ast_expression *condition;
-    waitui_ast_expression *body;
-};
-
-struct waitui_ast_binary_expression {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    waitui_ast_expression *left;
-    waitui_ast_binary_operator operator;
-    waitui_ast_expression *right;
-};
-
-struct waitui_ast_unary_expression {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    waitui_ast_unary_operator operator;
-    waitui_ast_expression *expression;
-};
-
-struct waitui_ast_lazy_expression {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    waitui_ast_expression *expression;
-    void *context;// FIXME: not specified
-};
-
-struct waitui_ast_native_expression {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    void *func;// FIXME: not specified
-};
-
-struct waitui_ast_constructor_call {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    symbol *name;
-    waitui_ast_expression_list *args;
-};
-
-struct waitui_ast_function_call {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    waitui_ast_expression *object;
-    symbol *functionName;
-    waitui_ast_expression_list *args;
-};
-
-struct waitui_ast_super_function_call {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    symbol *functionName;
-    waitui_ast_expression_list *args;
-};
-
-struct waitui_ast_reference {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    symbol *value;
-};
-
-struct waitui_ast_this_literal {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-};
-
-struct waitui_ast_integer_literal {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    str value;
-};
-
-struct waitui_ast_boolean_literal {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    bool value;
-};
-
-struct waitui_ast_decimal_literal {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    str value;
-};
-
-struct waitui_ast_null_literal {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-};
-
-struct waitui_ast_string_literal {
-    WAITUI_AST_EXPRESSION_PROPERTIES
-    str value;
-};
 
 #endif// WAITUI_AST_NODE_H

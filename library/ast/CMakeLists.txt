@@ -10,6 +10,8 @@ project(waitui-ast
 
 add_library(ast OBJECT)
 
+target_compile_features(ast PRIVATE c_std_11)
+
 target_sources(ast
         PRIVATE
         "src/ast.c"

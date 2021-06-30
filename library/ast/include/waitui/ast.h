@@ -41,9 +41,7 @@
 /**
  * @brief Type for the AST.
  */
-typedef struct waitui_ast {
-    waitui_ast_program *program;
-} waitui_ast;
+typedef struct waitui_ast waitui_ast;
 
 /**
  * @brief Type for AST callbacks for the waitui_ast_walk function.
