@@ -412,9 +412,25 @@ extern void waitui_ast_namespace_destroy(waitui_ast_namespace **this);
 
 /**
  * @brief Create a import node for the AST.
+ * @param[in] name The import name
+ * @param[in] alias The import alias
  * @return On success a pointer to waitui_ast_import, else NULL
  */
-extern waitui_ast_import *waitui_ast_import_new(void);
+extern waitui_ast_import *waitui_ast_import_new(symbol *name, symbol *alias);
+
+/**
+ * @brief Return the name for the import node.
+ * @param[in] this The import node to get the name from
+ * @return A pointer to symbol, else NULL
+ */
+extern symbol *waitui_ast_import_getName(waitui_ast_import *this);
+
+/**
+ * @brief Return the alias for the import node.
+ * @param[in] this The import node to get the name from
+ * @return A pointer to symbol, else NULL
+ */
+extern symbol *waitui_ast_import_getAlias(waitui_ast_import *this);
 
 /**
  * @brief Destroy a import node and its content.
