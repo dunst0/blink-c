@@ -125,6 +125,8 @@ struct waitui_ast_namespace {
  */
 struct waitui_ast_import {
     WAITUI_AST_DEFINITION_PROPERTIES
+    symbol *name;
+    symbol *alias;
 };
 
 /**
@@ -591,14 +593,33 @@ void waitui_ast_namespace_destroy(waitui_ast_namespace **this) {
     AST_NODE_DESTROY_DONE(waitui_ast_namespace);
 }
 
-waitui_ast_import *waitui_ast_import_new(void) {
+waitui_ast_import *waitui_ast_import_new(symbol *name, symbol *alias) {
     AST_NODE_NEW(waitui_ast_import, DEFINITION, IMPORT);
+
+    this->name  = name;
+    this->alias = alias;
+
+    symbol_increment_refcount(name);
+    symbol_increment_refcount(alias);
 
     AST_NODE_NEW_DONE(waitui_ast_import);
 }
 
+symbol *waitui_ast_import_getName(waitui_ast_import *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_import, NULL);
+    return this->name;
+}
+
+symbol *waitui_ast_import_getAlias(waitui_ast_import *this) {
+    WAITUI_AST_NODE_GET(waitui_ast_import, NULL);
+    return this->alias;
+}
+
 void waitui_ast_import_destroy(waitui_ast_import **this) {
     AST_NODE_DESTROY(waitui_ast_import);
+
+    symbol_decrement_refcount(&(*this)->name);
+    symbol_decrement_refcount(&(*this)->alias);
 
     AST_NODE_DESTROY_DONE(waitui_ast_import);
 }

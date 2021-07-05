@@ -187,10 +187,11 @@ void yyerror(YYLTYPE *locp, parser_extra_parser *extraParser, char const *msg);
 %type <unary_expression>   unary_expression
 %type <while_expression>   while
 
-%destructor { waitui_ast_node_destroy((waitui_ast_node **)&$$); }     <assignment> <binary_expression> <block>
-                                                        <constructor_call> <cast> <class> <expression> <formal>
-                                                        <function> <if_else_expression> <initialization> <let>
-                                                        <property> <unary_expression> <while_expression>
+%destructor { waitui_ast_node_destroy((waitui_ast_node **)&$$); }    <assignment> <binary_expression> <block>
+                                                                     <constructor_call> <cast> <class> <expression>
+                                                                     <formal> <function> <if_else_expression>
+                                                                     <initialization> <let> <property>
+                                                                     <unary_expression> <while_expression>
 %destructor { waitui_ast_expression_list_destroy(&$$); }       <expressions>
 %destructor { waitui_ast_formal_list_destroy(&$$); }           <formals>
 %destructor { waitui_ast_class_list_destroy(&$$); }            <classes>
@@ -244,11 +245,11 @@ import_list                     : import
 
 import                          : IMPORT_KEYWORD IMPORT_NAME ';'
                                     {
-                                        $$ = waitui_ast_import_new();
+                                        $$ = waitui_ast_import_new($2, NULL);
                                     }
                                 | IMPORT_KEYWORD IMPORT_NAME AS_KEYWORD IDENTIFIER ';'
                                     {
-                                        $$ = waitui_ast_import_new();
+                                        $$ = waitui_ast_import_new($2, $4);
                                     }
                                 ;
 

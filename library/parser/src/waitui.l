@@ -85,6 +85,13 @@ identifier          (operator{operator})|(({letter}|_)({letter}|{digit}|_)*)
                                                                                             importName.s   = yytext;
                                                                                             importName.len = yyleng;
 
+                                                                                            yylval->symbolValue = symbol_new(importName, SYMBOL_TYPE_UNDEFINED,
+                                                                                                                             yylloc->first_line, yylloc->first_column);
+                                                                                            if (!yylval->symbolValue) {
+                                                                                                yyerror(yylloc, yyextra->extraParser, "could not allocate memory for symbol");
+                                                                                                RETURN(YYerror);
+                                                                                            }
+
                                                                                             if (!parser_push_yy_state(yyextra, yytext, yyleng)) {
                                                                                                 yyerror(yylloc, yyextra->extraParser, "could not push lexer state to stack");
                                                                                                 RETURN(YYerror);
