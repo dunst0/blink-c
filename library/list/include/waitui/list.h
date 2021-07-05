@@ -8,6 +8,8 @@
 #ifndef WAITUI_LIST_H
 #define WAITUI_LIST_H
 
+#include <stdbool.h>
+
 
 // -----------------------------------------------------------------------------
 //  Public types
@@ -16,103 +18,131 @@
 /**
  * @brief Type representing a List node.
  */
-typedef struct list_node list_node;
-struct list_node {
-    void *element;
-    list_node *next;
-    list_node *prev;
-};
+typedef struct waitui_list_node waitui_list_node;
 
 /**
  * @brief Type for element destroy function.
  */
-typedef void (*list_element_destroy)(void **element);
+typedef void (*waitui_list_element_destroy)(void **element);
 
 /**
  * @brief Type representing a List.
  */
-typedef struct list {
-    list_node *head;
-    list_node *tail;
-    list_element_destroy elementDestroyCallback;
-    unsigned long long length;
-} list;
+typedef struct waitui_list waitui_list;
+
+/**
+ * @brief Type representing a List iterator.
+ */
+typedef struct waitui_list_iter waitui_list_iter;
 
 
 // -----------------------------------------------------------------------------
 //  Public defines
 // -----------------------------------------------------------------------------
 
-#define INTERFACE_LIST_TYPEDEF(type) typedef list type##_list
+#define INTERFACE_LIST_TYPEDEF(type)                                           \
+    typedef waitui_list type##_list;                                           \
+    typedef waitui_list_iter type##_list_iter
+
 #define IMPLEMENTATION_LIST_TYPEDEF(type)
 
 #define INTERFACE_LIST_NEW(type) extern type##_list *type##_list_new()
 #define IMPLEMENTATION_LIST_NEW(type)                                          \
     type##_list *type##_list_new() {                                           \
-        return (type##_list *) list_new(                                       \
-                (list_element_destroy) type##_destroy);                        \
-    }
-
-#define INTERFACE_LIST_NEW_CUSTOM(type, element_destroy)                       \
-    extern type##_list *type##_list_new()
-#define IMPLEMENTATION_LIST_NEW_CUSTOM(type, element_destroy)                  \
-    type##_list *type##_list_new() {                                           \
-        return (type##_list *) list_new(                                       \
-                (list_element_destroy)(element_destroy));                      \
+        return (type##_list *) waitui_list_new(                                \
+                (waitui_list_element_destroy) type##_destroy);                 \
     }
 
 #define INTERFACE_LIST_DESTROY(type)                                           \
     extern void type##_list_destroy(type##_list **this)
 #define IMPLEMENTATION_LIST_DESTROY(type)                                      \
     void type##_list_destroy(type##_list **this) {                             \
-        list_destroy((list **) this);                                          \
+        waitui_list_destroy((waitui_list **) this);                            \
     }
 
-#define INTERFACE_LIST_PUSH(type, elem)                                        \
-    extern int type##_list_push(type##_list *this, type *elem)
-#define IMPLEMENTATION_LIST_PUSH(type, elem)                                   \
-    int type##_list_push(type##_list *this, type *elem) {                      \
-        return list_push((list *) this, (void *) elem);                        \
+#define INTERFACE_LIST_PUSH(type)                                              \
+    extern int type##_list_push(type##_list *this, type *type##element)
+#define IMPLEMENTATION_LIST_PUSH(type)                                         \
+    int type##_list_push(type##_list *this, type *type##element) {             \
+        return waitui_list_push((waitui_list *) this, (void *) type##element); \
     }
 
 #define INTERFACE_LIST_POP(type) extern type *type##_list_pop(type##_list *this)
 #define IMPLEMENTATION_LIST_POP(type)                                          \
     type *type##_list_pop(type##_list *this) {                                 \
-        return (type *) list_pop((list *) this);                               \
+        return (type *) waitui_list_pop((waitui_list *) this);                 \
     }
 
-#define INTERFACE_LIST_UNSHIFT(type, elem)                                     \
-    extern int type##_list_unshift(type##_list *this, type *elem)
-#define IMPLEMENTATION_LIST_UNSHIFT(type, elem)                                \
-    int type##_list_unshift(type##_list *this, type *elem) {                   \
-        return list_unshift((list *) this, (void *) elem);                     \
+#define INTERFACE_LIST_UNSHIFT(type)                                           \
+    extern int type##_list_unshift(type##_list *this, type *type##element)
+#define IMPLEMENTATION_LIST_UNSHIFT(type)                                      \
+    int type##_list_unshift(type##_list *this, type *type##element) {          \
+        return waitui_list_unshift((waitui_list *) this,                       \
+                                   (void *) type##element);                    \
     }
 
 #define INTERFACE_LIST_SHIFT(type)                                             \
     extern type *type##_list_shift(type##_list *this)
 #define IMPLEMENTATION_LIST_SHIFT(type)                                        \
     type *type##_list_shift(type##_list *this) {                               \
-        return (type *) list_shift((list *) this);                             \
+        return (type *) waitui_list_shift((waitui_list *) this);               \
     }
 
-#define CREATE_LIST_TYPE(kind, type, elem)                                     \
+#define INTERFACE_LIST_PEEK(type)                                              \
+    extern type *type##_list_peek(type##_list *this)
+#define IMPLEMENTATION_LIST_PEEK(type)                                         \
+    type *type##_list_peek(type##_list *this) {                                \
+        return (type *) waitui_list_peek((waitui_list *) this);                \
+    }
+
+#define INTERFACE_LIST_GET_ITERATOR(type)                                      \
+    extern type##_list_iter *type##_list_getIterator(type##_list *this)
+#define IMPLEMENTATION_LIST_GET_ITERATOR(type)                                 \
+    type##_list_iter *type##_list_getIterator(type##_list *this) {             \
+        return (type##_list_iter *) waitui_list_getIterator(                   \
+                (waitui_list *) this);                                         \
+    }
+
+#define INTERFACE_LIST_ITER_HAS_NEXT(type)                                     \
+    extern bool type##_list_iter_hasNext(type##_list_iter *this)
+#define IMPLEMENTATION_LIST_ITER_HAS_NEXT(type)                                \
+    bool type##_list_iter_hasNext(type##_list_iter *this) {                    \
+        return waitui_list_iter_hasNext((waitui_list_iter *) this);            \
+    }
+
+#define INTERFACE_LIST_ITER_NEXT(type)                                         \
+    extern type *type##_list_iter_next(type##_list_iter *this)
+#define IMPLEMENTATION_LIST_ITER_NEXT(type)                                    \
+    type *type##_list_iter_next(type##_list_iter *this) {                      \
+        return (type *) waitui_list_iter_next((waitui_list_iter *) this);      \
+    }
+
+#define INTERFACE_LIST_ITER_DESTROY(type)                                      \
+    extern void type##_list_iter_destroy(type##_list_iter **this)
+#define IMPLEMENTATION_LIST_ITER_DESTROY(type)                                 \
+    void type##_list_iter_destroy(type##_list_iter **this) {                   \
+        waitui_list_iter_destroy((waitui_list_iter **) this);                  \
+    }
+
+/**
+ * @brief Define for quickly created list implementations for a value type.
+ * @param[in] kind Whether to create interface list definition
+ *                 or actual implementation
+ * @param[in] type For what type to create the list
+ */
+#define CREATE_LIST_TYPE(kind, type)                                           \
     kind##_LIST_TYPEDEF(type);                                                 \
     kind##_LIST_NEW(type);                                                     \
     kind##_LIST_DESTROY(type);                                                 \
-    kind##_LIST_PUSH(type, elem);                                              \
+    kind##_LIST_PUSH(type);                                                    \
     kind##_LIST_POP(type);                                                     \
-    kind##_LIST_UNSHIFT(type, elem);                                           \
-    kind##_LIST_SHIFT(type);
-
-
-#define CREATE_LIST_TYPE_CUSTOM(kind, type, elem, element_destroy)             \
-    kind##_LIST_TYPEDEF(type);                                                 \
-    kind##_LIST_NEW_CUSTOM(type, element_destroy);                             \
-    kind##_LIST_DESTROY(type);                                                 \
-    kind##_LIST_PUSH(type, elem);                                              \
-    kind##_LIST_POP(type);                                                     \
-    kind##_LIST_UNSHIFT(type, elem);                                           \
-    kind##_LIST_SHIFT(type);
+    kind##_LIST_UNSHIFT(type);                                                 \
+    kind##_LIST_SHIFT(type);                                                   \
+    kind##_LIST_PEEK(type);                                                    \
+    kind##_LIST_GET_ITERATOR(type);                                            \
+    kind##_LIST_ITER_HAS_NEXT(type);                                           \
+    kind##_LIST_ITER_NEXT(type);                                               \
+    kind##_LIST_ITER_DESTROY(type);
 
 
 // -----------------------------------------------------------------------------
@@ -122,16 +152,17 @@ typedef struct list {
 /**
  * @brief Create a List.
  * @param[in] elementDestroyCallback Function to call for element destruction
- * @return A pointer to list or NULL if memory allocation failed
+ * @return A pointer to waitui_list or NULL if memory allocation failed
  */
-extern list *list_new(list_element_destroy elementDestroyCallback);
+extern waitui_list *
+waitui_list_new(waitui_list_element_destroy elementDestroyCallback);
 
 /**
  * @brief Destroy a List.
  * @param[in,out] this The List to destroy
  * @note This will free call for every element the elementDestroyCallback
  */
-extern void list_destroy(list **this);
+extern void waitui_list_destroy(waitui_list **this);
 
 /**
  * @brief Add the element to the end of the List.
@@ -141,15 +172,15 @@ extern void list_destroy(list **this);
  * @retval 1 Ok
  * @retval 0 Memory allocation failed
  */
-extern int list_push(list *this, void *element);
+extern int waitui_list_push(waitui_list *this, void *element);
 
 /**
  * @brief Remove the element from the end of the List and return it.
  * @param[in,out] this The List to remove the element from
  * @note The caller has to destroy element on its own.
- * @return The element or NULL if list is empty
+ * @return The element or NULL if waitui_list is empty
  */
-extern void *list_pop(list *this);
+extern void *waitui_list_pop(waitui_list *this);
 
 /**
  * @brief Add the element to the beginning of the List.
@@ -159,14 +190,50 @@ extern void *list_pop(list *this);
  * @retval 1 Ok
  * @retval 0 Memory allocation failed
  */
-extern int list_unshift(list *this, void *element);
+extern int waitui_list_unshift(waitui_list *this, void *element);
 
 /**
  * @brief Remove the element from the beginning of the List and return it.
  * @param[in,out] this The List to remove the element from
  * @note The caller has to destroy element on its own.
- * @return The element or NULL if list is empty
+ * @return The element or NULL if waitui_list is empty
  */
-extern void *list_shift(list *this);
+extern void *waitui_list_shift(waitui_list *this);
+
+/**
+ * @brief Return the element from the beginning of the List, without removing it.
+ * @param[in] this The List to get the first element from
+ * @warning The caller has not to destroy element on its own.
+ * @return The element or NULL if waitui_list is empty
+ */
+extern void *waitui_list_peek(waitui_list *this);
+
+/**
+ * @brief Return the iterator to iterate over the List.
+ * @param[in] this The List to get the iterator for
+ * @return A pointer to waitui_list_iter or NULL if memory allocation failed
+ */
+extern waitui_list_iter *waitui_list_getIterator(waitui_list *this);
+
+/**
+ * @brief Return true if the List iterator has a next element.
+ * @param[in] this The List iterator to test for next element available
+ * @retval true If the iterator has a next element available
+ * @retval false If the iterator has no next element available
+ */
+extern bool waitui_list_iter_hasNext(waitui_list_iter *this);
+
+/**
+ * @brief Return the next element from the List iterator.
+ * @param[in] this The List iterator to get the next element
+ * @return The element or NULL if no more elements are available
+ */
+extern void *waitui_list_iter_next(waitui_list_iter *this);
+
+/**
+ * @brief Destroy a List iterator.
+ * @param[in,out] this The List iterator to destroy
+ */
+extern void waitui_list_iter_destroy(waitui_list_iter **this);
 
 #endif//WAITUI_LIST_H

@@ -16,7 +16,7 @@
 //  Public functions
 // -----------------------------------------------------------------------------
 
-CREATE_LIST_TYPE(IMPLEMENTATION, symbol_reference, reference)
+CREATE_LIST_TYPE(IMPLEMENTATION, symbol_reference)
 
 symbol_reference *symbol_reference_new(unsigned long int line,
                                        unsigned long int column) {

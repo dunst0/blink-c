@@ -363,14 +363,14 @@ struct waitui_ast_string_literal {
 //  Public functions
 // -----------------------------------------------------------------------------
 
-CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_namespace, namespace)
-CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_import, import)
-CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_class, class)
-CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_expression, expression)
-CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_formal, formal)
-CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_property, property)
-CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_function, function)
-CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_initialization, initialization)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_namespace)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_import)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_class)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_expression)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_formal)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_property)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_function)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_ast_initialization)
 
 waitui_ast_node_type waitui_ast_node_getNodeType(const waitui_ast_node *this) {
     WAITUI_AST_NODE_GET(waitui_ast_node, WAITUI_AST_NODE_TYPE_UNDEFINED);

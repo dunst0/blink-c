@@ -23,7 +23,7 @@ typedef struct symbol_reference {
     unsigned long long column;
 } symbol_reference;
 
-CREATE_LIST_TYPE(INTERFACE, symbol_reference, reference)
+CREATE_LIST_TYPE(INTERFACE, symbol_reference)
 
 
 // -----------------------------------------------------------------------------
