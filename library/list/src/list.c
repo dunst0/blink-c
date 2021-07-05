@@ -208,7 +208,7 @@ void *waitui_list_iter_next(waitui_list_iter *this) {
     node       = this->node;
     this->node = this->node->next;
 
-    return node;
+    return node->element;
 }
 
 void waitui_list_iter_destroy(waitui_list_iter **this) {
