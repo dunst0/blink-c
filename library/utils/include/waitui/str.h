@@ -1,5 +1,5 @@
 /**
- * @file list.h
+ * @file str.h
  * @author rick
  * @date 19.02.20
  * @brief File for the String implementation

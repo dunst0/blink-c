@@ -47,14 +47,13 @@ symbol *symbol_new(str identifier, symbol_type type, unsigned long int line,
             return NULL;
         }
         if (!symbol_reference_list_push(this->references, reference)) {
-            waitui_log_fatal("could not allocate memory for pushing symbol_reference");
+            waitui_log_fatal(
+                    "could not allocate memory for pushing symbol_reference");
             symbol_reference_destroy(&reference);
             symbol_destroy(&this);
             return NULL;
         }
     }
-
-    //this->refcount = 1;
 
     waitui_log_trace("new symbol successful created %p", this);
 
@@ -66,8 +65,9 @@ void symbol_increment_refcount(symbol *this) {
 
     this->refcount++;
 
-    waitui_log_trace("increment refcount for symbol with identifier '%.*s' to %ld %p",
-              STR_FMT(&this->identifier), this->refcount, this);
+    waitui_log_trace(
+            "increment refcount for symbol with identifier '%.*s' to %ld %p",
+            STR_FMT(&this->identifier), this->refcount, this);
 }
 
 void symbol_decrement_refcount(symbol **this) {
@@ -75,20 +75,21 @@ void symbol_decrement_refcount(symbol **this) {
 
     (*this)->refcount--;
 
-    waitui_log_trace("decrement refcount for symbol with identifier '%.*s' to %ld %p",
-              STR_FMT(&(*this)->identifier), (*this)->refcount, *this);
+    waitui_log_trace(
+            "decrement refcount for symbol with identifier '%.*s' to %ld %p",
+            STR_FMT(&(*this)->identifier), (*this)->refcount, *this);
 
     if ((*this)->refcount < 1) {
-        waitui_log_trace("freeing symbol with identifier '%.*s' and refcount %ld %p",
-                  STR_FMT(&(*this)->identifier), (*this)->refcount, *this);
+        waitui_log_trace(
+                "freeing symbol with identifier '%.*s' and refcount %ld %p",
+                STR_FMT(&(*this)->identifier), (*this)->refcount, *this);
         symbol_destroy(this);
     }
 }
 
 symbol_reference *symbol_get_reference_head(symbol *this) {
-    if (!this || !this->references || !this->references->head) { return NULL; }
-
-    return this->references->head->element;
+    if (!this || !this->references) { return NULL; }
+    return symbol_reference_list_peek(this->references);
 }
 
 void symbol_destroy(symbol **this) {
@@ -97,7 +98,7 @@ void symbol_destroy(symbol **this) {
     if (!this || !(*this)) { return; }
 
     waitui_log_trace("destroying symbol with identifier '%.*s' %p",
-              STR_FMT(&(*this)->identifier), *this);
+                     STR_FMT(&(*this)->identifier), *this);
 
     STR_FREE(&(*this)->identifier);
     symbol_reference_list_destroy(&(*this)->references);
