@@ -292,14 +292,14 @@ typedef struct waitui_ast_null_literal waitui_ast_null_literal;
  */
 typedef struct waitui_ast_string_literal waitui_ast_string_literal;
 
-CREATE_LIST_TYPE(INTERFACE, waitui_ast_namespace, namespace)
-CREATE_LIST_TYPE(INTERFACE, waitui_ast_import, import)
-CREATE_LIST_TYPE(INTERFACE, waitui_ast_class, class)
-CREATE_LIST_TYPE(INTERFACE, waitui_ast_expression, expression)
-CREATE_LIST_TYPE(INTERFACE, waitui_ast_formal, formal)
-CREATE_LIST_TYPE(INTERFACE, waitui_ast_property, property)
-CREATE_LIST_TYPE(INTERFACE, waitui_ast_function, function)
-CREATE_LIST_TYPE(INTERFACE, waitui_ast_initialization, initialization)
+CREATE_LIST_TYPE(INTERFACE, waitui_ast_namespace)
+CREATE_LIST_TYPE(INTERFACE, waitui_ast_import)
+CREATE_LIST_TYPE(INTERFACE, waitui_ast_class)
+CREATE_LIST_TYPE(INTERFACE, waitui_ast_expression)
+CREATE_LIST_TYPE(INTERFACE, waitui_ast_formal)
+CREATE_LIST_TYPE(INTERFACE, waitui_ast_property)
+CREATE_LIST_TYPE(INTERFACE, waitui_ast_function)
+CREATE_LIST_TYPE(INTERFACE, waitui_ast_initialization)
 
 
 // -----------------------------------------------------------------------------

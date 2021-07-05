@@ -60,11 +60,11 @@ typedef struct waitui_list_iter waitui_list_iter;
         waitui_list_destroy((waitui_list **) this);                            \
     }
 
-#define INTERFACE_LIST_PUSH(type, elem)                                        \
-    extern int type##_list_push(type##_list *this, type *elem)
-#define IMPLEMENTATION_LIST_PUSH(type, elem)                                   \
-    int type##_list_push(type##_list *this, type *elem) {                      \
-        return waitui_list_push((waitui_list *) this, (void *) elem);          \
+#define INTERFACE_LIST_PUSH(type)                                              \
+    extern int type##_list_push(type##_list *this, type *type##element)
+#define IMPLEMENTATION_LIST_PUSH(type)                                         \
+    int type##_list_push(type##_list *this, type *type##element) {             \
+        return waitui_list_push((waitui_list *) this, (void *) type##element); \
     }
 
 #define INTERFACE_LIST_POP(type) extern type *type##_list_pop(type##_list *this)
@@ -73,11 +73,12 @@ typedef struct waitui_list_iter waitui_list_iter;
         return (type *) waitui_list_pop((waitui_list *) this);                 \
     }
 
-#define INTERFACE_LIST_UNSHIFT(type, elem)                                     \
-    extern int type##_list_unshift(type##_list *this, type *elem)
-#define IMPLEMENTATION_LIST_UNSHIFT(type, elem)                                \
-    int type##_list_unshift(type##_list *this, type *elem) {                   \
-        return waitui_list_unshift((waitui_list *) this, (void *) elem);       \
+#define INTERFACE_LIST_UNSHIFT(type)                                           \
+    extern int type##_list_unshift(type##_list *this, type *type##element)
+#define IMPLEMENTATION_LIST_UNSHIFT(type)                                      \
+    int type##_list_unshift(type##_list *this, type *type##element) {          \
+        return waitui_list_unshift((waitui_list *) this,                       \
+                                   (void *) type##element);                    \
     }
 
 #define INTERFACE_LIST_SHIFT(type)                                             \
@@ -123,13 +124,19 @@ typedef struct waitui_list_iter waitui_list_iter;
         waitui_list_iter_destroy((waitui_list_iter **) this);                  \
     }
 
-#define CREATE_LIST_TYPE(kind, type, elem)                                     \
+/**
+ * @brief Define for quickly created list implementations for a value type.
+ * @param[in] kind Whether to create interface list definition
+ *                 or actual implementation
+ * @param[in] type For what type to create the list
+ */
+#define CREATE_LIST_TYPE(kind, type)                                           \
     kind##_LIST_TYPEDEF(type);                                                 \
     kind##_LIST_NEW(type);                                                     \
     kind##_LIST_DESTROY(type);                                                 \
-    kind##_LIST_PUSH(type, elem);                                              \
+    kind##_LIST_PUSH(type);                                                    \
     kind##_LIST_POP(type);                                                     \
-    kind##_LIST_UNSHIFT(type, elem);                                           \
+    kind##_LIST_UNSHIFT(type);                                                 \
     kind##_LIST_SHIFT(type);                                                   \
     kind##_LIST_PEEK(type);                                                    \
     kind##_LIST_GET_ITERATOR(type);                                            \
@@ -209,16 +216,17 @@ extern void *waitui_list_peek(waitui_list *this);
 extern waitui_list_iter *waitui_list_getIterator(waitui_list *this);
 
 /**
- * TODO
- * @param this
- * @return
+ * @brief Return true if the List iterator has a next element.
+ * @param[in] this The List iterator to test for next element available
+ * @retval true If the iterator has a next element available
+ * @retval false If the iterator has no next element available
  */
 extern bool waitui_list_iter_hasNext(waitui_list_iter *this);
 
 /**
- * TODO
- * @param this
- * @return
+ * @brief Return the next element from the List iterator.
+ * @param[in] this The List iterator to get the next element
+ * @return The element or NULL if no more elements are available
  */
 extern void *waitui_list_iter_next(waitui_list_iter *this);
 

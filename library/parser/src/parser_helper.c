@@ -15,4 +15,4 @@ parser_yy_state *parser_yy_state_new(str filename, int first_line,
 
 void parser_yy_state_destroy(parser_yy_state **this) {}
 
-CREATE_LIST_TYPE(IMPLEMENTATION, parser_yy_state, parser_yy_state)
+CREATE_LIST_TYPE(IMPLEMENTATION, parser_yy_state)

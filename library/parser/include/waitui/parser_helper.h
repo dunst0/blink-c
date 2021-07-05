@@ -45,7 +45,7 @@ extern parser_yy_state *parser_yy_state_new(str filename, int first_line,
 
 extern void parser_yy_state_destroy(parser_yy_state **this);
 
-CREATE_LIST_TYPE(INTERFACE, parser_yy_state, parser_yy_state)
+CREATE_LIST_TYPE(INTERFACE, parser_yy_state)
 
 /**
  * @brief Type for extra parser data.
