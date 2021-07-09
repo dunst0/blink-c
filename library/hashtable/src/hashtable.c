@@ -21,7 +21,7 @@
  * @param[in] key The key to calculate the slot for
  * @return The slot in the HashTable for the given key
  */
-unsigned long int hashtable_hash(hashtable *this, str key) {
+unsigned long int waitui_hashtable_hash(waitui_hashtable *this, str key) {
     unsigned long int hashValue = 0;
 
     if (key.len < 1 || !key.s) { return 0; }
@@ -37,18 +37,19 @@ unsigned long int hashtable_hash(hashtable *this, str key) {
 //  Public functions
 // -----------------------------------------------------------------------------
 
-hashtable *hashtable_new(unsigned long int size,
-                         hashtable_value_destroy valueDestroyCallback) {
-    hashtable *this = NULL;
+waitui_hashtable *
+waitui_hashtable_new(unsigned long int size,
+                     waitui_hashtable_value_destroy_fn valueDestroyFn) {
+    waitui_hashtable *this = NULL;
 
     this = calloc(1, sizeof(*this));
     if (!this) { return NULL; }
 
-    this->size                 = size;
-    this->valueDestroyCallback = valueDestroyCallback;
-    this->list                 = calloc(size, sizeof(this->list));
+    this->size           = size;
+    this->valueDestroyFn = valueDestroyFn;
+    this->list           = calloc(size, sizeof(this->list));
     if (!this->list) {
-        hashtable_destroy(&this);
+        waitui_hashtable_destroy(&this);
         return NULL;
     }
 
@@ -57,18 +58,16 @@ hashtable *hashtable_new(unsigned long int size,
     return this;
 }
 
-void hashtable_destroy(hashtable **this) {
+void waitui_hashtable_destroy(waitui_hashtable **this) {
     if (!this || !(*this)) { return; }
 
     if ((*this)->list) {
         for (unsigned long int i = 0; i < (*this)->size; ++i) {
             while ((*this)->list[i]) {
-                hashtable_node *temp = (*this)->list[i];
-                (*this)->list[i]     = (*this)->list[i]->next;
+                waitui_hashtable_node *temp = (*this)->list[i];
+                (*this)->list[i]            = (*this)->list[i]->next;
 
-                if (!temp->isStolen) {
-                    (*this)->valueDestroyCallback(&temp->value);
-                }
+                if (!temp->isStolen) { (*this)->valueDestroyFn(&temp->value); }
 
                 STR_FREE(&temp->key);
 
@@ -82,19 +81,18 @@ void hashtable_destroy(hashtable **this) {
     *this = NULL;
 }
 
-int hashtable_insert_check(hashtable *this, str key, void *value,
-                           hashtable_value_check valueCheckCallback,
-                           void *arg) {
+int waitui_hashtable_insert_check(waitui_hashtable *this, str key, void *value,
+                                  waitui_hashtable_value_check_fn valueCheckFn,
+                                  void *arg) {
     if (!this) { return 0; }
 
-    unsigned long int hashSlot = hashtable_hash(this, key);
-    hashtable_node *node       = this->list[hashSlot];
-    str keyCopy                = STR_NULL_INIT;
+    unsigned long int hashSlot  = waitui_hashtable_hash(this, key);
+    waitui_hashtable_node *node = this->list[hashSlot];
+    str keyCopy                 = STR_NULL_INIT;
 
-    while (node &&
-           (key.len != node->key.len ||
-            memcmp(key.s, node->key.s, key.len) != 0 ||
-            (valueCheckCallback && !valueCheckCallback(node->value, arg)))) {
+    while (node && (key.len != node->key.len ||
+                    memcmp(key.s, node->key.s, key.len) != 0 ||
+                    (valueCheckFn && !valueCheckFn(node->value, arg)))) {
         node = node->next;
     }
 
@@ -117,18 +115,18 @@ int hashtable_insert_check(hashtable *this, str key, void *value,
     return 1;
 }
 
-void *hashtable_lookup_check(hashtable *this, str key,
-                             hashtable_value_check valueCheckCallback,
-                             void *arg) {
+void *
+waitui_hashtable_lookup_check(waitui_hashtable *this, str key,
+                              waitui_hashtable_value_check_fn valueCheckFn,
+                              void *arg) {
     if (!this) { return NULL; }
 
-    unsigned long int hashValue = hashtable_hash(this, key);
-    hashtable_node *node        = this->list[hashValue];
+    unsigned long int hashValue = waitui_hashtable_hash(this, key);
+    waitui_hashtable_node *node = this->list[hashValue];
 
-    while (node &&
-           (key.len != node->key.len ||
-            memcmp(key.s, node->key.s, key.len) != 0 ||
-            (valueCheckCallback && !valueCheckCallback(node->value, arg)))) {
+    while (node && (key.len != node->key.len ||
+                    memcmp(key.s, node->key.s, key.len) != 0 ||
+                    (valueCheckFn && !valueCheckFn(node->value, arg)))) {
         node = node->next;
     }
 
@@ -137,12 +135,13 @@ void *hashtable_lookup_check(hashtable *this, str key,
     return node->value;
 }
 
-int hashtable_has_check(hashtable *this, str key,
-                        hashtable_value_check valueCheckCallback, void *arg) {
+int waitui_hashtable_has_check(
+        waitui_hashtable *this, str key,
+        waitui_hashtable_value_check_fn valueCheckCallback, void *arg) {
     if (!this) { return 0; }
 
-    unsigned long int hashValue = hashtable_hash(this, key);
-    hashtable_node *node        = this->list[hashValue];
+    unsigned long int hashValue = waitui_hashtable_hash(this, key);
+    waitui_hashtable_node *node = this->list[hashValue];
 
     while (node &&
            (key.len != node->key.len ||
@@ -154,18 +153,17 @@ int hashtable_has_check(hashtable *this, str key,
     return node != NULL;
 }
 
-int hashtable_mark_stolen_check(hashtable *this, str key,
-                                hashtable_value_check valueCheckCallback,
-                                void *arg) {
+int waitui_hashtable_mark_stolen_check(
+        waitui_hashtable *this, str key,
+        waitui_hashtable_value_check_fn valueCheckFn, void *arg) {
     if (!this) { return 0; }
 
-    unsigned long int hashValue = hashtable_hash(this, key);
-    hashtable_node *node        = this->list[hashValue];
+    unsigned long int hashValue = waitui_hashtable_hash(this, key);
+    waitui_hashtable_node *node = this->list[hashValue];
 
-    while (node &&
-           (key.len != node->key.len ||
-            memcmp(key.s, node->key.s, key.len) != 0 ||
-            (valueCheckCallback && !valueCheckCallback(node->value, arg)))) {
+    while (node && (key.len != node->key.len ||
+                    memcmp(key.s, node->key.s, key.len) != 0 ||
+                    (valueCheckFn && !valueCheckFn(node->value, arg)))) {
         node = node->next;
     }
 
@@ -176,18 +174,18 @@ int hashtable_mark_stolen_check(hashtable *this, str key,
     return 1;
 }
 
-int hashtable_insert(hashtable *this, str key, void *value) {
-    return hashtable_insert_check(this, key, value, NULL, NULL);
+int waitui_hashtable_insert(waitui_hashtable *this, str key, void *value) {
+    return waitui_hashtable_insert_check(this, key, value, NULL, NULL);
 }
 
-void *hashtable_lookup(hashtable *this, str key) {
-    return hashtable_lookup_check(this, key, NULL, NULL);
+void *waitui_hashtable_lookup(waitui_hashtable *this, str key) {
+    return waitui_hashtable_lookup_check(this, key, NULL, NULL);
 }
 
-int hashtable_has(hashtable *this, str key) {
-    return hashtable_has_check(this, key, NULL, NULL);
+int waitui_hashtable_has(waitui_hashtable *this, str key) {
+    return waitui_hashtable_has_check(this, key, NULL, NULL);
 }
 
-int hashtable_mark_stolen(hashtable *this, str key) {
-    return hashtable_mark_stolen_check(this, key, NULL, NULL);
+int waitui_hashtable_mark_stolen(waitui_hashtable *this, str key) {
+    return waitui_hashtable_mark_stolen_check(this, key, NULL, NULL);
 }

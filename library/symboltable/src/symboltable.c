@@ -21,6 +21,20 @@
 
 
 // -----------------------------------------------------------------------------
+//  Local types
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief Struct representing a SymbolTable.
+ */
+struct symboltable {
+    long int currentScope;
+    int declarationMode;
+    symbol_hashtable *symbols;
+};
+
+
+// -----------------------------------------------------------------------------
 //  Local functions
 // -----------------------------------------------------------------------------
 
@@ -37,8 +51,7 @@ static int symboltable_symbol_check(symbol *this, symbol *other) {
 //  Public functions
 // -----------------------------------------------------------------------------
 
-CREATE_HASHTABLE_TYPE_CUSTOM(IMPLEMENTATION, symbol, symbol,
-                             symbol_decrement_refcount);
+CREATE_HASHTABLE_TYPE_CUSTOM(IMPLEMENTATION, symbol, symbol_decrement_refcount);
 
 symboltable *symboltable_new(void) {
     symboltable *this = NULL;
@@ -89,16 +102,16 @@ void symboltable_exit_scope(symboltable *this) {
 
     for (unsigned long int i = 0; i < this->symbols->size; ++i) {
         if (this->symbols->list[i]) {
-            hashtable_node *node = this->symbols->list[i];
+            waitui_hashtable_node *node = this->symbols->list[i];
 
             while (node &&
                    ((symbol *) node->value)->scope == this->currentScope) {
-                hashtable_node *temp = node;
+                waitui_hashtable_node *temp = node;
 
                 node = temp->next;
 
                 if (!temp->isStolen) {
-                    this->symbols->valueDestroyCallback(&temp->value);
+                    this->symbols->valueDestroyFn(&temp->value);
                 }
 
                 STR_FREE(&temp->key);
@@ -139,23 +152,26 @@ int symboltable_add_symbol(symboltable *this, str identifier,
 
     if (foundSymbol) {
         if (this->declarationMode) {
-            symbol_reference *reference = symbol_get_reference_head(*newSymbol);
+            waitui_symbol_reference *reference =
+                    symbol_get_reference_head(*newSymbol);
             if (!reference) { goto error; }
 
             if (foundSymbol->scope == this->currentScope) {
                 waitui_log_error("multiple declaration of identifier '%.*s' at "
-                          "%llu:%llu",
-                          STR_FMT(&identifier), reference->line,
-                          reference->column);
+                                 "%llu:%llu",
+                                 STR_FMT(&identifier),
+                                 waitui_symbol_reference_getLine(reference),
+                                 waitui_symbol_reference_getColumn(reference));
                 goto error;
             }
 
             (*newSymbol)->scope = this->currentScope;
 
-            if (!symbol_hashtable_insert_check(
-                        this->symbols, identifier, *newSymbol,
-                        (hashtable_value_check) symboltable_symbol_check,
-                        *newSymbol)) {
+            if (!symbol_hashtable_insert_check(this->symbols, identifier,
+                                               *newSymbol,
+                                               (waitui_hashtable_value_check_fn)
+                                                       symboltable_symbol_check,
+                                               *newSymbol)) {
                 goto error;
             }
 
@@ -165,19 +181,20 @@ int symboltable_add_symbol(symboltable *this, str identifier,
                     "declaring new symbol with identifier '%.*s' in scope %ld",
                     STR_FMT(&identifier), this->currentScope);
         } else {
-            symbol_reference *reference =
-                    symbol_reference_list_pop((*newSymbol)->references);
+            waitui_symbol_reference *reference =
+                    waitui_symbol_reference_list_pop((*newSymbol)->references);
             if (!reference) { goto error; }
 
-            if (!symbol_reference_list_push(foundSymbol->references,
+            if (!waitui_symbol_reference_list_push(foundSymbol->references,
                                             reference)) {
-                symbol_reference_destroy(&reference);
+                waitui_symbol_reference_destroy(&reference);
                 goto error;
             }
 
-            waitui_log_debug("referencing known symbol with identifier '%.*s' in "
-                      "scope %ld",
-                      STR_FMT(&identifier), this->currentScope);
+            waitui_log_debug(
+                    "referencing known symbol with identifier '%.*s' in "
+                    "scope %ld",
+                    STR_FMT(&identifier), this->currentScope);
 
             symbol_decrement_refcount(newSymbol);
 
@@ -188,7 +205,7 @@ int symboltable_add_symbol(symboltable *this, str identifier,
 
         if (!symbol_hashtable_insert_check(
                     this->symbols, identifier, *newSymbol,
-                    (hashtable_value_check) symboltable_symbol_check,
+                    (waitui_hashtable_value_check_fn) symboltable_symbol_check,
                     *newSymbol)) {
             goto error;
         }
@@ -196,13 +213,14 @@ int symboltable_add_symbol(symboltable *this, str identifier,
         symbol_increment_refcount(*newSymbol);
 
         if (this->declarationMode) {
-            waitui_log_debug("declaring new symbol with identifier '%.*s' in scope "
-                      "%ld",
-                      STR_FMT(&identifier), this->currentScope);
+            waitui_log_debug(
+                    "declaring new symbol with identifier '%.*s' in scope "
+                    "%ld",
+                    STR_FMT(&identifier), this->currentScope);
         } else {
             waitui_log_debug("referencing new symbol with identifier '%.*s' in "
-                      "scope %ld",
-                      STR_FMT(&identifier), this->currentScope);
+                             "scope %ld",
+                             STR_FMT(&identifier), this->currentScope);
         }
     }
 
@@ -214,12 +232,10 @@ error:
 
 int symboltable_has(symboltable *this, str identifier) {
     if (!this) { return 0; }
-
     return symbol_hashtable_has(this->symbols, identifier);
 }
 
 symbol *symboltable_lookup(symboltable *this, str identifier) {
     if (!this) { return NULL; }
-
     return symbol_hashtable_lookup(this->symbols, identifier);
 }

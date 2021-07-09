@@ -43,7 +43,6 @@ typedef struct waitui_list_iter waitui_list_iter;
 #define INTERFACE_LIST_TYPEDEF(type)                                           \
     typedef waitui_list type##_list;                                           \
     typedef waitui_list_iter type##_list_iter
-
 #define IMPLEMENTATION_LIST_TYPEDEF(type)
 
 #define INTERFACE_LIST_NEW(type) extern type##_list *type##_list_new()
@@ -61,10 +60,10 @@ typedef struct waitui_list_iter waitui_list_iter;
     }
 
 #define INTERFACE_LIST_PUSH(type)                                              \
-    extern int type##_list_push(type##_list *this, type *type##element)
+    extern int type##_list_push(type##_list *this, type *type##Element)
 #define IMPLEMENTATION_LIST_PUSH(type)                                         \
-    int type##_list_push(type##_list *this, type *type##element) {             \
-        return waitui_list_push((waitui_list *) this, (void *) type##element); \
+    int type##_list_push(type##_list *this, type *type##Element) {             \
+        return waitui_list_push((waitui_list *) this, (void *) type##Element); \
     }
 
 #define INTERFACE_LIST_POP(type) extern type *type##_list_pop(type##_list *this)
@@ -74,11 +73,11 @@ typedef struct waitui_list_iter waitui_list_iter;
     }
 
 #define INTERFACE_LIST_UNSHIFT(type)                                           \
-    extern int type##_list_unshift(type##_list *this, type *type##element)
+    extern int type##_list_unshift(type##_list *this, type *type##Element)
 #define IMPLEMENTATION_LIST_UNSHIFT(type)                                      \
-    int type##_list_unshift(type##_list *this, type *type##element) {          \
+    int type##_list_unshift(type##_list *this, type *type##Element) {          \
         return waitui_list_unshift((waitui_list *) this,                       \
-                                   (void *) type##element);                    \
+                                   (void *) type##Element);                    \
     }
 
 #define INTERFACE_LIST_SHIFT(type)                                             \

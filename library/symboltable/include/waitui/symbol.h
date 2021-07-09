@@ -35,7 +35,7 @@ typedef struct symbol {
     long int scope;
     str identifier;
     symbol_type type;
-    symbol_reference_list *references;
+    waitui_symbol_reference_list *references;
     long int refcount;
 } symbol;
 
@@ -73,7 +73,7 @@ extern void symbol_decrement_refcount(symbol **this);
  * @param[in] this The Symbol to get the head of the reference list.
  * @return On success a pointer to SymbolReference, else NULL
  */
-extern symbol_reference *symbol_get_reference_head(symbol *this);
+extern waitui_symbol_reference *symbol_get_reference_head(symbol *this);
 
 /**
  * @brief Destroy the Symbol and its content.

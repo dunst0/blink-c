@@ -17,17 +17,12 @@
 //  Public types
 // -----------------------------------------------------------------------------
 
-CREATE_HASHTABLE_TYPE_CUSTOM(INTERFACE, symbol, symbol,
-                             symbol_decrement_refcount);
+CREATE_HASHTABLE_TYPE_CUSTOM(INTERFACE, symbol, symbol_decrement_refcount);
 
 /**
  * @brief Type for the SymbolTable.
  */
-typedef struct symboltable {
-    long int currentScope;
-    int declarationMode;
-    symbol_hashtable *symbols;
-} symboltable;
+typedef struct symboltable symboltable;
 
 
 // -----------------------------------------------------------------------------
