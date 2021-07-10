@@ -18,12 +18,9 @@
 /**
  * @brief Type for the SymbolReference.
  */
-typedef struct symbol_reference {
-    unsigned long long line;
-    unsigned long long column;
-} symbol_reference;
+typedef struct waitui_symbol_reference waitui_symbol_reference;
 
-CREATE_LIST_TYPE(INTERFACE, symbol_reference)
+CREATE_LIST_TYPE(INTERFACE, waitui_symbol_reference)
 
 
 // -----------------------------------------------------------------------------
@@ -36,13 +33,29 @@ CREATE_LIST_TYPE(INTERFACE, symbol_reference)
  * @param[in] column Column of the SymbolReference
  * @return On success a pointer to SymbolReference, else NULL
  */
-extern symbol_reference *symbol_reference_new(unsigned long int line,
-                                              unsigned long int column);
+extern waitui_symbol_reference *
+waitui_symbol_reference_new(unsigned long int line, unsigned long int column);
 
 /**
  * @brief Destroy the SymbolReference and its content.
  * @param[in,out] this The SymbolReference to destroy
  */
-extern void symbol_reference_destroy(symbol_reference **this);
+extern void waitui_symbol_reference_destroy(waitui_symbol_reference **this);
+
+/**
+ * @brief Get the line where the reference exists.
+ * @param[in] this The SymbolReference to get the line from.
+ * @return
+ */
+extern unsigned long long
+waitui_symbol_reference_getLine(waitui_symbol_reference *this);
+
+/**
+ * @brief Get the column where the reference exists.
+ * @param[in] this The SymbolReference to get the column from.
+ * @return
+ */
+extern unsigned long long
+waitui_symbol_reference_getColumn(waitui_symbol_reference *this);
 
 #endif//WAITUI_SYMBOL_REFERENCE_H

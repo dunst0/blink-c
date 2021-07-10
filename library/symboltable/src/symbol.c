@@ -33,23 +33,25 @@ symbol *symbol_new(str identifier, symbol_type type, unsigned long int line,
         symbol_destroy(&this);
         return NULL;
     }
-    this->references = symbol_reference_list_new();
+    this->references = waitui_symbol_reference_list_new();
     if (!this->references) {
         waitui_log_fatal("could not allocate memory for symbol_reference_list");
         symbol_destroy(&this);
         return NULL;
     }
     {
-        symbol_reference *reference = symbol_reference_new(line, column);
+        waitui_symbol_reference *reference =
+                waitui_symbol_reference_new(line, column);
         if (!reference) {
-            waitui_log_fatal("could not allocate memory for symbol_reference");
+            waitui_log_fatal(
+                    "could not allocate memory for waitui_symbol_reference");
             symbol_destroy(&this);
             return NULL;
         }
-        if (!symbol_reference_list_push(this->references, reference)) {
-            waitui_log_fatal(
-                    "could not allocate memory for pushing symbol_reference");
-            symbol_reference_destroy(&reference);
+        if (!waitui_symbol_reference_list_push(this->references, reference)) {
+            waitui_log_fatal("could not allocate memory for pushing "
+                             "waitui_symbol_reference");
+            waitui_symbol_reference_destroy(&reference);
             symbol_destroy(&this);
             return NULL;
         }
@@ -87,9 +89,9 @@ void symbol_decrement_refcount(symbol **this) {
     }
 }
 
-symbol_reference *symbol_get_reference_head(symbol *this) {
+waitui_symbol_reference *symbol_get_reference_head(symbol *this) {
     if (!this || !this->references) { return NULL; }
-    return symbol_reference_list_peek(this->references);
+    return waitui_symbol_reference_list_peek(this->references);
 }
 
 void symbol_destroy(symbol **this) {
@@ -101,7 +103,7 @@ void symbol_destroy(symbol **this) {
                      STR_FMT(&(*this)->identifier), *this);
 
     STR_FREE(&(*this)->identifier);
-    symbol_reference_list_destroy(&(*this)->references);
+    waitui_symbol_reference_list_destroy(&(*this)->references);
 
     free(*this);
     *this = NULL;

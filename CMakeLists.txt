@@ -9,6 +9,11 @@ project(waitui
         LANGUAGES C
         )
 
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+    include(CTest)
+endif ()
+
 add_subdirectory(app)
 add_subdirectory(library/ast)
 add_subdirectory(library/ast_printer)
@@ -18,3 +23,8 @@ add_subdirectory(library/log)
 add_subdirectory(library/parser)
 add_subdirectory(library/symboltable)
 add_subdirectory(library/utils)
+
+if ((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING)
+        AND BUILD_TESTING)
+    add_subdirectory(tests)
+endif ()

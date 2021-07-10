@@ -13,16 +13,29 @@
 
 
 // -----------------------------------------------------------------------------
+//  Local types
+// -----------------------------------------------------------------------------
+
+/**
+ * @brief Struct representing a SymbolReference.
+ */
+struct waitui_symbol_reference {
+    unsigned long long line;
+    unsigned long long column;
+};
+
+
+// -----------------------------------------------------------------------------
 //  Public functions
 // -----------------------------------------------------------------------------
 
-CREATE_LIST_TYPE(IMPLEMENTATION, symbol_reference)
+CREATE_LIST_TYPE(IMPLEMENTATION, waitui_symbol_reference)
 
-symbol_reference *symbol_reference_new(unsigned long int line,
-                                       unsigned long int column) {
-    symbol_reference *this = NULL;
+waitui_symbol_reference *waitui_symbol_reference_new(unsigned long int line,
+                                                     unsigned long int column) {
+    waitui_symbol_reference *this = NULL;
 
-    waitui_log_trace("creating new symbol_reference");
+    waitui_log_trace("creating new waitui_symbol_reference");
 
     this = calloc(1, sizeof(*this));
     if (!this) { return NULL; }
@@ -30,18 +43,30 @@ symbol_reference *symbol_reference_new(unsigned long int line,
     this->line   = line;
     this->column = column;
 
-    waitui_log_trace("new symbol_reference successful created");
+    waitui_log_trace("new waitui_symbol_reference successful created");
 
     return this;
 }
 
-void symbol_reference_destroy(symbol_reference **this) {
-    waitui_log_trace("destroying symbol_reference");
+void waitui_symbol_reference_destroy(waitui_symbol_reference **this) {
+    waitui_log_trace("destroying waitui_symbol_reference");
 
     if (!this || !(*this)) { return; }
 
     free(*this);
     *this = NULL;
 
-    waitui_log_trace("symbol_reference successful destroyed");
+    waitui_log_trace("waitui_symbol_reference successful destroyed");
+}
+
+unsigned long long
+waitui_symbol_reference_getLine(waitui_symbol_reference *this) {
+    if (!this) { return 0; }
+    return this->line;
+}
+
+unsigned long long
+waitui_symbol_reference_getColumn(waitui_symbol_reference *this) {
+    if (!this) { return 0; }
+    return this->column;
 }
